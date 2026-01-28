@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>LoL Draft Pro | 英雄聯盟職位分配器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0f1117;
+      --bg-card: #1c1f26;
+      --bg-hover: #2d323d;
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.4);
+      --text-main: #f8fafc;
+      --text-secondary: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --success: #34d399;
+      --danger: #ef4444;
+      --radius-lg: 24px;
+      --radius-md: 12px;
+      --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 1.5rem;
+      overflow-x: hidden;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .app-container {
+      max-width: 650px;
+      margin: 0 auto;
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Header */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0 3rem;
+    }
+
+    .brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .menu-trigger {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .menu-trigger:hover {
+      transform: scale(1.05);
+      background: var(--bg-hover);
+      border-color: var(--primary);
+    }
+
+    .menu-trigger svg {
+      width: 20px;
+      height: 20px;
+      color: var(--text-secondary);
+    }
+
+    /* 彈出選單 */
+    .dropdown-menu {
+      position: absolute;
+      top: 70px;
+      right: 0;
+      width: 260px;
+      background: #1e2229;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-premium);
+      padding: 0.75rem;
+      display: none;
+      z-index: 1000;
+    }
+
+    .dropdown-menu.active {
+      display: block;
+      animation: fadeInUp 0.3s;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      transition: background 0.2s;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+    }
+
+    .menu-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .menu-item.danger {
+      color: var(--danger);
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0.5rem 0;
+    }
+
+    .menu-info {
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* 主輸入卡片 */
+    .hero-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-premium);
+    }
+
+    .input-box {
+      display: flex;
+      gap: 0.75rem;
+      background: #0c0e12;
+      padding: 0.5rem;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+
+    .input-box:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .input-box input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 0.75rem 1rem;
+      outline: none;
+      font-size: 1.1rem;
+      color: #fff;
+      font-family: inherit;
+    }
+
+    .btn-icon-add {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon-add:hover {
+      transform: scale(1.05);
+      filter: brightness(1.1);
+    }
+
+    /* 歷史快速選擇 */
+    .history-pane {
+      margin-top: 1.25rem;
+      display: none;
+      animation: fadeInUp 0.3s;
+    }
+
+    .history-pane.active {
+      display: block;
+    }
+
+    .history-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .history-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .history-chip {
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .history-chip:hover {
+      border-color: var(--primary);
+      color: #fff;
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .history-chip.chosen {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    /* 候選玩家 */
+    .roster-area {
+      margin-top: 2.5rem;
+    }
+
+    .roster-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #selected-players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      min-height: 50px;
+    }
+
+    .player-pill {
+      background: linear-gradient(135deg, #2d323d 0%, #1c1f26 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.5rem 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 0.95rem;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .player-pill span {
+      font-weight: 500;
+    }
+
+    .remove-pill {
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .remove-pill:hover {
+      color: var(--danger);
+    }
+
+    /* 抽籤按鈕與結果 */
+    .action-bar {
+      margin-top: 3.5rem;
+      text-align: center;
+    }
+
+    .btn-draw-main {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #fff;
+      width: 100%;
+      max-width: 320px;
+      padding: 1.15rem;
+      border-radius: 18px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 30px -10px var(--primary-glow);
+      transition: all 0.4s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-draw-main:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 15px 40px -10px var(--primary-glow);
+    }
+
+    .btn-draw-main:active {
+      transform: translateY(-1px);
+      scale: 0.98;
+    }
+
+    .btn-draw-main:disabled {
+      background: #334155;
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .results-container {
+      margin-top: 2.5rem;
+      display: none;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-item {
+      background: #1c1f26;
+      border-radius: 16px;
+      padding: 1.15rem 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr auto 1.5fr;
+      align-items: center;
+      border: 1px solid var(--border);
+      animation: slideIn 0.4s ease-out forwards;
+      opacity: 0;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-15px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .res-player {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .res-arrow {
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      margin: 0 1rem;
+    }
+
+    .res-positions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .pos-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pos-icon {
+      width: 28px;
+      height: 28px;
+      filter: grayscale(0.2) brightness(1.2);
+    }
+
+    .pos-label {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .pos-secondary {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    /* 統計 Overlay */
+    #stats-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 11, 15, 0.85);
+      backdrop-filter: blur(10px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    #stats-overlay.active {
+      display: flex;
+    }
+
+    .stats-card {
+      background: #1c1f26;
+      width: 100%;
+      max-width: 750px;
+      max-height: 85vh;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      animation: fadeInUp 0.4s;
+    }
+
+    .stats-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stats-content {
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 1rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      text-align: center;
+    }
+
+    .td-name {
+      text-align: left;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    #toast-wrap {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3000;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #6366f1;
+      color: #fff;
+      padding: 0.85rem 1.75rem;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      animation: toastIn 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .balance-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .balance-control input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="toast-wrap"></div>
+
+  <div id="stats-overlay">
+    <div class="stats-card">
+      <div class="stats-header">
+        <h2 style="font-weight: 700;">歷史位置權重</h2>
+        <div style="cursor:pointer; font-size: 1.5rem; color: var(--text-secondary);" onclick="toggleStats()">×</div>
+      </div>
+      <div class="stats-content">
+        <table id="stats-table">
+          <thead>
+            <tr>
+              <th style="text-align:left;">召喚師</th>
+              <th>上路</th>
+              <th>打野</th>
+              <th>中路</th>
+              <th>下路</th>
+              <th>輔助</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <nav>
+      <div class="brand">LoL Draft Pro</div>
+      <div style="position: relative;">
+        <div class="menu-trigger" onclick="toggleMenu(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M3 12h18M3 6h18M3 18h18"></path>
+          </svg>
+        </div>
+        <div class="dropdown-menu" id="dropdown-menu">
+          <button class="menu-item" onclick="toggleStats()">
+            📊 檢視歷史權重
+          </button>
+          <button class="menu-item" onclick="copyResults()">
+            📋 複製最後結果
+          </button>
+          <button class="menu-item danger" onclick="clearStats()">
+            🗑️ 清空歷史數據
+          </button>
+          <div class="menu-divider"></div>
+          <div class="menu-info">上次：<span id="last-draw">尚未抽過</span></div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="hero-card">
+      <div class="input-box">
+        <input type="text" id="manual-player" placeholder="輸入召喚師..." autocomplete="off" />
+        <button onclick="addManualPlayer()" class="btn-icon-add">+</button>
+      </div>
+
+      <div class="history-pane" id="history-pane">
+        <span class="history-label">快速選擇參與者</span>
+        <div class="history-chips" id="history-chips"></div>
+      </div>
+
+      <div class="roster-area">
+        <div class="roster-label">
+          <span>參與名單 (<span id="current-count">0</span>/5)</span>
+          <label class="balance-control"><input type="checkbox" id="balance-toggle" checked> 智慧平衡重複位置</label>
+        </div>
+        <div id="selected-players"></div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button id="btn-draw" class="btn-draw-main" onclick="drawLots()">開始職位分配</button>
+    </div>
+
+    <div class="results-container" id="results-container">
+      <div class="result-header">
+        <h3 style="font-weight: 600; color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase;">最終分配結果
+        </h3>
+        <span style="font-size: 0.8rem; color: var(--primary); cursor: pointer;" onclick="copyResults()">一鍵複製</span>
+      </div>
+      <div id="results-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const ROLES = ["上路", "打野", "中路", "下路", "輔助"];
+    const ICON_URLS = {
+      "上路": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-top.png",
+      "打野": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-jungle.png",
+      "中路": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-middle.png",
+      "下路": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-bottom.png",
+      "輔助": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-utility.png"
+    };
+    const STORAGE_STATS = "lolDrawStats_v2";
+    const STORAGE_LAST = "lolLastDrawAt_v2";
+    let selectedPlayers = [];
+    let lastRes = null;
+
+    // UI Helpers
+    function toast(msg) {
+      const wrap = document.getElementById('toast-wrap');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = msg;
+      wrap.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        setTimeout(() => el.remove(), 400);
+      }, 2500);
+    }
+
+    function toggleMenu(e) {
+      e.stopPropagation();
+      document.getElementById('dropdown-menu').classList.toggle('active');
+    }
+    document.onclick = () => document.getElementById('dropdown-menu').classList.remove('active');
+
+    function toggleStats() {
+      const overlay = document.getElementById('stats-overlay');
+      overlay.classList.toggle('active');
+      if (overlay.classList.contains('active')) renderStatsTable();
+    }
+
+    // Logic
+    function getStats() {
+      return JSON.parse(localStorage.getItem(STORAGE_STATS) || '{}');
+    }
+
+    function saveStats(s) {
+      localStorage.setItem(STORAGE_STATS, JSON.stringify(s));
+      renderHistoryChips();
+    }
+
+    function addManualPlayer() {
+      const i = document.getElementById('manual-player');
+      const n = i.value.trim();
+      if (!n) return;
+      addPlayer(n);
+      i.value = '';
+    }
+
+    function addPlayer(n) {
+      if (selectedPlayers.includes(n)) return toast('此人已在名單中');
+      if (selectedPlayers.length >= 5) return toast('已達 5 人上限');
+
+      const s = getStats();
+      if (!s[n]) s[n] = { "上路": 0, "打野": 0, "中路": 0, "下路": 0, "輔助": 0 };
+      saveStats(s);
+
+      selectedPlayers.push(n);
+      updateUI();
+    }
+
+    function removePlayer(n) {
+      selectedPlayers = selectedPlayers.filter(p => p !== n);
+      updateUI();
+    }
+
+    function updateUI() {
+      const container = document.getElementById('selected-players');
+      container.innerHTML = '';
+      selectedPlayers.forEach(n => {
+        const div = document.createElement('div');
+        div.className = 'player-pill';
+        div.innerHTML = `<span>${n}</span>`;
+        const b = document.createElement('div');
+        b.className = 'remove-pill';
+        b.innerHTML = '×';
+        b.onclick = () => removePlayer(n);
+        div.appendChild(b);
+        container.appendChild(div);
+      });
+      document.getElementById('current-count').textContent = selectedPlayers.length;
+      renderHistoryChips();
+    }
+
+    function renderHistoryChips() {
+      const s = getStats();
+      const pane = document.getElementById('history-pane');
+      const chips = document.getElementById('history-chips');
+      const names = Object.keys(s).sort();
+
+      if (names.length === 0) {
+        pane.classList.remove('active');
+        return;
+      }
+
+      pane.classList.add('active');
+      chips.innerHTML = '';
+      names.forEach(n => {
+        const c = document.createElement('div');
+        c.className = `history-chip ${selectedPlayers.includes(n) ? 'chosen' : ''}`;
+        c.textContent = n;
+        if (!selectedPlayers.includes(n)) c.onclick = () => addPlayer(n);
+        chips.appendChild(c);
+      });
+    }
+
+    function drawLots() {
+      if (selectedPlayers.length === 0) return toast('請先加入玩家');
+      const btn = document.getElementById('btn-draw');
+      btn.disabled = true;
+      btn.textContent = '正在進行平衡分配...';
+
+      setTimeout(() => {
+        const isBalance = document.getElementById('balance-toggle').checked;
+        const stats = getStats();
+        let candidates = [];
+
+        // 模擬 400 次隨機分配，選取權重成本最低的
+        for (let i = 0; i < 400; i++) {
+          let players = [...selectedPlayers].sort(() => Math.random() - 0.5);
+          let roles = [...ROLES].sort(() => Math.random() - 0.5);
+          let cost = 0;
+          let map = players.map((p, idx) => ({ name: p, main: roles[idx] }));
+
+          if (isBalance) {
+            map.forEach(m => {
+              cost += Math.pow(stats[m.name][m.main], 2) * 5; // 權重惩罰
+            });
+          }
+          cost += Math.random() * 2; // 增加隨機性
+          candidates.push({ map, cost });
+        }
+
+        candidates.sort((a, b) => a.cost - b.cost);
+        let best = candidates[0].map;
+
+        // 生成次要位置
+        best.forEach(x => {
+          const others = ROLES.filter(r => r !== x.main);
+          x.sub = others[Math.floor(Math.random() * others.length)];
+        });
+
+        // 紀錄結果
+        lastRes = best;
+        renderResults(best);
+        updateStats(best);
+
+        const now = Date.now();
+        localStorage.setItem(STORAGE_LAST, String(now));
+        renderLastDrawInfo();
+
+        btn.disabled = false;
+        btn.textContent = '再次分配職位';
+        toast('職位分配成功！');
+      }, 500);
+    }
+
+    function renderResults(res) {
+      const container = document.getElementById('results-container');
+      const list = document.getElementById('results-list');
+      container.style.display = 'flex';
+      list.innerHTML = '';
+
+      res.forEach((r, i) => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.style.animationDelay = `${i * 0.1}s`;
+        div.innerHTML = `
+      <div class="res-player">${r.name}</div>
+      <div class="res-arrow">➜</div>
+      <div class="res-positions">
+        <div class="pos-tag">
+          <img src="${ICON_URLS[r.main]}" class="pos-icon">
+          <span class="pos-label">${r.main}</span>
+        </div>
+        <div class="pos-secondary">次選：${r.sub}</div>
+      </div>
+    `;
+        list.appendChild(div);
+      });
+      container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function updateStats(res) {
+      const s = getStats();
+      res.forEach(x => {
+        if (!s[x.name]) s[x.name] = { "上路": 0, "打野": 0, "中路": 0, "下路": 0, "輔助": 0 };
+        s[x.name][x.main] += 1;
+      });
+      saveStats(s);
+    }
+
+    function renderStatsTable() {
+      const s = getStats();
+      const tbody = document.querySelector('#stats-table tbody');
+      tbody.innerHTML = '';
+      Object.keys(s).sort().forEach(n => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+      <td class="td-name">${n}</td>
+      <td>${s[n]['上路']}</td><td>${s[n]['打野']}</td><td>${s[n]['中路']}</td><td>${s[n]['下路']}</td><td>${s[n]['輔助']}</td>
+      <td><button onclick="addPlayer('${n}')" style="background:var(--primary); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer;">加入</button></td>
+    `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function copyResults() {
+      if (!lastRes) return toast('目前沒有抽籤結果');
+      let txt = '【LoL Draft Pro 職位分配】\n';
+      lastRes.forEach(r => {
+        txt += `🔹 ${r.name} ➔ ${r.main} (次：${r.sub})\n`;
+      });
+      navigator.clipboard.writeText(txt).then(() => toast('結果已複製到剪貼簿'));
+    }
+
+    function clearStats() {
+      if (!confirm('確定要永久刪除所有召喚師權重紀錄嗎？')) return;
+      localStorage.removeItem(STORAGE_STATS);
+      localStorage.removeItem(STORAGE_LAST);
+      selectedPlayers = [];
+      updateUI();
+      toast('紀錄已清空');
+    }
+
+    function renderLastDrawInfo() {
+      const el = document.getElementById('last-draw');
+      const ts = localStorage.getItem(STORAGE_LAST);
+      if (!ts) {
+        el.textContent = '尚未抽過';
+        return;
+      }
+      const d = new Date(Number(ts));
+      el.textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    window.onload = () => {
+      updateUI();
+      renderLastDrawInfo();
+      document.getElementById('manual-player').addEventListener('keypress', e => {
+        if (e.key === 'Enter') addManualPlayer();
+      });
+    };
+  </script>
+</body>
+
+</html>
