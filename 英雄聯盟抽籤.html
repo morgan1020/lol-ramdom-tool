@@ -4,68 +4,287 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>英雄聯盟抽籤統計（高隨機性版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f0f2f5;
-    --fg: #333;
-    --card: #fff;
-    --brand: #3498db;
-    --brand-2: #2980b9;
-    --ok: #27ae60;
-    --ok-2: #1e8449;
-    --danger: #e74c3c;
-    --danger-2: #c0392b;
-    --muted: #95a5a6;
-    --shadow: 0 4px 8px rgba(0,0,0,.08);
+    --bg: #f6f7fb;
+    --bg-soft: #ffffff;
+    --card: #ffffff;
+    --card-strong: #ffffff;
+    --stroke: rgba(15, 23, 42, 0.08);
+    --text: #0f172a;
+    --muted: #6b7280;
+    --brand: #2563eb;
+    --brand-2: #2563eb;
+    --ok: #10b981;
+    --danger: #ef4444;
+    --shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.35);
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --chip-bg: #f3f4f6;
+    --chip-border: rgba(15, 23, 42, 0.1);
+    --known-panel: #f8fafc;
+    --thead-bg: rgba(37, 99, 235, 0.08);
+    --remove-x-bg: #ffffff;
+    --remove-x-text: #0f172a;
+    --bg-grad-1: rgba(37, 99, 235, 0.06);
+    --bg-grad-2: rgba(15, 23, 42, 0.05);
+  }
+  [data-theme="dark"] {
+    --bg: #0b0f1a;
+    --bg-soft: #121826;
+    --card: rgba(255, 255, 255, 0.06);
+    --card-strong: rgba(18, 24, 38, 0.9);
+    --stroke: rgba(148, 163, 184, 0.18);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --brand: #5b8cff;
+    --brand-2: #7c5dff;
+    --ok: #22c55e;
+    --danger: #f97316;
+    --shadow: 0 24px 60px -40px rgba(15, 23, 42, 0.8);
+    --chip-bg: rgba(148, 163, 184, 0.15);
+    --chip-border: rgba(148, 163, 184, 0.2);
+    --known-panel: rgba(15, 23, 42, 0.6);
+    --thead-bg: rgba(91, 140, 255, 0.2);
+    --remove-x-bg: rgba(255, 255, 255, 0.8);
+    --remove-x-text: #0b0f1a;
+    --bg-grad-1: rgba(91, 140, 255, 0.18);
+    --bg-grad-2: rgba(124, 93, 255, 0.16);
   }
   * { box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--fg); }
-  h1 { color: #2c3e50; text-align: center; }
+  body {
+    font-family: 'Space Grotesk', 'Noto Sans TC', sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-grad-1), transparent 45%),
+      radial-gradient(circle at 100% 10%, var(--bg-grad-2), transparent 40%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg) 100%);
+    margin: 0;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 28px 18px 48px;
+  }
   .container { max-width: 980px; margin: 0 auto; }
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding: 18px 18px 0;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .theme-toggle {
+    font-size: 12px;
+    padding: 6px 10px;
+    opacity: 0.7;
+  }
+  .theme-toggle:hover { opacity: 1; }
+  h1 {
+    font-size: clamp(28px, 3vw, 40px);
+    margin: 0;
+    letter-spacing: -0.8px;
+  }
+  .subtitle { color: var(--muted); font-size: 15px; }
   .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-  input { padding: 10px 12px; width: 220px; border-radius: 8px; border: 1px solid #d0d7de; outline: none; }
-  input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(52,152,219,.15); }
-  button { padding: 10px 14px; border-radius: 10px; border: none; background: var(--brand); color: #fff; font-weight: 700; cursor: pointer; transition: .25s; box-shadow: var(--shadow); position: relative; }
-  button:hover { background: var(--brand-2); transform: translateY(-1px); }
-  button:disabled { background: #b3c7da; cursor: not-allowed; transform: none; }
-  .btn-ok { background: var(--ok); }
-  .btn-ok:hover { background: var(--ok-2); }
-  .btn-danger { background: var(--danger); }
-  .btn-danger:hover { background: var(--danger-2); }
-  .card { background: var(--card); padding: 16px; margin: 16px 0; border-radius: 14px; box-shadow: var(--shadow); }
+  .row-spacer { flex: 1 1 auto; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--stroke);
+    padding: 18px;
+    margin: 16px 0;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }
+  .card-title { margin: 0 0 8px; font-weight: 600; }
+  .input {
+    padding: 12px 14px;
+    width: 240px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--stroke);
+    background: var(--bg-soft);
+    color: var(--text);
+    outline: none;
+    transition: .2s;
+  }
+  .input:focus { border-color: rgba(37, 99, 235, 0.6); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+  button {
+    padding: 11px 16px;
+    border-radius: 12px;
+    border: none;
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .25s;
+    box-shadow: 0 10px 20px -14px rgba(37, 99, 235, 0.45);
+    position: relative;
+  }
+  button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  button:disabled { background: #334155; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-ok { background: #10b981; }
+  .btn-danger { background: #ef4444; }
   .muted { color: var(--muted); font-size: 14px; }
   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  th, td { padding: 10px 14px; border: 1px solid #e5e7eb; text-align: center; }
-  thead { background: var(--brand); color: #fff; }
-  tbody tr:hover { background: #f8fafc; }
-  #selected-players li { display: inline-flex; align-items: center; gap: 8px; background: #ecf0f1; margin: 6px; padding: 6px 12px; border-radius: 10px; }
-  #selected-players li button { background: var(--danger); padding: 6px 8px; }
-  #selected-players li button:hover { background: var(--danger-2); }
+  th, td { padding: 12px 14px; border: 1px solid rgba(148, 163, 184, 0.2); text-align: center; }
+  thead { background: var(--thead-bg); color: var(--text); }
+  tbody tr { transition: .2s; }
+  tbody tr:hover { background: rgba(148, 163, 184, 0.08); }
+  #selected-players li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--chip-bg);
+    margin: 6px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--chip-border);
+    position: relative;
+    padding-right: 34px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .remove-x {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--remove-x-text);
+    background: var(--remove-x-bg);
+    opacity: 0;
+    transition: .2s;
+    cursor: pointer;
+  }
+  #selected-players li:hover .remove-x { opacity: 1; }
   #toast-wrap { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
-  .toast { min-width: 260px; max-width: 360px; padding: 12px 14px; border-radius: 12px; color: #fff; box-shadow: var(--shadow); display: flex; align-items: flex-start; gap: 10px; animation: slideIn .25s ease-out; }
-  .toast.info { background: #2d8cf0; }
-  .toast.success { background: #2ecc71; }
-  .toast.warn { background: #f39c12; }
-  .toast.error { background: #e74c3c; }
+  .toast {
+    min-width: 260px;
+    max-width: 360px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    color: #fff;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    animation: slideIn .25s ease-out;
+  }
+  .toast.info { background: #3b82f6; }
+  .toast.success { background: #22c55e; }
+  .toast.warn { background: #f59e0b; }
+  .toast.error { background: #ef4444; }
   .toast .title { font-weight: 700; margin-right: 6px; }
   .toast .msg { opacity: .95; }
   .toast .close { margin-left: auto; background: transparent; border: 0; color: #fff; font-weight: bold; cursor: pointer; }
   @keyframes slideIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  .loading::after { content: ""; position: absolute; right: 10px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; border: 2px solid rgba(255,255,255,.65); border-top-color: #fff; animation: spin .7s linear infinite; }
+  .loading::after {
+    content: "";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.65);
+    border-top-color: #fff;
+    animation: spin .7s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
   .inline-kv { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--stroke);
+    color: var(--muted);
+    box-shadow: none;
+    padding: 8px 12px;
+  }
+  .known-panel {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    background: var(--known-panel);
+    border: 1px solid var(--stroke);
+    display: none;
+  }
+  .known-panel.open { display: block; }
+  .known-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .known-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .known-chip {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    cursor: pointer;
+    transition: .2s;
+  }
+  .known-chip:hover { transform: translateY(-1px); background: rgba(37, 99, 235, 0.14); }
+  .known-chip.selected { background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.35); }
+  .known-chip.disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .stats-card { overflow: hidden; }
+  .accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .accordion-indicator { color: var(--muted); font-size: 14px; transition: transform .2s; }
+  .accordion-panel { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+  .stats-card.open .accordion-panel { max-height: 520px; overflow: auto; }
+  .stats-card.open .accordion-indicator { transform: rotate(180deg); }
+  @media (max-width: 720px) {
+    .row { flex-direction: column; align-items: stretch; }
+    .input { width: 100%; }
+    button { width: 100%; }
+    #selected-players li { width: 100%; justify-content: space-between; }
+  }
 </style>
 </head>
 <body>
 <div id="toast-wrap" aria-live="polite" aria-atomic="true"></div>
 <div class="container">
-  <h1>英雄聯盟抽籤統計</h1>
+  <div class="hero">
+    <h1>英雄聯盟抽籤統計</h1>
+    <div class="hero-meta">
+      <div class="subtitle">快速分配位置，保留歷史權重，打造公平的隊伍體驗。</div>
+      <button id="theme-toggle" class="btn-ghost theme-toggle" type="button">切換深色模式</button>
+    </div>
+  </div>
   <div class="card">
     <div class="row">
-      <input type="text" id="manual-player" placeholder="輸入玩家名稱" />
+      <input type="text" id="manual-player" class="input" placeholder="輸入玩家名稱" />
       <button id="btn-add" class="btn-ok">加入抽籤</button>
+      <button id="btn-known" class="btn-ok">選擇已知玩家</button>
       <button id="btn-draw">抽籤</button>
-      <button id="btn-clear" class="btn-danger">清空統計</button>
+      <span class="row-spacer"></span>
+      <button id="btn-copy" class="btn-ok">一鍵複製結果</button>
+    </div>
+    <div id="known-panel" class="known-panel" aria-hidden="true">
+      <div class="known-header">
+        <span class="muted">已知玩家（點選加入）</span>
+        <button id="btn-known-close" class="btn-ghost" type="button">關閉</button>
+      </div>
+      <div id="known-list" class="known-list"></div>
     </div>
     <div class="inline-kv" style="margin-top:8px;">
       <span class="muted">抽籤人數上限：5 人</span>
@@ -75,14 +294,13 @@
   </div>
 
   <div class="card">
-    <h2>抽籤候選名單（目前抽籤人數 <span id="current-count">0</span>/5）</h2>
+    <h2 class="card-title">抽籤候選名單（目前抽籤人數 <span id="current-count">0</span>/5）</h2>
     <ul id="selected-players"></ul>
   </div>
 
   <div class="card">
     <div class="row" style="justify-content: space-between; align-items: center;">
-      <h2 style="margin: 6px 0;">抽籤結果</h2>
-      <button id="btn-copy" class="btn-ok">一鍵複製結果</button>
+      <h2 class="card-title" style="margin: 6px 0;">抽籤結果</h2>
     </div>
     <table id="result-table" style="display:none;">
       <thead>
@@ -92,14 +310,19 @@
     </table>
   </div>
 
-  <div class="card">
-    <h2>統計內容（主要 +1，次要 +0.5）</h2>
-    <table id="stats-table">
-      <thead>
-        <tr><th>玩家名稱</th><th>上路</th><th>打野</th><th>中路</th><th>下路</th><th>輔助</th><th>加入抽籤</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <div class="card stats-card">
+    <div class="accordion-header" role="button" tabindex="0" aria-expanded="false" aria-controls="stats-panel">
+      <h2 class="card-title">統計內容（主要 +1，次要 +0.5）</h2>
+      <span class="accordion-indicator">▼</span>
+    </div>
+    <div id="stats-panel" class="accordion-panel">
+      <table id="stats-table">
+        <thead>
+          <tr><th>玩家名稱</th><th>上路</th><th>打野</th><th>中路</th><th>下路</th><th>輔助</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 </div>
 <script>
@@ -107,15 +330,18 @@ const positions = ["上路", "打野", "中路", "下路", "輔助"];
 let selectedPlayers = [];
 const STORAGE_STATS = "lolDrawStats";
 const STORAGE_LAST = "lolLastDrawAt";
+const STORAGE_THEME = "lolTheme";
 function toast(type,title,msg,timeout=2400){const wrap=document.getElementById('toast-wrap');const el=document.createElement('div');el.className=`toast ${type}`;el.innerHTML=`<span class=\"title\">${title}</span><span class=\"msg\">${msg||''}</span><button class=\"close\">×</button>`;el.querySelector('.close').onclick=()=>el.remove();wrap.appendChild(el);setTimeout(()=>el.remove(),timeout);} 
 function formatTime(ts){const d=new Date(ts);return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;}
 function setBusy(btn,busy){if(!btn)return;btn.disabled=!!busy;btn.classList.toggle('loading',!!busy);}
 function cryptoRandom(max){const array=new Uint32Array(1);crypto.getRandomValues(array);return array[0]%max;}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=cryptoRandom(i+1);[arr[i],arr[j]]=[arr[j],arr[i]];}}
-function displayStats(){const stats=JSON.parse(localStorage.getItem(STORAGE_STATS)||'{}');const tbody=document.querySelector('#stats-table tbody');tbody.innerHTML='';const names=Object.keys(stats).sort((a,b)=>{const totalA=positions.reduce((s,p)=>s+(stats[a]?.[p]||0),0);const totalB=positions.reduce((s,p)=>s+(stats[b]?.[p]||0),0);if(totalA!==totalB)return totalB-totalA;return a.localeCompare(b,'zh-Hant');});names.forEach(n=>{const r=document.createElement('tr');r.innerHTML=`<td>${n}</td><td>${stats[n]['上路']}</td><td>${stats[n]['打野']}</td><td>${stats[n]['中路']}</td><td>${stats[n]['下路']}</td><td>${stats[n]['輔助']}</td><td><button class='btn-ok' onclick=\"addPlayerFromStats('${n}')\">加入抽籤</button></td>`;tbody.appendChild(r);});}
-function addPlayerFromStats(n){if(selectedPlayers.includes(n))return toast('warn','提醒','玩家已在抽籤名單中');if(selectedPlayers.length>=5)return toast('warn','已達上限','抽籤人數已滿 5 人');selectedPlayers.push(n);updateSelectedList();toast('success','加入成功',`${n} 已加入抽籤名單`);}
+function displayStats(){const stats=JSON.parse(localStorage.getItem(STORAGE_STATS)||'{}');const tbody=document.querySelector('#stats-table tbody');tbody.innerHTML='';const names=Object.keys(stats).sort((a,b)=>{const totalA=positions.reduce((s,p)=>s+(stats[a]?.[p]||0),0);const totalB=positions.reduce((s,p)=>s+(stats[b]?.[p]||0),0);if(totalA!==totalB)return totalB-totalA;return a.localeCompare(b,'zh-Hant');});names.forEach(n=>{const r=document.createElement('tr');r.innerHTML=`<td>${n}</td><td>${stats[n]['上路']}</td><td>${stats[n]['打野']}</td><td>${stats[n]['中路']}</td><td>${stats[n]['下路']}</td><td>${stats[n]['輔助']}</td>`;tbody.appendChild(r);});renderKnownPlayers(names);}
+function renderKnownPlayers(names){const list=document.getElementById('known-list');if(!list)return;list.innerHTML='';if(names.length===0){const empty=document.createElement('div');empty.className='muted';empty.textContent='目前沒有已知玩家';list.appendChild(empty);return;}names.forEach(n=>{const chip=document.createElement('div');const isFull=selectedPlayers.length>=5;const isChosen=selectedPlayers.includes(n);chip.className=`known-chip${isChosen?' selected':''}${isFull&&!isChosen?' disabled':''}`;chip.textContent=n;chip.dataset.name=n;chip.onclick=()=>{if(selectedPlayers.includes(n)){selectedPlayers=selectedPlayers.filter(p=>p!==n);updateSelectedList();toast('info','已取消',`${n} 已從抽籤名單移除`);return;}if(selectedPlayers.length>=5)return toast('warn','已達上限','抽籤人數已滿 5 人');addManualPlayerFromKnown(n);};list.appendChild(chip);});}
+function syncKnownSelection(){const list=document.getElementById('known-list');if(!list)return;const chips=list.querySelectorAll('.known-chip');chips.forEach(chip=>{const n=chip.dataset.name;const isChosen=selectedPlayers.includes(n);const isFull=selectedPlayers.length>=5;chip.classList.toggle('selected',isChosen);chip.classList.toggle('disabled',!isChosen&&isFull);});}
+function addManualPlayerFromKnown(n){const i=document.getElementById('manual-player');i.value=n;addManualPlayer();}
 function addManualPlayer(){const i=document.getElementById('manual-player');const n=i.value.trim();if(!n)return toast('warn','未輸入','請先輸入玩家名稱');if(selectedPlayers.includes(n))return toast('warn','提醒','玩家已在抽籤名單中');if(selectedPlayers.length>=5)return toast('warn','已達上限','抽籤人數已滿 5 人');const s=JSON.parse(localStorage.getItem(STORAGE_STATS)||'{}');if(!s[n])s[n]={"上路":0,"打野":0,"中路":0,"下路":0,"輔助":0};localStorage.setItem(STORAGE_STATS,JSON.stringify(s));selectedPlayers.push(n);updateSelectedList();displayStats();i.value='';toast('success','加入成功',`${n} 已加入抽籤名單`);}
-function updateSelectedList(){const ul=document.getElementById('selected-players');ul.innerHTML='';selectedPlayers.forEach(n=>{const li=document.createElement('li');li.textContent=n+' ';const b=document.createElement('button');b.textContent='移除';b.onclick=()=>{selectedPlayers=selectedPlayers.filter(p=>p!==n);updateSelectedList();toast('info','已移除',`${n} 已從抽籤名單移除`);};li.appendChild(b);ul.appendChild(li);});document.getElementById('current-count').textContent=selectedPlayers.length;}
+function updateSelectedList(){const ul=document.getElementById('selected-players');ul.innerHTML='';selectedPlayers.forEach(n=>{const li=document.createElement('li');li.textContent=n;const x=document.createElement('span');x.className='remove-x';x.textContent='×';x.onclick=()=>{selectedPlayers=selectedPlayers.filter(p=>p!==n);updateSelectedList();toast('info','已移除',`${n} 已從抽籤名單移除`);};li.appendChild(x);ul.appendChild(li);});document.getElementById('current-count').textContent=selectedPlayers.length;syncKnownSelection();}
 function drawLots(){if(selectedPlayers.length===0)return toast('warn','尚未選人','請先選擇玩家');const btn=document.getElementById('btn-draw');setBusy(btn,true);try{const res=[];const names=[...selectedPlayers];const pos=[...positions];shuffle(pos);if(names.length>pos.length){toast('error','人數過多','玩家數量超過位置數量！');return;}for(let i=0;i<names.length;i++){res.push({name:names[i],main:pos[i],secondary:''});}if(names.length<5){let attempts=0;const max=1000;while(attempts<max){attempts++;res.forEach(r=>{const p=positions.filter(x=>x!==r.main);r.secondary=p[cryptoRandom(p.length)];});const combos=res.map(r=>[r.main,r.secondary].sort().join('|'));const u=new Set(combos);if(u.size===res.length)break;if(attempts===max)return toast('error','抽籤失敗','無法生成合法組合，請重試');}}
 displayResults(res);updateStats(res);const now=Date.now();localStorage.setItem(STORAGE_LAST,String(now));renderLastDraw();toast('success','抽籤完成','結果已產生並更新統計');}finally{setBusy(btn,false);}}
 function displayResults(r){const tb=document.querySelector('#result-table tbody');tb.innerHTML='';r.forEach(x=>{const row=document.createElement('tr');row.innerHTML=`<td>${x.name}</td><td>${x.main}</td><td>${x.secondary||'-'}</td>`;tb.appendChild(row);});document.getElementById('result-table').style.display='table';}
@@ -123,7 +349,47 @@ function updateStats(r){const s=JSON.parse(localStorage.getItem(STORAGE_STATS)||
 function copyResults(){const rows=document.querySelectorAll('#result-table tbody tr');if(rows.length===0)return toast('warn','沒有資料','目前沒有抽籤結果');let text='';rows.forEach(r=>{const c=r.querySelectorAll('td');text+=`${c[0].textContent}：主要 ${c[1].textContent}｜次要 ${c[2].textContent}\n`;});navigator.clipboard.writeText(text).then(()=>toast('success','已複製','抽籤結果已複製到剪貼簿'));}
 function clearStats(){if(!confirm('確定要清空所有統計資料嗎？'))return;localStorage.removeItem(STORAGE_STATS);selectedPlayers=[];updateSelectedList();displayStats();toast('info','已清空','統計資料已全部清除');}
 function renderLastDraw(){const el=document.getElementById('last-draw');const ts=localStorage.getItem(STORAGE_LAST);el.textContent=ts?formatTime(Number(ts)):'尚未抽過';}
-window.addEventListener('DOMContentLoaded',()=>{document.getElementById('btn-add').addEventListener('click',()=>{const b=document.getElementById('btn-add');setBusy(b,true);try{addManualPlayer();}finally{setBusy(b,false);}});document.getElementById('btn-draw').addEventListener('click',drawLots);document.getElementById('btn-clear').addEventListener('click',clearStats);document.getElementById('btn-copy').addEventListener('click',()=>{const b=document.getElementById('btn-copy');setBusy(b,true);try{copyResults();}finally{setBusy(b,false);}});displayStats();selectedPlayers=[];updateSelectedList();renderLastDraw();});
+function applyTheme(theme){document.body.setAttribute('data-theme',theme);const btn=document.getElementById('theme-toggle');if(btn)btn.textContent=theme==='dark'?'切換淺色模式':'切換深色模式';localStorage.setItem(STORAGE_THEME,theme);}
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('btn-add').addEventListener('click',()=>{const b=document.getElementById('btn-add');setBusy(b,true);try{addManualPlayer();}finally{setBusy(b,false);}});
+  document.getElementById('btn-draw').addEventListener('click',drawLots);
+  document.getElementById('btn-copy').addEventListener('click',()=>{const b=document.getElementById('btn-copy');setBusy(b,true);try{copyResults();}finally{setBusy(b,false);}});
+  const knownPanel=document.getElementById('known-panel');
+  const toggleKnown=()=>{knownPanel.classList.toggle('open');knownPanel.setAttribute('aria-hidden',String(!knownPanel.classList.contains('open')));};
+  document.getElementById('btn-known').addEventListener('click',toggleKnown);
+  document.getElementById('btn-known-close').addEventListener('click',toggleKnown);
+  const themeBtn=document.getElementById('theme-toggle');
+  const savedTheme=localStorage.getItem(STORAGE_THEME);
+  if(savedTheme)applyTheme(savedTheme);
+  themeBtn.addEventListener('click',()=>{const isDark=document.body.getAttribute('data-theme')==='dark';applyTheme(isDark?'light':'dark');});
+  const statsCard=document.querySelector('.stats-card');
+  const toggle=()=>{
+    const isOpen=statsCard.classList.toggle('open');
+    const header=statsCard.querySelector('.accordion-header');
+    header.setAttribute('aria-expanded',String(isOpen));
+  };
+  statsCard.querySelector('.accordion-header').addEventListener('click',toggle);
+  statsCard.querySelector('.accordion-header').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+  displayStats();
+  selectedPlayers=[];
+  updateSelectedList();
+  renderLastDraw();
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      if(e.target && e.target.tagName==='INPUT'){
+        e.preventDefault();
+        const val=document.getElementById('manual-player').value.trim();
+        if(val){addManualPlayer();return;}
+      }
+      drawLots();
+      return;
+    }
+    if(e.key.toLowerCase()==='c'){
+      if(e.target && e.target.tagName==='INPUT')return;
+      copyResults();
+    }
+  });
+});
 </script>
 </body>
 </html>
