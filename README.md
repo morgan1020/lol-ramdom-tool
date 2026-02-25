@@ -3,7 +3,7 @@
 此專案在原本網頁抽籤邏輯基礎上，新增 Discord Slash Command 機器人版本。
 
 ## 功能
-- 候選名單管理：`/pool add|remove|list|clear`
+- 候選名單管理：`/pool add|remove|list|from-voice|clear`
 - 抽籤：`/draw`
 - 統計：`/stats [name]`、`/resetstats`
 - 抽籤規則與網頁版一致：
@@ -15,6 +15,7 @@
 ## 環境需求
 - Node.js 20+
 - Discord Bot Token 與應用程式設定
+- Discord Developer Portal 開啟 `Server Members Intent`
 
 ## 安裝
 ```bash
@@ -32,6 +33,14 @@ cp .env.example .env
 ```bash
 npm run register
 ```
+
+### 主要指令範例
+- `/pool add name:小明`
+- `/pool add member:@小明`
+- `/pool from-voice`（從你目前語音頻道匯入真人成員）
+- `/pool list`
+- `/draw`
+- `/stats`
 
 ## 啟動機器人
 ```bash

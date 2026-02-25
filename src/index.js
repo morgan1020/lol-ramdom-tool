@@ -19,7 +19,13 @@ const repos = {
   stats: new StatsRepository(db)
 };
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates
+  ]
+});
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Bot 已上線：${readyClient.user.tag}`);
