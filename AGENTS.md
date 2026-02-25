@@ -1,45 +1,48 @@
 # Repository Guidelines
 
 ## 專案結構與模組規劃
-本專案目前是輕量的單頁網頁應用。
+本專案目前包含兩個部分：舊版單頁網頁工具 + Discord 機器人。
 
-- `英雄聯盟抽籤.html`：包含完整功能（HTML 結構、CSS 樣式、JavaScript 邏輯）。
+- `英雄聯盟抽籤.html`：原始單頁版抽籤工具（HTML/CSS/JS 單檔）。
+- `src/`：Discord Bot 主程式。
+- `src/commands/`：Slash Command 路由與指令邏輯。
+- `src/domain/`：核心規則（抽籤、統計、名單合併）。
+- `src/repositories/`、`src/db/`：SQLite 資料存取。
+- `scripts/register-commands.js`：註冊 guild 指令。
+- `tests/`：Node 內建 test 測試。
 - `.git/`：版本控制資料。
 
-若後續新增檔案，請保持根目錄簡潔，依用途分資料夾（例如：`assets/`、`styles/`、`scripts/`），方便從單檔逐步拆分。
+請保持根目錄簡潔，功能優先放在 `src/` 與 `tests/`。
 
 ## 建置、測試與開發指令
-本專案不需要建置流程，可直接執行。
+主要開發目標為 Discord Bot；網頁檔仍可直接開啟。
 
 - `open 英雄聯盟抽籤.html`  
-  在 macOS 直接用預設瀏覽器開啟頁面。
-- `python3 -m http.server 8000`  
-  啟動本機伺服器，便於模擬正式環境（剪貼簿與部分瀏覽器行為在 HTTP 下更穩定）。
-- `git status`  
-  提交前快速確認變更內容。
+  在 macOS 開啟舊版網頁工具。
+- `npm install`：安裝 Discord Bot 依賴。
+- `npm run register`：註冊/更新 guild slash commands。
+- `npm run start`：啟動 bot。
+- `npm test`：執行測試（`node --test`）。
 
 ## 程式風格與命名慣例
-- HTML/CSS/JS 使用 2 空白縮排，與現有檔案一致。
-- JavaScript 變數與函式使用語意明確的 `camelCase`（例如：`selectedPlayers`、`renderKnownPlayers`）。
-- 共用常數使用全大寫加底線（例如：`STORAGE_STATS`）。
-- UI 文案預設維持繁體中文，除非需求明確要求調整語言。
-- 互動行為邏輯應靠近對應 DOM 區塊，避免事件處理分散難維護。
+- JavaScript 一律 2 空白縮排，`camelCase` 命名。
+- 指令文案與使用者回覆預設繁體中文。
+- 核心規則優先放 `src/domain/`，避免耦合 Discord API。
+- 位置與統計規則變更時，必須同步更新測試。
 
 ## 測試指引
-目前沒有自動化測試；發 PR 前請至少完成以下手動驗證：
+發 PR 前至少完成：
 
-- 新增/移除玩家，確認上限為 5 人。
-- 執行抽籤，確認結果表格與統計資料正確更新。
-- 切換深淺色主題後重新整理，確認設定可保留。
-- 驗證一鍵複製與快捷鍵（`Enter`、`c`）行為正常。
-
-若未來拆出可重用模組或複雜邏輯，請新增測試目錄（例如：`tests/`）並補上執行方式。
+- `npm test` 必須通過。
+- 手動測試 `add/remove/list/draw/stats/from-voice`。
+- `from-voice` 需確認：發令者在語音頻道、bot 不會被加入、上限 5 人生效。
+- 語法檢查可用：`node --check src/index.js`（或檢查全部 `.js`）。
 
 ## Commit 與 Pull Request 規範
 延續現有提交風格：簡短、祈使句、動詞開頭（例如：`Revamp UI and interactions`、`Sort stats by draw count`）。
 
 PR 請包含：
 - 變更內容與目的。
-- UI 調整的前後截圖或短影片。
-- 主要流程的手動測試紀錄。
+- 若改動指令，附上新增/變更的 slash command 清單。
+- 主要流程手動測試紀錄（含 `from-voice` 情境）。
 - 對應 issue / 任務連結（如有）。

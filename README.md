@@ -1,53 +1,36 @@
-# LOL Discord 抽籤機器人
+# LOL 抽籤工具（Web + Discord Bot）
 
-此專案在原本網頁抽籤邏輯基礎上，新增 Discord Slash Command 機器人版本。
+本專案目前有兩種型態：
 
-## 功能
-- 候選名單管理：`/pool add|remove|list|from-voice|clear`
-- 抽籤：`/draw`
-- 統計：`/stats [name]`、`/resetstats`
-- 抽籤規則與網頁版一致：
-  - 最多 5 人
-  - 主位隨機分配
-  - 少於 5 人時分配副位，且主副組合不可重複
-  - 統計加權：主位 +1、副位 +0.5
+1. **Web 單頁版**：[`英雄聯盟抽籤.html`](./英雄聯盟抽籤.html)
+2. **Discord Bot 版**：Slash Commands + SQLite（沿用相同抽籤邏輯）
 
-## 環境需求
-- Node.js 20+
-- Discord Bot Token 與應用程式設定
-- Discord Developer Portal 開啟 `Server Members Intent`
+## 快速選擇你要用的型態
 
-## 安裝
+### A. Web 單頁版
+- 直接開啟 `英雄聯盟抽籤.html` 即可使用
+- 適合本機快速抽籤、免安裝
+
+### B. Discord Bot 版
+- 提供 `/pool`、`/draw`、`/stats` 等指令
+- 支援 `/pool from-voice`（從目前語音頻道匯入成員）
+- 完整人類使用手冊請看：[`README_DISCORD_BOT.md`](./README_DISCORD_BOT.md)
+
+## Discord Bot 最短啟動步驟
 ```bash
 npm install
 cp .env.example .env
-```
-
-請填入 `.env`：
-- `DISCORD_TOKEN`
-- `CLIENT_ID`
-- `GUILD_ID`
-- `DB_PATH`（可保留預設 `./data/bot.sqlite`）
-
-## 註冊指令
-```bash
 npm run register
-```
-
-### 主要指令範例
-- `/pool add name:小明`
-- `/pool add member:@小明`
-- `/pool from-voice`（從你目前語音頻道匯入真人成員）
-- `/pool list`
-- `/draw`
-- `/stats`
-
-## 啟動機器人
-```bash
 npm run start
 ```
 
-## 測試
+`.env` 必填：
+- `DISCORD_TOKEN`
+- `CLIENT_ID`
+- `GUILD_ID`
+- `DB_PATH`（預設 `./data/bot.sqlite`）
+
+## 開發與測試
 ```bash
 npm test
 ```
