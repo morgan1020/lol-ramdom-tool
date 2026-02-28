@@ -10,13 +10,9 @@ Key rules:
 - Stats weighting: main `+1`, secondary `+0.5`
 
 ## Core Commands
-- `/pool add name:<text>`
-- `/pool add member:@user`
-- `/pool remove name:<text>`
+- `/pool ui` (ephemeral 互動面板：抽籤 / 選擇加入 / 選擇刪除 / 匯入語音；抽籤結果會公開發佈到頻道)
 - `/pool list`
-- `/pool from-voice` (imports non-bot members from requester's current voice channel)
 - `/pool clear` (manager only)
-- `/draw`
 - `/stats [name]`
 - `/resetstats` (manager only)
 
@@ -46,7 +42,7 @@ Key rules:
 
 ## Validation Checklist
 1. `npm test` passes.
-2. `/pool from-voice` fails when requester is not in voice.
-3. `/pool from-voice` imports only human users.
-4. Pool never exceeds 5 players.
-5. `/draw` and `/stats` update correctly after import.
+2. `/pool ui` 的 `匯入語音` 在 requester 不在語音時會失敗。
+3. `/pool ui` 的 `匯入語音` 只匯入真人（不含 bot）。
+4. `/pool ui` 的 `抽籤` 在候選名單 > 5 人時會阻擋並提示需刪除人數。
+5. `/pool ui` 的 `抽籤` 執行後 `/stats` 更新正確。
