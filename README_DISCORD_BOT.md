@@ -9,6 +9,39 @@ Key rules:
 - Secondary role for `<5` players, with unique main+secondary combinations
 - Stats weighting: main `+1`, secondary `+0.5`
 
+## Flow
+```mermaid
+flowchart TD
+  A[使用者輸入 /pool ui] --> B[顯示私密 UI 主面板]
+
+  B --> C[選擇加入]
+  B --> D[選擇刪除]
+  B --> E[匯入語音]
+  B --> F[抽籤]
+
+  C --> G[從伺服器成員中選人]
+  G --> H[加入候選名單並更新 UI]
+
+  D --> I[從候選名單中選人]
+  I --> J[刪除候選玩家並更新 UI]
+
+  E --> K[讀取目前語音頻道成員]
+  K --> L[過濾 bot 後加入候選名單]
+  L --> M[更新 UI]
+
+  F --> N{候選名單是否超過 5 人}
+  N -->|是| O[阻止抽籤並提示還需刪除幾人]
+  N -->|否| P[執行抽籤]
+  P --> Q[更新統計資料]
+  Q --> R[公開發佈抽籤結果到頻道]
+  R --> S[更新私密 UI 主面板]
+
+  O --> S
+  H --> B
+  J --> B
+  M --> B
+```
+
 ## Core Commands
 - `/pool ui` (ephemeral 互動面板：抽籤 / 選擇加入 / 選擇刪除 / 匯入語音；抽籤結果會公開發佈到頻道)
 - `/pool list`
