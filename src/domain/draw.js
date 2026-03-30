@@ -45,13 +45,13 @@ function buildSecondaryRoles(results) {
       result.secondary = choices[randomInt(choices.length)];
     }
 
-    const combinations = results.map((r) => [r.main, r.secondary].sort().join("|"));
-    if (new Set(combinations).size === results.length) {
+    const coveredPositions = new Set(results.flatMap((r) => [r.main, r.secondary]));
+    if (coveredPositions.size >= results.length + 1) {
       return;
     }
   }
 
-  throw new Error("無法生成合法組合，請重試");
+  throw new Error("無法生成符合位置覆蓋條件的結果，請重試");
 }
 
 function drawAssignments(playerNames) {
