@@ -12,9 +12,7 @@
 - 適合本機快速抽籤、免安裝
 
 ### B. Discord Bot 版
-- 提供 `/pool`、`/draw`、`/stats` 等指令
-- 支援 `/pool from-voice`（從目前語音頻道匯入成員）
-- 完整人類使用手冊請看：[`README_DISCORD_BOT.md`](./README_DISCORD_BOT.md)
+- Discord Bot 版的指令、互動流程與部署方式請直接看：[`README_DISCORD_BOT.md`](./README_DISCORD_BOT.md)
 
 ## Discord Bot 最短啟動步驟
 ```bash

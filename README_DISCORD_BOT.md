@@ -4,9 +4,10 @@
 This bot provides League role drawing in Discord using slash commands, reusing the same core logic as the original web tool.
 
 Key rules:
-- Max 5 players per draw pool
+- `匯入語音` 可先把語音頻道成員加入候選名單，即使總數超過 5 人
+- 真正執行抽籤時，候選名單上限仍為 5 人；超過時會先提示刪減
 - Unique main role assignment
-- Secondary role for `<5` players, with unique main+secondary combinations
+- Secondary role for `<5` players, with covered positions >= player count + 1
 - Stats weighting: main `+1`, secondary `+0.5`
 
 ## Flow
@@ -48,6 +49,8 @@ flowchart TD
 - `/pool clear` (manager only)
 - `/stats [name]`
 - `/resetstats` (manager only)
+
+`匯入語音` 是 `/pool ui` 面板中的按鈕操作，不是獨立的 slash command。
 
 ## Runtime Requirements
 - Node.js `20+`
