@@ -437,9 +437,51 @@
       width: 100%;
       max-width: 600px;
       max-height: 80vh;
-      overflow-y: auto;
+      overflow: hidden;
       box-shadow: var(--shadow-lg);
       color: var(--text-main);
+      background-clip: padding-box;
+    }
+
+    .stats-scroll {
+      max-height: calc(80vh - 112px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 8px;
+      margin-right: -8px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+    }
+
+    .stats-scroll::-webkit-scrollbar {
+      width: 12px;
+    }
+
+    .stats-scroll::-webkit-scrollbar-track {
+      background: transparent;
+      margin: 14px 0;
+    }
+
+    .stats-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 999px;
+      border: 3px solid transparent;
+      background-clip: content-box;
+    }
+
+    .stats-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.52);
+      background-clip: content-box;
+    }
+
+    .stats-scroll::-webkit-scrollbar-button {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    .stats-scroll::-webkit-scrollbar-corner {
+      background: transparent;
     }
 
     table {
@@ -550,26 +592,27 @@
   <div class="stats-modal" id="stats-modal">
     <div class="stats-content">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="margin:0;">歷史權重統計</h2>
+        <h2 style="margin:0;">歷史數據</h2>
         <button id="stats-close"
-          style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; transition:0.2s;"
-          onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">×</button>
+          style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; transition:0.2s;">×</button>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>玩家</th>
-            <th>上路</th>
-            <th>打野</th>
-            <th>中路</th>
-            <th>下路</th>
-            <th>輔助</th>
-          </tr>
-        </thead>
-        <tbody id="stats-tbody"></tbody>
-      </table>
-      <div style="text-align:right; margin-top:24px;">
-        <button id="btn-clear-stats" class="btn btn-secondary" style="color:var(--danger);">清空紀錄</button>
+      <div class="stats-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>玩家</th>
+              <th>上路</th>
+              <th>打野</th>
+              <th>中路</th>
+              <th>下路</th>
+              <th>輔助</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+        <div style="text-align:right; margin-top:24px;">
+          <button id="btn-clear-stats" class="btn btn-secondary" style="color:var(--danger);">清空紀錄</button>
+        </div>
       </div>
     </div>
   </div>
@@ -597,7 +640,9 @@
     const iconSun = document.getElementById('icon-sun');
     
     // Check saved theme or system preference
-    const savedTheme = localStorage.getItem('lol-theme');
+    const THEME_KEY = 'lolTheme';
+    const LEGACY_THEME_KEY = 'lol-theme';
+    const savedTheme = localStorage.getItem(THEME_KEY) || localStorage.getItem(LEGACY_THEME_KEY);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     let currentTheme = savedTheme || (prefersDark ? 'dark' : 'light');
     
@@ -610,7 +655,8 @@
         iconMoon.style.display = 'block';
         iconSun.style.display = 'none';
       }
-      localStorage.setItem('lol-theme', theme);
+      localStorage.setItem(THEME_KEY, theme);
+      localStorage.removeItem(LEGACY_THEME_KEY);
     }
     
     applyTheme(currentTheme);
@@ -627,6 +673,10 @@
     const btnEdit = document.getElementById('btn-edit');
     const knownHints = document.getElementById('known-hints');
     const cardsGrid = document.getElementById('cards-grid');
+    const fabStats = document.getElementById('fab-stats');
+    const statsClose = document.getElementById('stats-close');
+    const btnClearStats = document.getElementById('btn-clear-stats');
+    const statsTbody = document.getElementById('stats-tbody');
 
     function toast(msg) {
       const wrap = document.getElementById('toast-wrap');
@@ -639,13 +689,25 @@
 
     function getStats() { return JSON.parse(localStorage.getItem(STORAGE_STATS) || '{}'); }
     function saveStats(s) { localStorage.setItem(STORAGE_STATS, JSON.stringify(s)); }
+    function sortPlayerNames(stats) {
+      return Object.keys(stats).sort((a, b) => {
+        const totalA = positions.reduce((sum, position) => sum + (stats[a]?.[position] || 0), 0);
+        const totalB = positions.reduce((sum, position) => sum + (stats[b]?.[position] || 0), 0);
+        if (totalA !== totalB) return totalB - totalA;
+        return a.localeCompare(b, 'zh-Hant');
+      });
+    }
 
     function renderKnownPlayers() {
       const stats = getStats();
-      const names = Object.keys(stats).sort();
-      knownHints.innerHTML = '';
+      const names = sortPlayerNames(stats);
+      knownHints.replaceChildren();
       if (names.length === 0) {
-        knownHints.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">尚未累積歷史玩家</span>';
+        const empty = document.createElement('span');
+        empty.style.color = 'var(--text-muted)';
+        empty.style.fontSize = '13px';
+        empty.textContent = '尚未累積歷史玩家';
+        knownHints.appendChild(empty);
         return;
       }
       names.forEach(n => {
@@ -653,10 +715,10 @@
         const chip = document.createElement('span');
         chip.className = 'known-chip';
         chip.textContent = n;
-        chip.onclick = () => {
+        chip.addEventListener('click', () => {
           inputEl.value = n;
           addPlayer();
-        };
+        });
         knownHints.appendChild(chip);
       });
     }
@@ -674,12 +736,12 @@
 
       if (hasDrawn) {
         btnEdit.style.display = 'inline-flex';
-        btnDraw.innerHTML = '重新抽籤';
+        btnDraw.textContent = '重新抽籤';
         btnCopy.style.display = 'inline-flex';
         document.body.classList.add('is-drawn');
       } else {
         btnEdit.style.display = 'none';
-        btnDraw.innerHTML = '開始抽籤';
+        btnDraw.textContent = '開始抽籤';
         btnCopy.style.display = 'none';
         document.body.classList.remove('is-drawn');
       }
@@ -689,7 +751,7 @@
     }
 
     function renderCards() {
-      cardsGrid.innerHTML = '';
+      cardsGrid.replaceChildren();
       selectedPlayers.forEach((p, idx) => {
         const card = document.createElement('div');
         card.className = 'player-card';
@@ -700,43 +762,69 @@
           card.classList.add('has-result');
         }
 
-        let resultHTML = '';
-        if (res) {
-          let secondaryHTML = '';
-          if (res.secondary) {
-            secondaryHTML =
-              '<div class="role-divider"></div>' +
-              '<div class="role-col sub-role-col">' +
-              '<span class="role-label">次要</span>' +
-              '<img src="' + posImgUrls[res.secondary] + '" alt="' + res.secondary + '" class="role-icon-img" />' +
-              '<div class="role-name">' + res.secondary + '</div>' +
-              '</div>';
-          }
-
-          let mainLabel = res.secondary ? '<span class="role-label">主要</span>' : '';
-
-          resultHTML =
-            '<div class="card-result">' +
-            '<div class="role-col main-role-col">' +
-            mainLabel +
-            '<img src="' + posImgUrls[res.main] + '" alt="' + res.main + '" class="role-icon-img" />' +
-            '<div class="role-name">' + res.main + '</div>' +
-            '</div>' +
-            secondaryHTML +
-            '</div>';
+        if (!hasDrawn) {
+          const removeButton = document.createElement('button');
+          removeButton.className = 'btn-remove';
+          removeButton.type = 'button';
+          removeButton.title = '移除玩家';
+          removeButton.textContent = '×';
+          removeButton.addEventListener('click', () => removePlayer(p));
+          card.appendChild(removeButton);
         }
 
-        let removeBtn = hasDrawn ? '' : '<button class="btn-remove" title="移除玩家" onclick="removePlayer(\'' + p + '\')">×</button>';
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'card-header';
+        const cardName = document.createElement('div');
+        cardName.className = 'card-name';
+        cardName.textContent = p;
+        cardHeader.appendChild(cardName);
+        card.appendChild(cardHeader);
 
-        card.innerHTML =
-          removeBtn +
-          '<div class="card-header">' +
-          '<div class="card-name">' + p + '</div>' +
-          '</div>' +
-          resultHTML;
+        if (res) {
+          const result = document.createElement('div');
+          result.className = 'card-result';
+          result.appendChild(createRoleColumn('main-role-col', res.main, res.secondary ? '主要' : ''));
+
+          if (res.secondary) {
+            const divider = document.createElement('div');
+            divider.className = 'role-divider';
+            result.appendChild(divider);
+            result.appendChild(createRoleColumn('sub-role-col', res.secondary, '次要'));
+          }
+
+          card.appendChild(result);
+        }
 
         cardsGrid.appendChild(card);
       });
+    }
+
+    function createRoleColumn(extraClass, role, label) {
+      const col = document.createElement('div');
+      col.className = 'role-col ' + extraClass;
+
+      if (label) {
+        const roleLabel = document.createElement('span');
+        roleLabel.className = 'role-label';
+        roleLabel.textContent = label;
+        col.appendChild(roleLabel);
+      }
+
+      const img = document.createElement('img');
+      img.src = posImgUrls[role];
+      img.alt = role;
+      img.className = 'role-icon-img';
+      img.addEventListener('error', () => {
+        img.style.display = 'none';
+      }, { once: true });
+      col.appendChild(img);
+
+      const roleName = document.createElement('div');
+      roleName.className = 'role-name';
+      roleName.textContent = role;
+      col.appendChild(roleName);
+
+      return col;
     }
 
     function addPlayer() {
@@ -757,12 +845,12 @@
       updateUI();
     }
 
-    window.removePlayer = function (name) {
+    function removePlayer(name) {
       selectedPlayers = selectedPlayers.filter(x => x !== name);
       hasDrawn = false;
       drawResults = {};
       updateUI();
-    };
+    }
 
     inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
     btnAdd.addEventListener('click', addPlayer);
@@ -796,6 +884,11 @@
       const names = [...selectedPlayers];
       const pos = [...positions];
 
+      if (names.length > positions.length) {
+        toast('玩家數量超過位置數量');
+        return;
+      }
+
       // Shuffle positions
       for (let i = pos.length - 1; i > 0; i--) {
         const j = cryptoRandom(i + 1);
@@ -812,6 +905,7 @@
       // Assign secondary
       if (names.length < 5) {
         let attempts = 0;
+        let assigned = false;
         while (attempts < 1000) {
           attempts++;
           tempRes.forEach(r => {
@@ -819,7 +913,15 @@
             r.secondary = p[cryptoRandom(p.length)];
           });
           const covered = new Set(tempRes.flatMap(r => [r.main, r.secondary]));
-          if (covered.size >= tempRes.length + 1) break;
+          if (covered.size >= tempRes.length + 1) {
+            assigned = true;
+            break;
+          }
+        }
+        if (!assigned) {
+          toast('無法生成符合條件的結果，請重試');
+          updateUI();
+          return;
         }
       }
 
@@ -853,15 +955,23 @@
           }
         }
       });
-      navigator.clipboard.writeText(text.trim()).then(() => toast('抽籤結果已複製！'));
+      navigator.clipboard.writeText(text.trim())
+        .then(() => toast('抽籤結果已複製！'))
+        .catch(() => toast('無法複製到剪貼簿'));
     });
 
     // --- 快捷鍵設定 ---
     document.addEventListener('keydown', (e) => {
       const isInputActive = document.activeElement === inputEl;
+      const isModalOpen = modal.classList.contains('open');
+
+      if (e.key === 'Escape' && isModalOpen) {
+        modal.classList.remove('open');
+        return;
+      }
 
       // Enter: 抽籤 / 重新抽籤
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !isModalOpen) {
         // 如果輸入框內有文字且正在焦點上，讓加入玩家的事件優先處理
         if (isInputActive && inputEl.value.trim() !== '') {
           return;
@@ -873,7 +983,7 @@
       }
 
       // C: 複製抽籤結果 (非輸入狀態)
-      if (e.key.toLowerCase() === 'c' && !isInputActive) {
+      if (e.key.toLowerCase() === 'c' && !isInputActive && !isModalOpen) {
         e.preventDefault();
         if (btnCopy.style.display !== 'none' && !btnCopy.disabled) {
           btnCopy.click();
@@ -883,23 +993,40 @@
 
     // Stats Modal
     const modal = document.getElementById('stats-modal');
-    document.getElementById('fab-stats').onclick = () => { renderStats(); modal.classList.add('open'); };
-    document.getElementById('stats-close').onclick = () => modal.classList.remove('open');
+    fabStats.addEventListener('click', () => {
+      renderStats();
+      modal.classList.add('open');
+    });
+    statsClose.addEventListener('click', () => modal.classList.remove('open'));
+    statsClose.addEventListener('mouseenter', () => {
+      statsClose.style.color = 'white';
+    });
+    statsClose.addEventListener('mouseleave', () => {
+      statsClose.style.color = 'var(--text-muted)';
+    });
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.classList.remove('open');
     });
-    document.getElementById('btn-clear-stats').onclick = () => {
-      if (confirm('清空紀錄？')) { localStorage.removeItem(STORAGE_STATS); renderStats(); renderKnownPlayers(); }
-    };
+    btnClearStats.addEventListener('click', () => {
+      if (confirm('清空紀錄？')) {
+        localStorage.removeItem(STORAGE_STATS);
+        renderStats();
+        renderKnownPlayers();
+      }
+    });
 
     function renderStats() {
       const stats = getStats();
-      const tbody = document.getElementById('stats-tbody');
-      tbody.innerHTML = '';
-      Object.keys(stats).sort().forEach(n => {
+      statsTbody.replaceChildren();
+      sortPlayerNames(stats).forEach(n => {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td>' + n + '</td><td>' + stats[n]['上路'] + '</td><td>' + stats[n]['打野'] + '</td><td>' + stats[n]['中路'] + '</td><td>' + stats[n]['下路'] + '</td><td>' + stats[n]['輔助'] + '</td>';
-        tbody.appendChild(tr);
+        const values = [n, stats[n]['上路'], stats[n]['打野'], stats[n]['中路'], stats[n]['下路'], stats[n]['輔助']];
+        values.forEach(value => {
+          const td = document.createElement('td');
+          td.textContent = String(value);
+          tr.appendChild(td);
+        });
+        statsTbody.appendChild(tr);
       });
     }
 
