@@ -348,6 +348,25 @@
       flex-direction: column;
       gap: 6px;
       margin-top: 14px;
+      position: relative;
+    }
+
+    .preferred-role-control::after {
+      content: "";
+      position: absolute;
+      right: 14px;
+      bottom: 15px;
+      width: 7px;
+      height: 7px;
+      border-right: 1.5px solid var(--text-muted);
+      border-bottom: 1.5px solid var(--text-muted);
+      pointer-events: none;
+      transform: rotate(45deg);
+      transition: border-color 0.15s;
+    }
+
+    .preferred-role-control:focus-within::after {
+      border-color: var(--text-main);
     }
 
     .preferred-role-label {
@@ -357,6 +376,8 @@
     }
 
     .preferred-role-select {
+      appearance: none;
+      -webkit-appearance: none;
       width: 100%;
       min-height: 38px;
       border: 1px solid var(--border-color);
@@ -364,7 +385,8 @@
       background: var(--input-bg);
       color: var(--text-main);
       font-size: 14px;
-      padding: 0 10px;
+      line-height: 38px;
+      padding: 0 34px 0 12px;
       outline: none;
       transition: border-color 0.15s, background-color 0.15s;
     }
