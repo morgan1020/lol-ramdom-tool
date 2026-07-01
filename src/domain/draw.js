@@ -1,6 +1,7 @@
 const { randomInt } = require('node:crypto');
 
 const positions = ["上路", "打野", "中路", "下路", "輔助"];
+const SECONDARY_ROLE_ERROR_MESSAGE = "無法生成符合副位路線唯一性與位置覆蓋條件的結果，請重試";
 
 function shuffle(arr) {
   const copy = [...arr];
@@ -36,22 +37,47 @@ function validatePlayers(playerNames) {
   return cleaned;
 }
 
+function createRouteKey(main, secondary) {
+  return [main, secondary].sort((a, b) => a.localeCompare(b, 'zh-Hant')).join('|');
+}
+
+function canCoverEnoughPositions(results) {
+  const coveredPositions = new Set(results.flatMap((r) => [r.main, r.secondary]));
+  return coveredPositions.size >= results.length + 1;
+}
+
 function buildSecondaryRoles(results) {
-  const maxAttempts = 1000;
+  const usedRouteKeys = new Set();
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    for (const result of results) {
-      const choices = positions.filter((pos) => pos !== result.main);
-      result.secondary = choices[randomInt(choices.length)];
+  function assignAt(index) {
+    if (index === results.length) {
+      return canCoverEnoughPositions(results);
     }
 
-    const coveredPositions = new Set(results.flatMap((r) => [r.main, r.secondary]));
-    if (coveredPositions.size >= results.length + 1) {
-      return;
+    const result = results[index];
+    const choices = shuffle(positions.filter((pos) => pos !== result.main));
+    for (const secondary of choices) {
+      const routeKey = createRouteKey(result.main, secondary);
+      if (usedRouteKeys.has(routeKey)) {
+        continue;
+      }
+
+      result.secondary = secondary;
+      usedRouteKeys.add(routeKey);
+      if (assignAt(index + 1)) {
+        return true;
+      }
+      usedRouteKeys.delete(routeKey);
+      result.secondary = "";
     }
+
+    result.secondary = "";
+    return false;
   }
 
-  throw new Error("無法生成符合位置覆蓋條件的結果，請重試");
+  if (!assignAt(0)) {
+    throw new Error(SECONDARY_ROLE_ERROR_MESSAGE);
+  }
 }
 
 function drawAssignments(playerNames) {
@@ -74,5 +100,6 @@ function drawAssignments(playerNames) {
 module.exports = {
   positions,
   drawAssignments,
-  validatePlayers
+  validatePlayers,
+  SECONDARY_ROLE_ERROR_MESSAGE
 };

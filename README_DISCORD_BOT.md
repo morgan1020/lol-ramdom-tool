@@ -8,6 +8,7 @@ Key rules:
 - 真正執行抽籤時，候選名單上限仍為 5 人；超過時會先提示刪減
 - Unique main role assignment
 - Secondary role for `<5` players, with covered positions >= player count + 1
+- Any two players must not share the same unordered `{main, secondary}` role pair
 - Stats weighting: main `+1`, secondary `+0.5`
 
 ## Flow

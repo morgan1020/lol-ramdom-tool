@@ -1095,6 +1095,56 @@
       return array[0] % max;
     }
 
+    function shuffleList(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = cryptoRandom(i + 1);
+        const temp = copy[i];
+        copy[i] = copy[j];
+        copy[j] = temp;
+      }
+      return copy;
+    }
+
+    function createRouteKey(main, secondary) {
+      return [main, secondary].sort((a, b) => a.localeCompare(b, 'zh-Hant')).join('|');
+    }
+
+    function buildSecondaryRoles(results) {
+      const usedRouteKeys = new Set();
+
+      function canCoverEnoughPositions() {
+        const covered = new Set(results.flatMap(result => [result.main, result.secondary]));
+        return covered.size >= results.length + 1;
+      }
+
+      function assignAt(index) {
+        if (index === results.length) {
+          return canCoverEnoughPositions();
+        }
+
+        const result = results[index];
+        const choices = shuffleList(positions.filter(position => position !== result.main));
+        for (const secondary of choices) {
+          const routeKey = createRouteKey(result.main, secondary);
+          if (usedRouteKeys.has(routeKey)) continue;
+
+          result.secondary = secondary;
+          usedRouteKeys.add(routeKey);
+          if (assignAt(index + 1)) {
+            return true;
+          }
+          usedRouteKeys.delete(routeKey);
+          result.secondary = '';
+        }
+
+        result.secondary = '';
+        return false;
+      }
+
+      return assignAt(0);
+    }
+
     btnDraw.addEventListener('click', () => {
       if (selectedPlayers.length === 0) return;
 
@@ -1124,40 +1174,22 @@
         return;
       }
 
-      const remainingPositions = positions.filter(position => !constrainedRoles.includes(position));
-      for (let i = remainingPositions.length - 1; i > 0; i--) {
-        const j = cryptoRandom(i + 1);
-        const temp = remainingPositions[i];
-        remainingPositions[i] = remainingPositions[j];
-        remainingPositions[j] = temp;
-      }
+      const shuffledRemainingPositions = shuffleList(
+        positions.filter(position => !constrainedRoles.includes(position))
+      );
 
       const tempRes = [];
       let nextRandomPosition = 0;
       names.forEach(name => {
         const preferredRole = preferredRoles[name];
-        const main = preferredRole || remainingPositions[nextRandomPosition++];
+        const main = preferredRole || shuffledRemainingPositions[nextRandomPosition++];
         tempRes.push({ name, main, secondary: '' });
       });
 
       // Assign secondary
       if (names.length < 5) {
-        let attempts = 0;
-        let assigned = false;
-        while (attempts < 1000) {
-          attempts++;
-          tempRes.forEach(r => {
-            const p = positions.filter(x => x !== r.main);
-            r.secondary = p[cryptoRandom(p.length)];
-          });
-          const covered = new Set(tempRes.flatMap(r => [r.main, r.secondary]));
-          if (covered.size >= tempRes.length + 1) {
-            assigned = true;
-            break;
-          }
-        }
-        if (!assigned) {
-          toast('無法生成符合條件的結果，請重試');
+        if (!buildSecondaryRoles(tempRes)) {
+          toast('無法生成符合副位路線唯一性與位置覆蓋條件的結果，請重試');
           updateUI();
           return;
         }

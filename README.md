@@ -10,6 +10,7 @@
 ### A. Web 單頁版
 - 直接開啟 `英雄聯盟抽籤.html` 即可使用
 - 適合本機快速抽籤、免安裝
+- 抽籤規則：主位不重複；少於 5 人時才分配副位，且任意兩位玩家的 `{主位, 副位}` 無序組合不得重複
 
 ### B. Discord Bot 版
 - Discord Bot 版的指令、互動流程與部署方式請直接看：[`README_DISCORD_BOT.md`](./README_DISCORD_BOT.md)
