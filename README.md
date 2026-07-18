@@ -24,6 +24,21 @@ npm run build
 npm run preview
 ```
 
+## Cloudflare Pages 部署
+
+此專案是純靜態 Vite 網站，建置完成的 `dist/` 可直接部署至 Cloudflare Pages。
+
+1. 在 Cloudflare Dashboard 開啟 **Workers & Pages**，選擇 **Create application** → **Pages** → **Connect to Git**。
+2. 連接 GitHub 後選擇此 repository；即使是私人 GitHub repository，也可以透過 Cloudflare Pages Git integration 部署。
+3. 在建置設定填入：
+   - **Framework preset**：`Vite`
+   - **Build command**：`npm run build`
+   - **Build output directory**：`dist`
+   - **Production branch**：`main`
+4. 儲存並開始部署。之後推送至 `main` 的 commit 會建立 production deployment；其他分支可建立 preview deployment。
+
+此網站不需要 Cloudflare 環境變數或 API key。請勿把 `.env`、token 或其他機密提交到 Git。
+
 ## 測試
 
 ```bash

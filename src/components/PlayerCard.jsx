@@ -1,12 +1,17 @@
 import React from 'react';
 import { positions } from '../domain/draw.js';
+import bottomIcon from '../../assets/roles/Bottom_icon.png';
+import jungleIcon from '../../assets/roles/Jungle_icon.png';
+import middleIcon from '../../assets/roles/Middle_icon.png';
+import supportIcon from '../../assets/roles/Support_icon.png';
+import topIcon from '../../assets/roles/Top_icon.png';
 
 const roleAssets = {
-  上路: '/assets/roles/Top_icon.png',
-  打野: '/assets/roles/Jungle_icon.png',
-  中路: '/assets/roles/Middle_icon.png',
-  下路: '/assets/roles/Bottom_icon.png',
-  輔助: '/assets/roles/Support_icon.png'
+  上路: topIcon,
+  打野: jungleIcon,
+  中路: middleIcon,
+  下路: bottomIcon,
+  輔助: supportIcon
 };
 
 function RoleColumn({ role, label }) {
