@@ -1,6 +1,6 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { drawAssignments } = require('../src/domain/draw');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { drawAssignments } from '../src/domain/draw.js';
 
 function createRouteKey(main, secondary) {
   return [main, secondary].sort((a, b) => a.localeCompare(b, 'zh-Hant')).join('|');
@@ -71,4 +71,19 @@ test('0 人會拋錯', () => {
 
 test('超過 5 人會拋錯', () => {
   assert.throws(() => drawAssignments(['A', 'B', 'C', 'D', 'E', 'F']), /上限 5 人/);
+});
+
+test('可指定玩家偏好主位且其他玩家主位仍不重複', () => {
+  const result = drawAssignments(['A', 'B', 'C'], { B: '中路' });
+  const byName = Object.fromEntries(result.map((row) => [row.name, row]));
+
+  assert.equal(byName.B.main, '中路');
+  assert.equal(new Set(result.map((row) => row.main)).size, result.length);
+});
+
+test('重複指定相同偏好主位會拋錯', () => {
+  assert.throws(
+    () => drawAssignments(['A', 'B'], { A: '上路', B: '上路' }),
+    /指定位置重複：上路/
+  );
 });

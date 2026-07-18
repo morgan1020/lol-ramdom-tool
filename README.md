@@ -1,35 +1,40 @@
-# LOL 抽籤工具（Web + Discord Bot）
+# LOL 抽籤工具
 
-本專案目前有兩種型態：
+React + Vite 版英雄聯盟位置抽籤工具。此專案現在只維護靜態 Web 版本，不再包含 Discord Bot 技術路線。
 
-1. **Web 單頁版**：[`英雄聯盟抽籤.html`](./英雄聯盟抽籤.html)
-2. **Discord Bot 版**：Slash Commands + SQLite（沿用相同抽籤邏輯）
+## 功能
 
-## 快速選擇你要用的型態
+- 最多 5 位玩家抽籤，主位不重複。
+- 少於 5 人時會分配副位，並避免任兩位玩家出現相同的 `{主位, 副位}` 無序組合。
+- 可為玩家指定偏好主位；若多人指定相同位置會阻擋抽籤。
+- 歷史玩家、統計紀錄、深淺色偏好會保存在瀏覽器 localStorage。
+- 支援統計視窗、清空紀錄、複製結果與快捷鍵。
 
-### A. Web 單頁版
-- 直接開啟 `英雄聯盟抽籤.html` 即可使用
-- 適合本機快速抽籤、免安裝
-- 抽籤規則：主位不重複；少於 5 人時才分配副位，且任意兩位玩家的 `{主位, 副位}` 無序組合不得重複
+## 開發
 
-### B. Discord Bot 版
-- Discord Bot 版的指令、互動流程與部署方式請直接看：[`README_DISCORD_BOT.md`](./README_DISCORD_BOT.md)
-
-## Discord Bot 最短啟動步驟
 ```bash
 npm install
-cp .env.example .env
-npm run register
-npm run start
+npm run dev
 ```
 
-`.env` 必填：
-- `DISCORD_TOKEN`
-- `CLIENT_ID`
-- `GUILD_ID`
-- `DB_PATH`（預設 `./data/bot.sqlite`）
+## 建置
 
-## 開發與測試
+```bash
+npm run build
+npm run preview
+```
+
+## 測試
+
 ```bash
 npm test
 ```
+
+## localStorage 相容性
+
+React 版沿用舊版單頁工具的 key：
+
+- 統計：`lolDrawStats`
+- 主題：`lolTheme`
+
+若瀏覽器內仍有舊主題 key `lol-theme`，第一次儲存主題時會移除。
