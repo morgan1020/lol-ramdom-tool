@@ -1,31 +1,24 @@
 import React from 'react';
 
-export function PlayerInput({ value, playerCount, hasDrawn, disabled, onChange, onAdd, onEdit, onDraw, onCopy }) {
+export function PlayerInput({ value, playerCount, disabled, onChange, onAdd }) {
   return (
-    <div className="input-group">
-      <input
+    <div className="player-input">
+      <label className="field-label" htmlFor="player-name">新增玩家</label>
+      <div className="input-group">
+        <input
+          id="player-name"
         type="text"
         value={value}
-        disabled={disabled || hasDrawn}
-        placeholder={`輸入玩家名稱... (目前 ${playerCount}/5)`}
+        disabled={disabled}
+        placeholder={`輸入玩家名稱（${playerCount}/5）`}
         autoComplete="off"
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') onAdd();
         }}
-      />
-      {!hasDrawn && (
-        <button className="btn btn-primary" type="button" onClick={onAdd}>加入玩家</button>
-      )}
-      {hasDrawn && (
-        <button className="btn btn-secondary" type="button" onClick={onEdit}>修改名單</button>
-      )}
-      <button className="btn btn-primary" type="button" disabled={playerCount === 0} onClick={onDraw}>
-        {hasDrawn ? '重新抽籤' : '開始抽籤'}
-      </button>
-      {hasDrawn && (
-        <button className="btn btn-secondary" type="button" onClick={onCopy}>複製結果</button>
-      )}
+        />
+        <button className="btn btn-secondary" type="button" disabled={disabled} onClick={onAdd}>加入</button>
+      </div>
     </div>
   );
 }
