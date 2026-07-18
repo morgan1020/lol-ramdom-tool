@@ -39,6 +39,14 @@ npm run preview
 
 此網站不需要 Cloudflare 環境變數或 API key。請勿把 `.env`、token 或其他機密提交到 Git。
 
+## 快捷鍵
+
+僅在抽籤結果頁可使用：
+
+- `Z`：修改名單
+- `X`：修改偏好
+- `C`：複製結果
+- `Enter`：再抽一次
 ## 測試
 
 ```bash

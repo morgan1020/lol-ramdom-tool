@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { drawAssignments } from './domain/draw.js';
 import { formatCopyText } from './domain/copyFormat.js';
+import { getResultShortcutAction } from './domain/resultShortcuts.js';
 import { applyDrawToStats, ensurePlayerStats, sortPlayerNames } from './domain/stats.js';
 import { clearStats, loadStats, saveStats } from './storage/localStats.js';
 import { loadTheme, saveTheme } from './storage/theme.js';
@@ -82,6 +83,29 @@ export default function App() {
     try { await navigator.clipboard.writeText(formatCopyText(Object.values(drawResults))); toast('抽籤結果已複製！'); }
     catch { toast('無法複製到剪貼簿'); }
   };
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const isInteractiveTarget = event.target instanceof Element && Boolean(event.target.closest('button, input, select, textarea, [contenteditable="true"]'));
+      const action = getResultShortcutAction({
+        key: event.key,
+        step,
+        isStatsOpen,
+        isDrawing,
+        hasModifier: event.ctrlKey || event.metaKey || event.altKey || event.shiftKey,
+        isInteractiveTarget
+      });
+      if (!action) return;
+
+      event.preventDefault();
+      if (action === 'roster') setStep('roster');
+      if (action === 'preferences') setStep('preferences');
+      if (action === 'copy') handleCopy();
+      if (action === 'draw') handleDraw();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [step, isStatsOpen, isDrawing, handleCopy, handleDraw]);
   const knownNames = useMemo(() => {
     const names = sortPlayerNames(stats);
     return [...selectedPlayers.filter((name) => names.includes(name)), ...selectedPlayers.filter((name) => !names.includes(name)), ...names.filter((name) => !selectedPlayers.includes(name))];

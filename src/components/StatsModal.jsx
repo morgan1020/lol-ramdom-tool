@@ -35,7 +35,7 @@ export function StatsModal({ open, stats, onClose, onClear }) {
             </tbody>
           </table>
         </div>
-        <div className="stats-actions">
+        <div className="stats-actions"><p className="shortcut-hint">快捷鍵：<kbd>Z</kbd> 修改名單 <kbd>X</kbd> 修改偏好 <kbd>C</kbd> 複製結果 <kbd>Enter</kbd> 再抽一次</p>
           <button className="btn btn-secondary btn-danger-text" type="button" onClick={onClear}>清空紀錄</button>
         </div>
       </section>
