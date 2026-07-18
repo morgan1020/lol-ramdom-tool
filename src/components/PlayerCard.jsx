@@ -16,7 +16,7 @@ function RoleColumn({ role, label }) {
 export function PlayerCard({ player, result, preferredRole, hasDrawn, unavailableRoles = [], onRemove, onPreferredRoleChange }) {
   return <article className={result ? 'player-card has-result' : 'player-card'}>
     {!hasDrawn && onRemove && <button className="btn-remove" type="button" title="移除玩家" aria-label={`移除 ${player}`} onClick={() => onRemove(player)}>×</button>}
-    <div className="card-header"><div className="card-name">{player}</div></div>
+    <div className="card-header"><span className="card-kicker">召喚師</span><div className="card-name">{player}</div></div>
     {!hasDrawn && <div className="preferred-role-control"><span>偏好主位 <em>可略過</em></span><div className="role-picker" role="group" aria-label={`${player} 的偏好主位`}>
       <button className={preferredRole ? 'role-choice' : 'role-choice is-selected'} type="button" onClick={() => onPreferredRoleChange(player, '')}>隨機</button>
       {positions.map((position) => {

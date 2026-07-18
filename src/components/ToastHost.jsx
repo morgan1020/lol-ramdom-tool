@@ -4,7 +4,7 @@ export function ToastHost({ toasts }) {
   return (
     <div className="toast-wrap" aria-live="polite" aria-atomic="true">
       {toasts.map((toast) => (
-        <div className="toast" key={toast.id}>{toast.message}</div>
+        <div className="toast" key={toast.id}><span className="toast-mark" aria-hidden="true">✓</span>{toast.message}</div>
       ))}
     </div>
   );
