@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import championData from './data/champions.json';
 import { drawAssignments } from './domain/draw.js';
 import { formatCopyText } from './domain/copyFormat.js';
 import { getResultShortcutAction } from './domain/resultShortcuts.js';
@@ -6,6 +7,7 @@ import { applyDrawToStats, ensurePlayerStats, sortPlayerNames } from './domain/s
 import { clearStats, loadStats, saveStats } from './storage/localStats.js';
 import { loadTheme, saveTheme } from './storage/theme.js';
 import { KnownPlayers } from './components/KnownPlayers.jsx';
+import { ChampionDrawPanel } from './components/ChampionDrawPanel.jsx';
 import { PlayerCard } from './components/PlayerCard.jsx';
 import { PlayerInput } from './components/PlayerInput.jsx';
 import { StatsModal } from './components/StatsModal.jsx';
@@ -17,6 +19,11 @@ const steps = [
   { id: 'roster', label: '組隊', description: '選擇這次要一起玩的玩家' },
   { id: 'preferences', label: '偏好', description: '設定想玩的主位，也可以略過' },
   { id: 'result', label: '揭曉', description: '查看這次的分路結果' }
+];
+
+const toolModes = [
+  { id: 'roles', label: '抽分路' },
+  { id: 'champions', label: '抽英雄' }
 ];
 
 function getInitialTheme() {
@@ -31,6 +38,7 @@ function Stepper({ current }) {
 
 export default function App() {
   const [theme, setTheme] = useState(getInitialTheme);
+  const [toolMode, setToolMode] = useState('roles');
   const [step, setStep] = useState('roster');
   const [inputValue, setInputValue] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState([]);
@@ -111,13 +119,19 @@ export default function App() {
     return [...selectedPlayers.filter((name) => names.includes(name)), ...selectedPlayers.filter((name) => !names.includes(name)), ...names.filter((name) => !selectedPlayers.includes(name))];
   }, [selectedPlayers, stats]);
   const current = steps.find((item) => item.id === step);
+  const changeToolMode = (nextMode) => {
+    setToolMode(nextMode);
+    if (nextMode === 'champions') setStatsOpen(false);
+  };
 
   return <div className={`app step-${step}`}><main className="container">
-    <header className="app-header"><div className="page-title"><span className="eyebrow">League of Legends</span><h1>英雄聯盟抽籤</h1></div><div className="header-actions"><button className="icon-button" type="button" title="歷史統計" aria-label="歷史統計" onClick={() => setStatsOpen(true)}>⌁</button><ThemeToggle theme={theme} onToggle={() => setTheme((value) => value === 'light' ? 'dark' : 'light')} /></div></header>
-    <Stepper current={step} />
+    <header className="app-header"><div className="page-title"><span className="eyebrow">League of Legends</span><h1>英雄聯盟抽籤</h1></div><div className="header-actions">{toolMode === 'roles' && <button className="icon-button" type="button" title="歷史統計" aria-label="歷史統計" onClick={() => setStatsOpen(true)}>⌁</button>}<ThemeToggle theme={theme} onToggle={() => setTheme((value) => value === 'light' ? 'dark' : 'light')} /></div></header>
+    <nav className="tool-mode-toggle" aria-label="工具模式" role="tablist">{toolModes.map((mode) => <button key={mode.id} className={toolMode === mode.id ? 'mode-choice is-selected' : 'mode-choice'} type="button" role="tab" aria-selected={toolMode === mode.id} onClick={() => changeToolMode(mode.id)}>{mode.label}</button>)}</nav>
+    {toolMode === 'roles' && <><Stepper current={step} />
     <section className="flow-heading"><span>步驟 {steps.findIndex((item) => item.id === step) + 1} / 3</span><h2>{current.label}</h2><p>{current.description}</p></section>
     {step === 'roster' && <section className="flow-panel roster-flow"><PlayerInput value={inputValue} playerCount={selectedPlayers.length} disabled={selectedPlayers.length >= 5} onChange={setInputValue} onAdd={() => addPlayerName(inputValue)} /><div className="known-section"><h3>最近使用的玩家</h3><KnownPlayers names={knownNames} selectedPlayers={selectedPlayers} onToggle={(name) => selectedPlayers.includes(name) ? removePlayer(name) : addPlayerName(name)} /></div><div className="roster-summary"><div><span>本次隊伍</span><strong>{selectedPlayers.length} <small>/ 5 人</small></strong></div>{selectedPlayers.length === 0 ? <p>先加入至少一位玩家，即可繼續。</p> : <div className="roster-names">{selectedPlayers.map((name) => <button key={name} type="button" onClick={() => removePlayer(name)}>{name}<span>×</span></button>)}</div>}</div><div className="flow-actions"><button className="btn btn-primary btn-large" type="button" disabled={selectedPlayers.length === 0} onClick={() => setStep('preferences')}>下一步：設定偏好</button></div></section>}
     {step === 'preferences' && <section className="flow-panel preferences-flow" aria-busy={isDrawing}><div className={isDrawing ? 'cards-grid is-drawing' : 'cards-grid'}>{selectedPlayers.map((name) => <PlayerCard key={name} player={name} preferredRole={preferredRoles[name]} unavailableRoles={Object.values(preferredRoles)} hasDrawn={false} onPreferredRoleChange={updatePreferredRole} />)}</div>{isDrawing && <p className="draw-status" role="status">正在為隊伍安排最佳分路…</p>}<div className="flow-actions split-actions"><button className="btn btn-secondary" type="button" disabled={isDrawing} onClick={() => setStep('roster')}>返回修改名單</button><button className="btn btn-primary btn-large" type="button" disabled={isDrawing} onClick={handleDraw}>{isDrawing ? '抽籤中…' : '開始抽籤'}</button></div></section>}
-    {step === 'result' && <section className="flow-panel result-flow" key={revealVersion}>{drawCompletedAt && <p className="draw-completed-at">抽籤時間：{drawCompletedAt.toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })}</p>}<div className="cards-grid result-grid">{selectedPlayers.map((name) => <PlayerCard key={name} player={name} result={drawResults[name]} hasDrawn />)}</div><div className="flow-actions result-actions"><button className="btn btn-secondary" type="button" onClick={() => setStep('roster')}>修改名單</button><button className="btn btn-secondary" type="button" onClick={() => setStep('preferences')}>修改偏好</button><button className="btn btn-secondary" type="button" onClick={handleCopy}>複製結果</button><button className="btn btn-primary btn-large" type="button" onClick={handleDraw}>再抽一次</button></div></section>}
-  </main><StatsModal open={isStatsOpen} stats={stats} onClose={() => setStatsOpen(false)} onClear={() => { if (window.confirm('清空紀錄？')) { clearStats(); setStats({}); setStatsOpen(false); toast('統計紀錄已清空'); } }} /><ToastHost toasts={toasts} /></div>;
+    {step === 'result' && <section className="flow-panel result-flow" key={revealVersion}>{drawCompletedAt && <p className="draw-completed-at">抽籤時間：{drawCompletedAt.toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })}</p>}<div className="cards-grid result-grid">{selectedPlayers.map((name) => <PlayerCard key={name} player={name} result={drawResults[name]} hasDrawn />)}</div><div className="flow-actions result-actions"><button className="btn btn-secondary" type="button" onClick={() => setStep('roster')}>修改名單</button><button className="btn btn-secondary" type="button" onClick={() => setStep('preferences')}>修改偏好</button><button className="btn btn-secondary" type="button" onClick={handleCopy}>複製結果</button><button className="btn btn-primary btn-large" type="button" onClick={handleDraw}>再抽一次</button></div></section>}</>}
+    {toolMode === 'champions' && <ChampionDrawPanel championData={championData} />}
+  </main><footer className="app-footer"><a href="https://developer.riotgames.com/docs/lol#data_dragon" target="_blank" rel="noreferrer">資料來源：Riot Data Dragon</a></footer><StatsModal open={isStatsOpen} stats={stats} onClose={() => setStatsOpen(false)} onClear={() => { if (window.confirm('清空紀錄？')) { clearStats(); setStats({}); setStatsOpen(false); toast('統計紀錄已清空'); } }} /><ToastHost toasts={toasts} /></div>;
 }

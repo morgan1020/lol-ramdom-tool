@@ -1,12 +1,13 @@
 # LOL 抽籤工具
 
-React + Vite 版英雄聯盟位置抽籤工具。此專案現在只維護靜態 Web 版本，不再包含 Discord Bot 技術路線。
+React + Vite 版英雄聯盟抽籤工具。此專案現在只維護靜態 Web 版本，不再包含 Discord Bot 技術路線。
 
 ## 功能
 
 - 最多 5 位玩家抽籤，主位不重複。
 - 少於 5 人時會分配副位，並避免任兩位玩家出現相同的 `{主位, 副位}` 無序組合。
 - 可為玩家指定偏好主位；若多人指定相同位置會阻擋抽籤。
+- 支援獨立的單次抽英雄模式，使用 Riot Data Dragon 的台灣繁體中文資料。
 - 歷史玩家、統計紀錄、深淺色偏好會保存在瀏覽器 localStorage。
 - 支援統計視窗、清空紀錄、複製結果與快捷鍵。
 
@@ -16,6 +17,18 @@ React + Vite 版英雄聯盟位置抽籤工具。此專案現在只維護靜態 
 npm install
 npm run dev
 ```
+
+更新英雄資料：
+
+```bash
+npm run update:champions
+```
+
+更新腳本會讀取 Data Dragon 最新版本的 `zh_TW` 英雄資料，驗證後寫入 `src/data/champions.json`。資料會在 Vite 建置時打包進靜態網站；更新檔案後提交並推送到 Cloudflare Pages 連接的 production branch，即可由 Cloudflare Pages 重新建置上線。若下載或驗證失敗，既有資料不會被覆蓋。
+
+英雄圖片使用對應版本的 Data Dragon CDN。英雄抽籤只使用基本英雄清單，不包含分路限制、玩家偏好、排除名單或英雄統計。
+
+本工具為非官方粉絲工具，未獲 Riot Games 背書。League of Legends 與 Riot Games 為 Riot Games, Inc. 的商標。資料來源：[Riot Data Dragon](https://developer.riotgames.com/docs/lol#data_dragon)。
 
 ## 建置
 
