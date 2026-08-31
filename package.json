@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test",
-    "update:champions": "node scripts/update-champions.mjs"
+    "update:champions": "node scripts/update-champions.mjs",
+    "update:champion-positions": "node scripts/update-champion-positions.mjs"
   },
   "engines": {
     "node": ">=20"

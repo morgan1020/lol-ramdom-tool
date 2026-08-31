@@ -1,45 +1,124 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { drawChampion } from '../domain/drawChampion.js';
+import { preloadImage } from '../domain/preloadImage.js';
+import {
+  CHAMPION_POSITION_KEYS,
+  CHAMPION_POSITION_LABELS,
+  getChampionsForPosition
+} from '../domain/championPositions.js';
 
-export function ChampionDrawPanel({ championData }) {
+export function ChampionDrawPanel({ championData, positionData, selectedPosition, onPositionChange }) {
   const [result, setResult] = useState(null);
+  const [queuedResult, setQueuedResult] = useState(null);
+  const [isPreparing, setIsPreparing] = useState(true);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [revealVersion, setRevealVersion] = useState(0);
+  const [resultImageFailed, setResultImageFailed] = useState(false);
   const [error, setError] = useState('');
+  const prepareRequestId = useRef(0);
+  const revealTimer = useRef(null);
+
+  const prepareNextChampion = useCallback(async (position) => {
+    const requestId = prepareRequestId.current + 1;
+    prepareRequestId.current = requestId;
+    setQueuedResult(null);
+    setIsPreparing(true);
+
+    try {
+      const pool = getChampionsForPosition(championData.champions, positionData, position);
+      const champion = drawChampion(pool);
+      const imageStatus = await preloadImage(champion.imageUrl);
+      if (prepareRequestId.current !== requestId) return;
+
+      setQueuedResult({ champion, imageStatus });
+      setError('');
+    } catch (prepareError) {
+      if (prepareRequestId.current !== requestId) return;
+      setError(prepareError.message || '準備英雄失敗，請重試');
+    } finally {
+      if (prepareRequestId.current === requestId) setIsPreparing(false);
+    }
+  }, [championData, positionData]);
+
+  useEffect(() => {
+    prepareNextChampion(selectedPosition);
+    return () => {
+      prepareRequestId.current += 1;
+    };
+  }, [prepareNextChampion, selectedPosition]);
+
+  useEffect(() => () => clearTimeout(revealTimer.current), []);
 
   const handleDraw = () => {
-    try {
-      setResult(drawChampion(championData.champions));
-      setError('');
-    } catch (drawError) {
-      setResult(null);
-      setError(drawError.message || '抽英雄失敗，請重試');
-    }
+    if (!queuedResult || isPreparing || isRevealing) return;
+
+    clearTimeout(revealTimer.current);
+    setResult(queuedResult.champion);
+    setResultImageFailed(queuedResult.imageStatus === 'error');
+    setRevealVersion((version) => version + 1);
+    setIsRevealing(true);
+    setError('');
+    prepareNextChampion(selectedPosition);
+    revealTimer.current = setTimeout(() => setIsRevealing(false), 240);
   };
+
+  const handlePositionChange = (position) => {
+    clearTimeout(revealTimer.current);
+    setIsRevealing(false);
+    onPositionChange(position);
+    setResult(null);
+    setResultImageFailed(false);
+    setError('');
+    if (position === selectedPosition) prepareNextChampion(position);
+  };
+
+  const selectedPositionLabel = CHAMPION_POSITION_LABELS[selectedPosition];
+  const selectedPoolSize = positionData.positions[selectedPosition].length;
 
   return (
     <section className="champion-flow" aria-labelledby="champion-draw-title">
       <div className="flow-heading">
         <span>獨立模式</span>
         <h2 id="champion-draw-title">抽英雄</h2>
-        <p>從目前版本的全部英雄中，隨機抽出一隻英雄。</p>
+        <p>選擇路線後，從該路線的英雄池隨機抽出一隻英雄。</p>
       </div>
       <div className="champion-panel">
+        <div className="champion-position-picker" role="group" aria-label="選擇英雄路線">
+          {CHAMPION_POSITION_KEYS.map((position) => (
+            <button
+              key={position}
+              className={selectedPosition === position ? 'champion-position is-selected' : 'champion-position'}
+              type="button"
+              aria-pressed={selectedPosition === position}
+              onClick={() => handlePositionChange(position)}
+            >
+              {CHAMPION_POSITION_LABELS[position]}
+            </button>
+          ))}
+        </div>
         {result ? (
-          <article className="champion-result" aria-live="polite">
+          <article key={revealVersion} className="champion-result" aria-live="polite">
             <div className="champion-image-frame">
-              <img src={result.imageUrl} alt={result.name} onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+              {resultImageFailed ? (
+                <span className="champion-image-fallback">{result.name}</span>
+              ) : (
+                <img src={result.imageUrl} alt={result.name} onError={() => setResultImageFailed(true)} />
+              )}
             </div>
             <span className="card-kicker">本次英雄</span>
             <h3>{result.name}</h3>
             <p className="champion-id">{result.id}</p>
           </article>
         ) : (
-          <div className="champion-empty" role="status">按下按鈕開始抽英雄</div>
+          <div className="champion-empty" role="status">{isPreparing ? `正在準備${selectedPositionLabel}英雄…` : '按下按鈕開始抽英雄'}</div>
         )}
         {error && <p className="champion-error" role="alert">{error}</p>}
         <div className="champion-actions">
-          <button className="btn btn-primary btn-large" type="button" onClick={handleDraw}>{result ? '重新抽一隻' : '開始抽英雄'}</button>
+          <button className="btn btn-primary btn-large" type="button" disabled={isPreparing || isRevealing || !queuedResult} onClick={handleDraw}>
+            {isRevealing ? '揭曉中…' : isPreparing ? '準備下一隻…' : result ? '重新抽一隻' : '開始抽英雄'}
+          </button>
         </div>
-        <p className="champion-data-meta">資料版本：{championData.version}　·　共 {championData.champions.length} 隻英雄</p>
+        <p className="champion-data-meta">資料版本：{positionData.version}　·　{selectedPositionLabel}英雄池：{selectedPoolSize} 隻</p>
       </div>
     </section>
   );
