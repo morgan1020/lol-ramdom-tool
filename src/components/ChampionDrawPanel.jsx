@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { drawChampion } from '../domain/drawChampion.js';
 import { preloadImage } from '../domain/preloadImage.js';
 import {
-  CHAMPION_POSITION_KEYS,
+  CHAMPION_POOL_KEYS,
   CHAMPION_POSITION_LABELS,
   getChampionsForPosition
 } from '../domain/championPositions.js';
@@ -73,18 +73,18 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
   };
 
   const selectedPositionLabel = CHAMPION_POSITION_LABELS[selectedPosition];
-  const selectedPoolSize = positionData.positions[selectedPosition].length;
+  const selectedPoolSize = selectedPosition === 'ALL' ? championData.champions.length : positionData.positions[selectedPosition].length;
 
   return (
     <section className="champion-flow" aria-labelledby="champion-draw-title">
       <div className="flow-heading">
         <span>獨立模式</span>
         <h2 id="champion-draw-title">抽英雄</h2>
-        <p>選擇路線後，從該路線的英雄池隨機抽出一隻英雄。</p>
+        <p>可從全英雄隨機抽選，也可以指定路線縮小英雄池。</p>
       </div>
       <div className="champion-panel">
         <div className="champion-position-picker" role="group" aria-label="選擇英雄路線">
-          {CHAMPION_POSITION_KEYS.map((position) => (
+          {CHAMPION_POOL_KEYS.map((position) => (
             <button
               key={position}
               className={selectedPosition === position ? 'champion-position is-selected' : 'champion-position'}

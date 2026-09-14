@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  CHAMPION_POSITION_KEYS,
+  CHAMPION_POOL_KEYS,
   CHAMPION_POSITION_LABELS,
   getChampionsForPosition
 } from '../domain/championPositions.js';
@@ -32,7 +32,7 @@ export function ChampionPoolModal({ open, championData, positionData, initialPos
           <button className="stats-close" type="button" onClick={onClose} aria-label="關閉英雄池一覽">×</button>
         </div>
         <div className="champion-pool-tabs" role="tablist" aria-label="英雄池分路">
-          {CHAMPION_POSITION_KEYS.map((position) => (
+          {CHAMPION_POOL_KEYS.map((position) => (
             <button
               id={`champion-pool-tab-${position}`}
               key={position}

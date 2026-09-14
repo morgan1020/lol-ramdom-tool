@@ -3,12 +3,15 @@ export const CHAMPION_POSITION_SOURCE = 'CommunityDragon champion statistics';
 export const CHAMPION_POSITION_SOURCE_URL = 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-champion-statistics/global/default/rcp-fe-lol-champion-statistics.js';
 export const CHAMPION_POSITION_KEYS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'];
 export const CHAMPION_POSITION_LABELS = {
+  ALL: '不限路線',
   TOP: '上路',
   JUNGLE: '打野',
   MIDDLE: '中路',
   BOTTOM: '下路',
   SUPPORT: '輔助'
 };
+
+export const CHAMPION_POOL_KEYS = ['ALL', ...CHAMPION_POSITION_KEYS];
 
 const MIN_CHAMPIONS_PER_POSITION = 10;
 const MIN_POSITIONED_CHAMPION_RATIO = 0.5;
@@ -225,6 +228,8 @@ export function getChampionsForPosition(champions, positionDocument, position) {
   if (!Array.isArray(champions)) {
     throw new Error('英雄池格式錯誤');
   }
+
+  if (position === 'ALL') return [...champions];
 
   const canonicalPosition = normalizeChampionPosition(position);
   const championIds = positionDocument?.positions?.[canonicalPosition];

@@ -98,3 +98,13 @@ test('專案內英雄與位置快照版本一致且五路皆通過驗證', () =>
 
   assert.doesNotThrow(() => validateChampionPositionsDocument(actualPositionData, actualChampionData));
 });
+
+
+test('不限路線包含未列於分路資料的英雄，且不依賴位置資料', () => {
+  const champions = [{ id: 'A' }, { id: 'B' }, { id: 'Unassigned' }];
+  const pool = getChampionsForPosition(champions, null, 'ALL');
+  assert.deepEqual(pool, champions);
+  assert.notEqual(pool, champions);
+  pool.pop();
+  assert.equal(champions.length, 3);
+});
