@@ -18,7 +18,17 @@ npm install
 npm run dev
 ```
 
-更新英雄資料：
+完整更新英雄與路線資料（建議使用）：
+
+```bash
+npm run update:data
+npm test
+npm run build
+```
+
+此指令會先更新英雄資料，再更新路線資料；英雄更新失敗時會停止。完成後兩份 JSON 都需一併提交並部署，線上網站才會顯示新版。本機更新不會自動部署。
+
+只更新英雄資料：
 
 ```bash
 npm run update:champions
@@ -26,7 +36,7 @@ npm run update:champions
 
 更新腳本會讀取 Data Dragon 最新版本的 `zh_TW` 英雄資料，驗證後寫入 `src/data/champions.json`。資料會在 Vite 建置時打包進靜態網站；更新檔案後提交並推送到 Cloudflare Pages 連接的 production branch，即可由 Cloudflare Pages 重新建置上線。若下載或驗證失敗，既有資料不會被覆蓋。
 
-更新英雄位置資料：
+更新英雄位置資料（也會先更新英雄資料）：
 
 ```bash
 npm run update:champion-positions

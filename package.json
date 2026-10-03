@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "node --test",
     "update:champions": "node scripts/update-champions.mjs",
-    "update:champion-positions": "node scripts/update-champion-positions.mjs"
+    "update:champion-positions": "npm run update:champions && node scripts/update-champion-positions.mjs",
+    "update:data": "npm run update:champion-positions"
   },
   "engines": {
     "node": ">=20"
