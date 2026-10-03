@@ -51,6 +51,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 34px; animation: enter-up .45s both; }
 .eyebrow, .flow-heading > span, .card-kicker { display: block; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 h1 { margin: 5px 0 0; font-size: clamp(28px, 4vw, 38px); letter-spacing: -.055em; line-height: 1.08; }
+.header-tools { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; min-width: 0; }
 .header-actions { display: flex; gap: 9px; }
 .tool-mode-toggle { display: flex; width: min(360px, 100%); margin: -10px auto 30px; padding: 4px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .mode-choice { flex: 1; min-height: 39px; border: 0; border-radius: 9px; color: var(--text-muted); background: transparent; font-weight: 800; transition: color .16s ease, background .16s ease, box-shadow .16s ease; }
@@ -158,3 +159,64 @@ h1 { margin: 5px 0 0; font-size: clamp(28px, 4vw, 38px); letter-spacing: -.055em
 .step-back:hover:not(:disabled) strong { text-decoration: underline; text-underline-offset: 4px; }
 .step-back:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
 .step-back:disabled { opacity: .55; cursor: default; }
+
+.discord-sync-controls { position: relative; display: flex; align-items: center; gap: 10px; max-width: 100%; margin: 0; padding: 0; }
+.discord-sync-label { flex-shrink: 0; color: var(--text); font-size: 12px; font-weight: 700; }
+.discord-sync-label > span { margin-left: 3px; color: var(--text-muted); font-weight: 500; }
+.discord-sync-switch { display: grid; flex-shrink: 0; width: 44px; min-height: 36px; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; }
+.discord-switch-track { display: flex; align-items: center; width: 36px; height: 21px; padding: 3px; border-radius: 999px; background: var(--border-strong); transition: background .2s; }
+.discord-switch-track > span { width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .2s; }
+.discord-sync-switch[aria-checked='true'] .discord-switch-track { background: var(--primary); }
+.discord-sync-switch[aria-checked='true'] .discord-switch-track > span { transform: translateX(15px); }
+.discord-destination-select { position: relative; min-width: 0; }
+.discord-destination-select select { appearance: none; width: clamp(100px, 13vw, 160px); max-width: 100%; min-height: 36px; padding: 6px 28px 6px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: transparent; font-size: 12px; text-overflow: ellipsis; cursor: pointer; }
+.discord-destination-select select:hover { background: var(--surface-muted); }
+.discord-destination-select option { color: var(--text); background: var(--surface-strong); }
+.discord-destination-select > svg { position: absolute; right: 9px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); fill: none; stroke: var(--text-muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.discord-current-name { min-width: 0; padding: 0 8px 0 12px; border-left: 1px solid var(--border); color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
+.discord-sync-controls > .discord-sync-error { position: absolute; top: 100%; right: 0; max-width: 300px; margin: 5px 0 0; font-size: 12px; }
+.menu-lines-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+@media (max-width: 600px) {
+  .app-header { flex-wrap: wrap; }
+  .header-tools { display: contents; }
+  .header-actions { margin-left: auto; }
+  .discord-sync-controls { flex-basis: 100%; justify-content: flex-end; padding-top: 12px; border-top: 1px solid var(--border); }
+  .discord-destination-select select { width: 140px; }
+  .discord-current-name { max-width: 180px; }
+  .app-header h1 { font-size: 28px; }
+  .header-actions .icon-button { width: 36px; height: 36px; }
+}
+.roster-flow { width: min(720px, 100%); padding: 28px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+.roster-flow .player-input { width: 100%; }
+.roster-flow .roster-summary { padding: 24px 0; border-width: 1px 0; border-radius: 0; background: transparent; box-shadow: none; }
+.roster-flow .flow-actions { margin-top: 24px; }
+.roster-flow .flow-actions .btn { width: 100%; }
+@media (max-width: 600px) { .roster-flow { padding: 20px 16px; } }
+.discord-settings-content { width: min(760px, 100%); margin: 0 auto; }
+.discord-settings-content h3 { margin: 22px 0 12px; font-size: 17px; }
+.discord-settings-content label { display: block; margin: 14px 0 8px; font-size: 13px; font-weight: 700; }
+.discord-settings-content input { width: 100%; min-height: 46px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); background: var(--surface-muted); }
+.discord-local-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.discord-sync-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.discord-destination-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.discord-destination-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-muted); }
+.discord-destination-list li > div:first-child { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
+.discord-destination-list span { display: block; margin-top: 6px; color: var(--accent); font-size: 12px; }
+.discord-destination-list .discord-sync-actions { margin-top: 0; }
+.discord-settings-notice { color: var(--accent); font-size: 13px; }
+.discord-help-link { display: inline-block; margin-top: 14px; color: var(--primary); font-size: 12px; }
+.discord-sync-status { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); background: var(--surface-muted); }
+.discord-sync-status p { flex: 1 1 200px; margin: 0; font-size: 13px; line-height: 1.6; }
+.discord-sync-status.is-sent { color: var(--accent); }
+.discord-sync-error, .discord-sync-status.is-error { color: var(--danger); }
+
+.roster-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.roster-slot { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 64px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-muted); color: var(--text); }
+.roster-slot.is-filled:hover { border-color: var(--danger); }
+.roster-slot .roster-slot-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 13px; }
+.roster-slot .roster-slot-remove { flex-shrink: 0; color: var(--text-muted); font-size: 17px; }
+.roster-slot.is-filled:hover .roster-slot-remove { color: var(--danger); }
+.roster-slot.is-empty { flex-direction: column; gap: 2px; border-style: dashed; background: transparent; }
+.roster-slot.is-empty > span { font-size: 20px; line-height: 1; }
+.roster-slot.is-empty small { color: var(--text-muted); font-size: 11px; }
+@media (max-width: 600px) { .roster-slots { gap: 6px; }.roster-slot { min-height: 64px; padding: 8px 4px; }.roster-slot.is-filled { flex-direction: column; }.roster-slot .roster-slot-name { max-width: 100%; font-size: 11px; } }
