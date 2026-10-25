@@ -33,6 +33,25 @@ test('Discord 訊息只含分路結果，不傳送時間並禁止所有提及通
   assert.throws(() => buildDiscordDrawMessage([{ name: 'A'.repeat(2000), main: '上路' }]), /長度限制/);
 });
 
+test('Webhook 五人訊息固定依上野中下輔排序', () => {
+  const payload = buildDiscordDrawMessage([
+    { name: '輔助玩家', main: '輔助' },
+    { name: '下路玩家', main: '下路' },
+    { name: '中路玩家', main: '中路' },
+    { name: '打野玩家', main: '打野' },
+    { name: '上路玩家', main: '上路' }
+  ]);
+
+  assert.equal(payload.content, [
+    '### 英雄聯盟分路結果',
+    '> **上路玩家**　上路',
+    '> **打野玩家**　打野',
+    '> **中路玩家**　中路',
+    '> **下路玩家**　下路',
+    '> **輔助玩家**　輔助'
+  ].join('\n'));
+});
+
 test('直接傳送到 Discord，等待確認、略過 cookie 與 referrer，且不使用網站後端', async () => {
   let calls = 0;
   const id = await sendDiscordDraw(webhook, results, {

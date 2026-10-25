@@ -2,1046 +2,1046 @@
   "schemaVersion": 1,
   "source": "Riot Data Dragon",
   "locale": "zh_TW",
-  "version": "16.19.1",
-  "updatedAt": "2026-10-03T13:36:01.095Z",
+  "version": "16.21.1",
+  "updatedAt": "2026-10-25T07:23:25.182Z",
   "champions": [
     {
       "id": "Aatrox",
       "key": "266",
       "name": "厄薩斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Aatrox.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Aatrox.png"
     },
     {
       "id": "Yunara",
       "key": "804",
       "name": "尤娜拉",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Yunara.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Yunara.png"
     },
     {
       "id": "Bard",
       "key": "432",
       "name": "巴德",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Bard.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Bard.png"
     },
     {
       "id": "Galio",
       "key": "3",
       "name": "加里歐",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Galio.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Galio.png"
     },
     {
       "id": "Khazix",
       "key": "121",
       "name": "卡力斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Khazix.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Khazix.png"
     },
     {
       "id": "KSante",
       "key": "897",
       "name": "卡桑帝",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/KSante.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/KSante.png"
     },
     {
       "id": "Katarina",
       "key": "55",
       "name": "卡特蓮娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Katarina.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Katarina.png"
     },
     {
       "id": "Cassiopeia",
       "key": "69",
       "name": "卡莎碧雅",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Cassiopeia.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Cassiopeia.png"
     },
     {
       "id": "Karthus",
       "key": "30",
       "name": "卡爾瑟斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Karthus.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Karthus.png"
     },
     {
       "id": "Karma",
       "key": "43",
       "name": "卡瑪",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Karma.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Karma.png"
     },
     {
       "id": "Camille",
       "key": "164",
       "name": "卡蜜兒",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Camille.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Camille.png"
     },
     {
       "id": "Kassadin",
       "key": "38",
       "name": "卡薩丁",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kassadin.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kassadin.png"
     },
     {
       "id": "Gragas",
       "key": "79",
       "name": "古拉格斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Gragas.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Gragas.png"
     },
     {
       "id": "Skarner",
       "key": "72",
       "name": "史加納",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Skarner.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Skarner.png"
     },
     {
       "id": "Sejuani",
       "key": "113",
       "name": "史瓦妮",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Sejuani.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Sejuani.png"
     },
     {
       "id": "Smolder",
       "key": "901",
       "name": "史矛德",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Smolder.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Smolder.png"
     },
     {
       "id": "Blitzcrank",
       "key": "53",
       "name": "布里茨",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Blitzcrank.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Blitzcrank.png"
     },
     {
       "id": "Braum",
       "key": "201",
       "name": "布郎姆",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Braum.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Braum.png"
     },
     {
       "id": "Briar",
       "key": "233",
       "name": "布蕾爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Briar.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Briar.png"
     },
     {
       "id": "Brand",
       "key": "63",
       "name": "布蘭德",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Brand.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Brand.png"
     },
     {
       "id": "Volibear",
       "key": "106",
       "name": "弗力貝爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Volibear.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Volibear.png"
     },
     {
       "id": "Vladimir",
       "key": "8",
       "name": "弗拉迪米爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Vladimir.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Vladimir.png"
     },
     {
       "id": "Zac",
       "key": "154",
       "name": "札克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Zac.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zac.png"
     },
     {
       "id": "Evelynn",
       "key": "28",
       "name": "伊芙琳",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Evelynn.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Evelynn.png"
     },
     {
       "id": "Elise",
       "key": "60",
       "name": "伊莉絲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Elise.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Elise.png"
     },
     {
       "id": "Irelia",
       "key": "39",
       "name": "伊瑞莉雅",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Irelia.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Irelia.png"
     },
     {
       "id": "Ezreal",
       "key": "81",
       "name": "伊澤瑞爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ezreal.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ezreal.png"
     },
     {
       "id": "Illaoi",
       "key": "420",
       "name": "伊羅旖",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Illaoi.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Illaoi.png"
     },
     {
       "id": "Jinx",
       "key": "222",
       "name": "吉茵珂絲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Jinx.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Jinx.png"
     },
     {
       "id": "MissFortune",
       "key": "21",
       "name": "好運姐",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/MissFortune.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/MissFortune.png"
     },
     {
       "id": "Ambessa",
       "key": "799",
       "name": "安比薩",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ambessa.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ambessa.png"
     },
     {
       "id": "Annie",
       "key": "1",
       "name": "安妮",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Annie.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Annie.png"
     },
     {
       "id": "Vayne",
       "key": "67",
       "name": "汎",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Vayne.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Vayne.png"
     },
     {
       "id": "Milio",
       "key": "902",
       "name": "米里歐",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Milio.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Milio.png"
     },
     {
       "id": "Ekko",
       "key": "245",
       "name": "艾克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ekko.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ekko.png"
     },
     {
       "id": "Ashe",
       "key": "22",
       "name": "艾希",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ashe.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ashe.png"
     },
     {
       "id": "Anivia",
       "key": "34",
       "name": "艾妮維亞",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Anivia.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Anivia.png"
     },
     {
       "id": "Kled",
       "key": "240",
       "name": "克雷德",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kled.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kled.png"
     },
     {
       "id": "Kalista",
       "key": "429",
       "name": "克黎思妲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kalista.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kalista.png"
     },
     {
       "id": "Nunu",
       "key": "20",
       "name": "努努和威朗普",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Nunu.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Nunu.png"
     },
     {
       "id": "Zed",
       "key": "238",
       "name": "劫",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Zed.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zed.png"
     },
     {
       "id": "Gnar",
       "key": "150",
       "name": "吶兒",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Gnar.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Gnar.png"
     },
     {
       "id": "Shyvana",
       "key": "102",
       "name": "希瓦娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Shyvana.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Shyvana.png"
     },
     {
       "id": "Ziggs",
       "key": "115",
       "name": "希格斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ziggs.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ziggs.png"
     },
     {
       "id": "Sivir",
       "key": "15",
       "name": "希維爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Sivir.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Sivir.png"
     },
     {
       "id": "LeeSin",
       "key": "64",
       "name": "李星",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/LeeSin.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/LeeSin.png"
     },
     {
       "id": "Warwick",
       "key": "19",
       "name": "沃維克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Warwick.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Warwick.png"
     },
     {
       "id": "Yasuo",
       "key": "157",
       "name": "犽宿",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Yasuo.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Yasuo.png"
     },
     {
       "id": "Yone",
       "key": "777",
       "name": "犽凝",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Yone.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Yone.png"
     },
     {
       "id": "Belveth",
       "key": "200",
       "name": "貝爾薇斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Belveth.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Belveth.png"
     },
     {
       "id": "Singed",
       "key": "27",
       "name": "辛吉德",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Singed.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Singed.png"
     },
     {
       "id": "Aphelios",
       "key": "523",
       "name": "亞菲利歐",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Aphelios.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Aphelios.png"
     },
     {
       "id": "Alistar",
       "key": "12",
       "name": "亞歷斯塔",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Alistar.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Alistar.png"
     },
     {
       "id": "Nocturne",
       "key": "56",
       "name": "夜曲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Nocturne.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Nocturne.png"
     },
     {
       "id": "Nidalee",
       "key": "76",
       "name": "奈德麗",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Nidalee.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Nidalee.png"
     },
     {
       "id": "Neeko",
       "key": "518",
       "name": "妮可",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Neeko.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Neeko.png"
     },
     {
       "id": "Senna",
       "key": "235",
       "name": "姍娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Senna.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Senna.png"
     },
     {
       "id": "Lux",
       "key": "99",
       "name": "拉克絲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Lux.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Lux.png"
     },
     {
       "id": "Rammus",
       "key": "33",
       "name": "拉姆斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Rammus.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Rammus.png"
     },
     {
       "id": "MasterYi",
       "key": "11",
       "name": "易大師",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/MasterYi.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/MasterYi.png"
     },
     {
       "id": "Jayce",
       "key": "126",
       "name": "杰西",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Jayce.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Jayce.png"
     },
     {
       "id": "Varus",
       "key": "110",
       "name": "法洛士",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Varus.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Varus.png"
     },
     {
       "id": "Poppy",
       "key": "78",
       "name": "波比",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Poppy.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Poppy.png"
     },
     {
       "id": "Akali",
       "key": "84",
       "name": "阿卡莉",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Akali.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Akali.png"
     },
     {
       "id": "Amumu",
       "key": "32",
       "name": "阿姆姆",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Amumu.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Amumu.png"
     },
     {
       "id": "Azir",
       "key": "268",
       "name": "阿祈爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Azir.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Azir.png"
     },
     {
       "id": "Ahri",
       "key": "103",
       "name": "阿璃",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ahri.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ahri.png"
     },
     {
       "id": "Xayah",
       "key": "498",
       "name": "剎雅",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Xayah.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Xayah.png"
     },
     {
       "id": "Velkoz",
       "key": "161",
       "name": "威寇茲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Velkoz.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Velkoz.png"
     },
     {
       "id": "Syndra",
       "key": "134",
       "name": "星朵拉",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Syndra.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Syndra.png"
     },
     {
       "id": "Zyra",
       "key": "143",
       "name": "枷蘿",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Zyra.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zyra.png"
     },
     {
       "id": "Zoe",
       "key": "142",
       "name": "柔依",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Zoe.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zoe.png"
     },
     {
       "id": "Locke",
       "key": "805",
       "name": "洛克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Locke.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Locke.png"
     },
     {
       "id": "Pyke",
       "key": "555",
       "name": "派克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Pyke.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Pyke.png"
     },
     {
       "id": "Janna",
       "key": "40",
       "name": "珍娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Janna.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Janna.png"
     },
     {
       "id": "Chogath",
       "key": "31",
       "name": "科加斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Chogath.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Chogath.png"
     },
     {
       "id": "Yorick",
       "key": "83",
       "name": "約瑞科",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Yorick.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Yorick.png"
     },
     {
       "id": "Maokai",
       "key": "57",
       "name": "茂凱",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Maokai.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Maokai.png"
     },
     {
       "id": "Fizz",
       "key": "105",
       "name": "飛斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Fizz.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Fizz.png"
     },
     {
       "id": "Gangplank",
       "key": "41",
       "name": "剛普朗克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Gangplank.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Gangplank.png"
     },
     {
       "id": "Akshan",
       "key": "166",
       "name": "埃可尚",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Akshan.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Akshan.png"
     },
     {
       "id": "Ivern",
       "key": "427",
       "name": "埃爾文",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ivern.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ivern.png"
     },
     {
       "id": "Qiyana",
       "key": "246",
       "name": "姬亞娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Qiyana.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Qiyana.png"
     },
     {
       "id": "Nami",
       "key": "267",
       "name": "娜米",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Nami.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Nami.png"
     },
     {
       "id": "Naafiri",
       "key": "950",
       "name": "娜菲芮",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Naafiri.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Naafiri.png"
     },
     {
       "id": "Corki",
       "key": "42",
       "name": "庫奇",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Corki.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Corki.png"
     },
     {
       "id": "MonkeyKing",
       "key": "62",
       "name": "悟空",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/MonkeyKing.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/MonkeyKing.png"
     },
     {
       "id": "Tryndamere",
       "key": "23",
       "name": "泰達米爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Tryndamere.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Tryndamere.png"
     },
     {
       "id": "Udyr",
       "key": "77",
       "name": "烏迪爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Udyr.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Udyr.png"
     },
     {
       "id": "Urgot",
       "key": "6",
       "name": "烏爾加特",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Urgot.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Urgot.png"
     },
     {
       "id": "Trundle",
       "key": "48",
       "name": "特朗德",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Trundle.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Trundle.png"
     },
     {
       "id": "Nautilus",
       "key": "111",
       "name": "納帝魯斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Nautilus.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Nautilus.png"
     },
     {
       "id": "Nasus",
       "key": "75",
       "name": "納瑟斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Nasus.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Nasus.png"
     },
     {
       "id": "Soraka",
       "key": "16",
       "name": "索拉卡",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Soraka.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Soraka.png"
     },
     {
       "id": "Sona",
       "key": "37",
       "name": "索娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Sona.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Sona.png"
     },
     {
       "id": "TwistedFate",
       "key": "4",
       "name": "逆命",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/TwistedFate.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/TwistedFate.png"
     },
     {
       "id": "Malzahar",
       "key": "90",
       "name": "馬爾札哈",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Malzahar.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Malzahar.png"
     },
     {
       "id": "Leblanc",
       "key": "7",
       "name": "勒布朗",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Leblanc.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Leblanc.png"
     },
     {
       "id": "Zeri",
       "key": "221",
       "name": "婕莉",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Zeri.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zeri.png"
     },
     {
       "id": "KogMaw",
       "key": "96",
       "name": "寇格魔",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/KogMaw.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/KogMaw.png"
     },
     {
       "id": "Tristana",
       "key": "18",
       "name": "崔絲塔娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Tristana.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Tristana.png"
     },
     {
       "id": "Yuumi",
       "key": "350",
       "name": "悠咪",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Yuumi.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Yuumi.png"
     },
     {
       "id": "Mel",
       "key": "800",
       "name": "梅爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Mel.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Mel.png"
     },
     {
       "id": "Nilah",
       "key": "895",
       "name": "淣菈",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Nilah.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Nilah.png"
     },
     {
       "id": "Lillia",
       "key": "876",
       "name": "莉莉亞",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Lillia.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Lillia.png"
     },
     {
       "id": "TahmKench",
       "key": "223",
       "name": "貪啃奇",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/TahmKench.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/TahmKench.png"
     },
     {
       "id": "Caitlyn",
       "key": "51",
       "name": "凱特琳",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Caitlyn.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Caitlyn.png"
     },
     {
       "id": "Kennen",
       "key": "85",
       "name": "凱能",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kennen.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kennen.png"
     },
     {
       "id": "Kaisa",
       "key": "145",
       "name": "凱莎",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kaisa.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kaisa.png"
     },
     {
       "id": "Kayle",
       "key": "10",
       "name": "凱爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kayle.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kayle.png"
     },
     {
       "id": "Kayn",
       "key": "141",
       "name": "慨影",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kayn.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kayn.png"
     },
     {
       "id": "Teemo",
       "key": "17",
       "name": "提摩",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Teemo.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Teemo.png"
     },
     {
       "id": "Swain",
       "key": "50",
       "name": "斯溫",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Swain.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Swain.png"
     },
     {
       "id": "Vi",
       "key": "254",
       "name": "菲艾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Vi.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Vi.png"
     },
     {
       "id": "Fiora",
       "key": "114",
       "name": "菲歐拉",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Fiora.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Fiora.png"
     },
     {
       "id": "Fiddlesticks",
       "key": "9",
       "name": "費德提克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Fiddlesticks.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Fiddlesticks.png"
     },
     {
       "id": "Ornn",
       "key": "516",
       "name": "鄂爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ornn.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ornn.png"
     },
     {
       "id": "Taric",
       "key": "44",
       "name": "塔里克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Taric.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Taric.png"
     },
     {
       "id": "Taliyah",
       "key": "163",
       "name": "塔莉雅",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Taliyah.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Taliyah.png"
     },
     {
       "id": "Talon",
       "key": "91",
       "name": "塔隆",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Talon.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Talon.png"
     },
     {
       "id": "Orianna",
       "key": "61",
       "name": "奧莉安娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Orianna.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Orianna.png"
     },
     {
       "id": "Shen",
       "key": "98",
       "name": "慎",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Shen.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Shen.png"
     },
     {
       "id": "Zilean",
       "key": "26",
       "name": "極靈",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Zilean.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zilean.png"
     },
     {
       "id": "Samira",
       "key": "360",
       "name": "煞蜜拉",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Samira.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Samira.png"
     },
     {
       "id": "Seraphine",
       "key": "147",
       "name": "瑟菈紛",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Seraphine.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Seraphine.png"
     },
     {
       "id": "Thresh",
       "key": "412",
       "name": "瑟雷西",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Thresh.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Thresh.png"
     },
     {
       "id": "Graves",
       "key": "104",
       "name": "葛雷夫",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Graves.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Graves.png"
     },
     {
       "id": "Quinn",
       "key": "133",
       "name": "葵恩",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Quinn.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Quinn.png"
     },
     {
       "id": "Jax",
       "key": "24",
       "name": "賈克斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Jax.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Jax.png"
     },
     {
       "id": "Lucian",
       "key": "236",
       "name": "路西恩",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Lucian.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Lucian.png"
     },
     {
       "id": "Draven",
       "key": "119",
       "name": "達瑞文",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Draven.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Draven.png"
     },
     {
       "id": "Darius",
       "key": "122",
       "name": "達瑞斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Darius.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Darius.png"
     },
     {
       "id": "Renekton",
       "key": "58",
       "name": "雷尼克頓",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Renekton.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Renekton.png"
     },
     {
       "id": "Riven",
       "key": "92",
       "name": "雷玟",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Riven.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Riven.png"
     },
     {
       "id": "RekSai",
       "key": "421",
       "name": "雷珂煞",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/RekSai.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/RekSai.png"
     },
     {
       "id": "Ryze",
       "key": "13",
       "name": "雷茲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Ryze.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ryze.png"
     },
     {
       "id": "Rengar",
       "key": "107",
       "name": "雷葛爾",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Rengar.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Rengar.png"
     },
     {
       "id": "Leona",
       "key": "89",
       "name": "雷歐娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Leona.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Leona.png"
     },
     {
       "id": "JarvanIV",
       "key": "59",
       "name": "嘉文四世",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/JarvanIV.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/JarvanIV.png"
     },
     {
       "id": "Twitch",
       "key": "29",
       "name": "圖奇",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Twitch.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Twitch.png"
     },
     {
       "id": "Heimerdinger",
       "key": "74",
       "name": "漢默丁格",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Heimerdinger.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Heimerdinger.png"
     },
     {
       "id": "Renata",
       "key": "888",
-      "name": "睿娜妲‧格萊斯克",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Renata.png"
+      "name": "睿娜妲．格萊斯克",
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Renata.png"
     },
     {
       "id": "Viktor",
       "key": "112",
       "name": "維克特",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Viktor.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Viktor.png"
     },
     {
       "id": "Veigar",
       "key": "45",
       "name": "維迦",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Veigar.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Veigar.png"
     },
     {
       "id": "Viego",
       "key": "234",
       "name": "維爾戈",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Viego.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Viego.png"
     },
     {
       "id": "DrMundo",
       "key": "36",
       "name": "蒙多醫生",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/DrMundo.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/DrMundo.png"
     },
     {
       "id": "Garen",
       "key": "86",
       "name": "蓋倫",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Garen.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Garen.png"
     },
     {
       "id": "Hecarim",
       "key": "120",
       "name": "赫克林",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Hecarim.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Hecarim.png"
     },
     {
       "id": "Hwei",
       "key": "910",
       "name": "赫威",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Hwei.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Hwei.png"
     },
     {
       "id": "XinZhao",
       "key": "5",
       "name": "趙信",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/XinZhao.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/XinZhao.png"
     },
     {
       "id": "Xerath",
       "key": "101",
       "name": "齊勒斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Xerath.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Xerath.png"
     },
     {
       "id": "Olaf",
       "key": "2",
       "name": "歐拉夫",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Olaf.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Olaf.png"
     },
     {
       "id": "Aurora",
       "key": "893",
       "name": "歐羅拉",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Aurora.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Aurora.png"
     },
     {
       "id": "Pantheon",
       "key": "80",
       "name": "潘森",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Pantheon.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Pantheon.png"
     },
     {
       "id": "Rell",
       "key": "526",
       "name": "銳兒",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Rell.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Rell.png"
     },
     {
       "id": "Rakan",
       "key": "497",
       "name": "銳空",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Rakan.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Rakan.png"
     },
     {
       "id": "Malphite",
       "key": "54",
       "name": "墨菲特",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Malphite.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Malphite.png"
     },
     {
       "id": "AurelionSol",
       "key": "136",
       "name": "翱銳龍獸",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/AurelionSol.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/AurelionSol.png"
     },
     {
       "id": "Vex",
       "key": "711",
       "name": "薇可絲",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Vex.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Vex.png"
     },
     {
       "id": "Sion",
       "key": "14",
       "name": "賽恩",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Sion.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Sion.png"
     },
     {
       "id": "Sett",
       "key": "875",
       "name": "賽特",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Sett.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Sett.png"
     },
     {
       "id": "Sylas",
       "key": "517",
       "name": "賽勒斯",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Sylas.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Sylas.png"
     },
     {
       "id": "Diana",
       "key": "131",
       "name": "黛安娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Diana.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Diana.png"
     },
     {
       "id": "Jhin",
       "key": "202",
       "name": "燼",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Jhin.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Jhin.png"
     },
     {
       "id": "Zaahen",
       "key": "904",
       "name": "薩亨",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Zaahen.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zaahen.png"
     },
     {
       "id": "Shaco",
       "key": "35",
       "name": "薩科",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Shaco.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Shaco.png"
     },
     {
       "id": "Rumble",
       "key": "68",
       "name": "藍寶",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Rumble.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Rumble.png"
     },
     {
       "id": "Kindred",
       "key": "203",
       "name": "鏡爪",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Kindred.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Kindred.png"
     },
     {
       "id": "Gwen",
       "key": "887",
       "name": "關",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Gwen.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Gwen.png"
     },
     {
       "id": "Lissandra",
       "key": "127",
       "name": "麗珊卓",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Lissandra.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Lissandra.png"
     },
     {
       "id": "Lulu",
       "key": "117",
       "name": "露璐",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Lulu.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Lulu.png"
     },
     {
       "id": "Morgana",
       "key": "25",
       "name": "魔甘娜",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Morgana.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Morgana.png"
     },
     {
       "id": "Mordekaiser",
       "key": "82",
       "name": "魔鬥凱薩",
-      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.19.1/img/champion/Mordekaiser.png"
+      "imageUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Mordekaiser.png"
     }
   ]
 }

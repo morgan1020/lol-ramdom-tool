@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "16.19.1+eb67adbe8273",
+  "version": "16.21.1+d528d866eac8",
   "source": "CommunityDragon champion statistics",
   "sourceUrl": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-champion-statistics/global/default/rcp-fe-lol-champion-statistics.js",
-  "sourceVersion": "sha256:eb67adbe82739acce23ac4f96495cb7a07fc4f173ed131b506ab08be310ac27f",
-  "sourceLastModified": "Tue, 29 Sep 2026 00:55:21 GMT",
-  "dataDragonVersion": "16.19.1",
-  "updatedAt": "2026-10-03T13:36:01.900Z",
+  "sourceVersion": "sha256:d528d866eac8195f211409712e9a799b9f8a73316d0c0c59f26b441f3de9536d",
+  "sourceLastModified": "Wed, 21 Oct 2026 07:13:44 GMT",
+  "dataDragonVersion": "16.21.1",
+  "updatedAt": "2026-10-25T07:23:25.397Z",
   "positions": {
     "TOP": [
       "Aatrox",
@@ -17,7 +17,6 @@
       "Irelia",
       "Illaoi",
       "Ambessa",
-      "Vayne",
       "Kled",
       "Gnar",
       "Yasuo",
@@ -124,7 +123,6 @@
       "Fizz",
       "Akshan",
       "Qiyana",
-      "Nasus",
       "TwistedFate",
       "Malzahar",
       "Leblanc",
@@ -170,13 +168,11 @@
       "Draven",
       "Twitch",
       "Viktor",
-      "Veigar",
       "Jhin"
     ],
     "SUPPORT": [
       "Bard",
       "Karma",
-      "Camille",
       "Blitzcrank",
       "Braum",
       "Brand",

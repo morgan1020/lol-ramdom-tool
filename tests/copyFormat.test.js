@@ -17,6 +17,27 @@ test('複製格式依主位排序並以每位玩家一行顯示副位', () => {
   ].join('\n'));
 });
 
+test('複製五人結果固定依上野中下輔排序，且不改動原始結果', () => {
+  const results = [
+    { name: '輔助玩家', main: '輔助' },
+    { name: '下路玩家', main: '下路' },
+    { name: '中路玩家', main: '中路' },
+    { name: '打野玩家', main: '打野' },
+    { name: '上路玩家', main: '上路' }
+  ];
+  const original = structuredClone(results);
+
+  assert.equal(formatCopyText(results), [
+    '### 英雄聯盟分路結果',
+    '> **上路玩家**　上路',
+    '> **打野玩家**　打野',
+    '> **中路玩家**　中路',
+    '> **下路玩家**　下路',
+    '> **輔助玩家**　輔助'
+  ].join('\n'));
+  assert.deepEqual(results, original);
+});
+
 test('五人結果只顯示主位', () => {
   const text = formatCopyText([{ name: '小美', main: '輔助', secondary: '' }]);
 
