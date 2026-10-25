@@ -5,7 +5,8 @@ import { drawAssignments } from './domain/draw.js';
 import { formatCopyText } from './domain/copyFormat.js';
 import { getResultShortcutAction } from './domain/resultShortcuts.js';
 import { applyDrawToStats, ensurePlayerStats, sortPlayerNames } from './domain/stats.js';
-import { buildRoster, rosterKey } from './domain/rosterView.js';
+import { prepareRoster, matchesPreparedRoster, rosterKey } from './domain/rosterView.js';
+import { getActiveDiscordDestination } from './domain/discordDestinations.js';
 import { createClientRoster, describeClientPosition } from './domain/clientRoster.js';
 import { displayPlayerName } from './domain/playerNames.js';
 import { clearStats, loadStats, saveStats } from './storage/localStats.js';
@@ -16,12 +17,14 @@ import { StatsModal } from './components/StatsModal.jsx';
 import { ThemeToggle } from './components/ThemeToggle.jsx';
 import { ToastHost } from './components/ToastHost.jsx';
 import { RoleWorkspace } from './components/RoleWorkspace.jsx';
+import { RoleSetup } from './components/RoleSetup.jsx';
 import { SettingsDialog } from './components/SettingsDialog.jsx';
 import { useDiscordSync } from './hooks/useDiscordSync.js';
 import { hasDesktopData, saveDesktopPreferences, importDesktopStats } from './storage/desktopData.js';
 import { importStats, parseStatsBackup } from './domain/statsBackup.js';
 import './styles.css';
 import './workspace.css';
+import './flow.css';
 
 function getInitialTheme() {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -34,6 +37,8 @@ export default function App({ initialData }) {
   const [theme, setTheme] = useState(getInitialTheme);
   const [toolMode, setToolMode] = useState('roles');
   const [source, setSource] = useState(isDesktop ? 'client' : 'manual');
+  const [phase, setPhase] = useState('setup');
+  const [prepared, setPrepared] = useState(null);
   const [manualPlayers, setManualPlayers] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [preferredRoles, setPreferredRoles] = useState({});
@@ -43,7 +48,7 @@ export default function App({ initialData }) {
   const [stats, setStats] = useState(loadStats);
   const statsRef = useRef(stats);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState('draw');
+  const [settingsTab, setSettingsTab] = useState('data');
   const [statsOpen, setStatsOpen] = useState(false);
   const [championPosition, setChampionPosition] = useState('TOP');
   const [championPoolOpen, setChampionPoolOpen] = useState(false);
@@ -62,11 +67,12 @@ export default function App({ initialData }) {
   const [toasts, setToasts] = useState([]);
   const operationInProgress = useRef(false);
   const discordSync = useDiscordSync();
-  const busy = operationBusy || discordSync.pending || preferencesBusy;
+  const busy = operationBusy || discordSync.pending || preferencesBusy || discordSync.status.state === 'sending';
 
   const players = source === 'client' ? clientLobby?.players || [] : manualPlayers.map((name) => ({ name }));
   const names = players.map((player) => player.name);
-  const results = snapshot?.source === source && snapshot.key === rosterKey(names) ? snapshot.results : [];
+  const visiblePlayers = phase === 'draw' && prepared ? prepared.players : players;
+  const results = snapshot?.source === source && snapshot.key === rosterKey(visiblePlayers.map((player) => player.name)) ? snapshot.results : [];
   const hasResults = results.length > 0;
   const knownNames = useMemo(() => sortPlayerNames(stats), [stats]);
 
@@ -159,7 +165,7 @@ export default function App({ initialData }) {
     finally { operationInProgress.current = false; setBusy(false); }
   };
   const removePlayer = (name) => {
-    if (operationInProgress.current) return;
+    if (busy || operationInProgress.current) return;
     setManualPlayers((current) => current.filter((player) => player !== name));
     setPreferredRoles((current) => { const next = { ...current }; delete next[name]; return next; });
     clearResult();
@@ -174,8 +180,22 @@ export default function App({ initialData }) {
     } catch (saveError) { toast(saveError.message || '無法儲存客戶端設定'); }
     finally { preferencesInProgress.current = false; setPreferencesBusy(false); }
   };
-  const handleDraw = async () => {
+  const finishSetup = () => {
     if (busy || operationInProgress.current) return;
+    try {
+      const roster = prepareRoster({ source, lobby: clientLobby, manualPlayers, drawMode, preferredRoles });
+      if (discordSync.settings.enabled && !getActiveDiscordDestination(discordSync.settings)) throw new Error('請選擇 Discord 傳送位置，或關閉同步');
+      setPrepared({ ...roster, players: players.map((player) => ({ ...player })) });
+      setError(''); setPhase('draw');
+      window.scrollTo(0, 0);
+    } catch (setupError) { setError(setupError.message || '請確認玩家與抽籤設定'); }
+  };
+  const returnToSetup = () => {
+    if (busy || operationInProgress.current) return;
+    setPhase('setup'); window.scrollTo(0, 0);
+  };
+  const handleDraw = async () => {
+    if (phase !== 'draw' || !prepared || busy || operationInProgress.current) return;
     operationInProgress.current = true;
     setBusy(true); setError(''); setApplyStatus({ state: 'idle', message: '' });
     try {
@@ -186,13 +206,17 @@ export default function App({ initialData }) {
         catch (readError) { setClientLobby(null); throw readError; }
         finally { setClientLoading(false); }
       }
-      const roster = buildRoster({ source, lobby, manualPlayers, drawMode, preferredRoles });
+      const roster = prepareRoster({ source, lobby, manualPlayers, drawMode, preferredRoles });
+      if (!matchesPreparedRoster(prepared, roster)) {
+        setPhase('setup');
+        throw new Error('隊伍或主位偏好已變動，請重新確認設定後再抽籤');
+      }
       const drawn = drawAssignments(roster.names, roster.preferences);
       await new Promise((resolve) => window.setTimeout(resolve, 320));
       await updateStats(applyDrawToStats(statsRef.current, drawn));
       setSnapshot({ source, key: rosterKey(roster.names), results: drawn }); setCompletedAt(new Date());
       void discordSync.syncDraw(drawn);
-      if (isDesktop && autoApplyRoles) {
+      if (isDesktop && source === 'client' && autoApplyRoles) {
         setApplyStatus({ state: 'applying', message: '正在更新我的 LoL 分路…' });
         try {
           const reply = await window.lolDesktop.applyRoles(drawn);
@@ -236,38 +260,34 @@ export default function App({ initialData }) {
     catch (saveError) { toast(saveError.message || '無法清空統計'); }
     finally { operationInProgress.current = false; setBusy(false); }
   };
-  const editRoster = () => {
-    if (source === 'client') { setManualPlayers(names); changeSource('manual'); }
-    else clearResult();
-    window.requestAnimationFrame(() => document.querySelector('#player-name')?.focus());
-  };
   useEffect(() => {
     const onKeyDown = (event) => {
       const interactive = event.target instanceof Element && Boolean(event.target.closest('button, input, select, textarea, summary, [contenteditable="true"]'));
       if (interactive || operationInProgress.current) return;
-      const action = getResultShortcutAction({ key: event.key, step: hasResults ? 'result' : 'roster', isStatsOpen: statsOpen || settingsOpen || championPoolOpen || toolMode !== 'roles', isDrawing: busy, hasModifier: event.ctrlKey || event.metaKey || event.altKey || event.shiftKey, isInteractiveTarget: interactive });
+      const action = getResultShortcutAction({ key: event.key, step: phase === 'draw' && hasResults ? 'result' : 'roster', isStatsOpen: statsOpen || settingsOpen || championPoolOpen || toolMode !== 'roles' || busy, isDrawing: busy, hasModifier: event.ctrlKey || event.metaKey || event.altKey || event.shiftKey, isInteractiveTarget: interactive });
       if (!action || event.repeat) return;
       event.preventDefault();
-      if (action === 'roster') editRoster();
-      if (action === 'preferences') changeDrawMode('custom');
+      if (action === 'roster') returnToSetup();
+      if (action === 'preferences') { returnToSetup(); void changeDrawMode('custom'); }
       if (action === 'copy') void handleCopy();
       if (action === 'draw') void handleDraw();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   });
-  const openSettings = (tab = 'draw') => {
-    if (operationInProgress.current) return;
+  const openSettings = (tab = 'data') => {
+    if (busy || operationInProgress.current) return;
     setSettingsTab(tab); setSettingsOpen(true);
   };
   const changeToolMode = (next) => {
-    if (operationInProgress.current) return;
+    if (busy || operationInProgress.current) return;
     setToolMode(next); setStatsOpen(false); setChampionPoolOpen(false);
   };
-  return <div className="app compact-app"><main className="container">
-    <header className="compact-header"><div className="app-brand"><img src="/favicon-dice.png" alt="" /><h1>英雄聯盟抽籤</h1></div><div className="compact-header-actions"><button className="toolbar-button" type="button" disabled={busy} onClick={() => toolMode === 'roles' ? setStatsOpen(true) : setChampionPoolOpen(true)} aria-label={toolMode === 'roles' ? '歷史統計' : '英雄池一覽'}><span aria-hidden="true">◷</span><span className="toolbar-text">{toolMode === 'roles' ? '歷史統計' : '英雄池'}</span></button><ThemeToggle theme={theme} onToggle={toggleTheme} /><button className="toolbar-icon" type="button" aria-label="設定" title="設定" disabled={busy} onClick={() => openSettings()}>⚙</button></div></header>
-    <div className="compact-navigation"><nav className="compact-tabs" role="tablist" aria-label="工具模式">{[['roles', '抽分路'], ['champions', '抽英雄']].map(([value, label]) => <button key={value} role="tab" type="button" disabled={busy} aria-selected={toolMode === value} onClick={() => changeToolMode(value)}>{label}</button>)}</nav><button className="discord-summary" type="button" disabled={busy} onClick={() => openSettings('discord')}><i className={discordSync.settings.enabled ? 'is-on' : ''} aria-hidden="true" />Discord {discordSync.settings.enabled ? '同步已開啟' : '未啟用'}</button></div>
-    {toolMode === 'roles' ? <RoleWorkspace isDesktop={isDesktop} source={source} onSourceChange={changeSource} lobby={clientLobby} players={players} results={results} busy={busy} loading={clientLoading} error={error} applyStatus={applyStatus} drawMode={drawMode} onDrawModeChange={changeDrawMode} preferredRoles={preferredRoles} onPreferredRoleChange={changePreferredRole} autoApplyRoles={autoApplyRoles} onAutoApplyRolesChange={toggleAutoApplyRoles} onRefresh={refreshClient} onDraw={handleDraw} onCopy={handleCopy} onRemove={removePlayer} inputValue={inputValue} onInputChange={setInputValue} onAdd={() => addPlayer()} knownNames={knownNames} onToggleKnown={(name) => manualPlayers.includes(name) ? removePlayer(name) : addPlayer(name)} completedAt={completedAt} discordStatus={hasResults ? discordSync.status : { state: 'idle', message: '' }} onRetryDiscord={discordSync.retry} /> : <ChampionDrawPanel championData={championData} positionData={championPositionData} selectedPosition={championPosition} onPositionChange={setChampionPosition} />}
+  const drawingView = toolMode === 'roles' && phase === 'draw';
+  return <div className={`app compact-app${drawingView ? ' is-draw-view' : ''}`}><main className="container">
+    <header className="compact-header"><div className="app-brand"><img src="/favicon-dice.png" alt="" /><h1>英雄聯盟抽籤</h1></div><div className="compact-header-actions"><button className="toolbar-button" type="button" disabled={busy} onClick={() => toolMode === 'roles' ? setStatsOpen(true) : setChampionPoolOpen(true)} aria-label={toolMode === 'roles' ? '歷史統計' : '英雄池一覽'}><span aria-hidden="true">◷</span><span className="toolbar-text">{toolMode === 'roles' ? '歷史統計' : '英雄池'}</span></button><ThemeToggle theme={theme} onToggle={toggleTheme} />{!drawingView && <button className="toolbar-icon" type="button" aria-label="設定" title="設定" disabled={busy} onClick={() => openSettings('data')}>⚙</button>}</div></header>
+    {!drawingView && <div className="compact-navigation"><nav className="compact-tabs" role="tablist" aria-label="工具模式">{[['roles', '抽分路'], ['champions', '抽英雄']].map(([value, label]) => <button key={value} role="tab" type="button" disabled={busy} aria-selected={toolMode === value} onClick={() => changeToolMode(value)}>{label}</button>)}</nav></div>}
+    {toolMode === 'roles' ? phase === 'setup' ? <RoleSetup isDesktop={isDesktop} source={source} onSourceChange={changeSource} lobby={clientLobby} players={players} busy={busy} loading={clientLoading} error={error} drawMode={drawMode} onDrawModeChange={changeDrawMode} preferredRoles={preferredRoles} onPreferredRoleChange={changePreferredRole} autoApplyRoles={autoApplyRoles} onAutoApplyRolesChange={toggleAutoApplyRoles} onRefresh={refreshClient} onPrepare={finishSetup} onRemove={removePlayer} inputValue={inputValue} onInputChange={setInputValue} onAdd={() => addPlayer()} knownNames={knownNames} onToggleKnown={(name) => manualPlayers.includes(name) ? removePlayer(name) : addPlayer(name)} discordSync={discordSync} onManageWebhook={() => openSettings('discord')} /> : <RoleWorkspace lobby={{ localPlayerId: prepared?.localPlayerId }} players={visiblePlayers} results={results} busy={busy} loading={clientLoading} error={error} applyStatus={applyStatus} onReturn={returnToSetup} onDraw={handleDraw} onCopy={handleCopy} discordStatus={hasResults ? discordSync.status : { state: 'idle', message: '' }} onRetryDiscord={discordSync.retry} /> : <ChampionDrawPanel championData={championData} positionData={championPositionData} selectedPosition={championPosition} onPositionChange={setChampionPosition} />}
     <footer className="compact-footer"><span>資料來源：<a href="https://developer.riotgames.com/docs/lol#data_dragon" target="_blank" rel="noreferrer">Riot Data Dragon</a> · <a href="https://www.communitydragon.org/" target="_blank" rel="noreferrer">CommunityDragon</a></span></footer>
-  </main><SettingsDialog open={settingsOpen} tab={settingsTab} onTabChange={setSettingsTab} onClose={() => setSettingsOpen(false)} isDesktop={isDesktop} source={source} drawMode={drawMode} onDrawModeChange={changeDrawMode} autoApplyRoles={autoApplyRoles} onAutoApplyRolesChange={toggleAutoApplyRoles} discordSync={discordSync} stats={stats} dataInfo={initialData?.info} dataNotice={initialData?.notice} onImportStats={handleImportStats} /><StatsModal open={statsOpen} stats={stats} onClose={() => setStatsOpen(false)} onClear={handleClearStats} /><ChampionPoolModal open={championPoolOpen} championData={championData} positionData={championPositionData} initialPosition={championPosition} onClose={() => setChampionPoolOpen(false)} /><ToastHost toasts={toasts} /></div>;
+  </main><SettingsDialog open={settingsOpen} tab={settingsTab} onTabChange={setSettingsTab} onClose={() => setSettingsOpen(false)} isDesktop={isDesktop} discordSync={discordSync} stats={stats} dataInfo={initialData?.info} dataNotice={initialData?.notice} onImportStats={handleImportStats} /><StatsModal open={statsOpen} stats={stats} onClose={() => setStatsOpen(false)} onClear={handleClearStats} /><ChampionPoolModal open={championPoolOpen} championData={championData} positionData={championPositionData} initialPosition={championPosition} onClose={() => setChampionPoolOpen(false)} /><ToastHost toasts={toasts} /></div>;
 }

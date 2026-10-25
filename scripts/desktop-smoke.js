@@ -56,11 +56,11 @@ try {
   const check = await window.webContents.executeJavaScript(`(async () => {
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     for (let i = 0; i < 200; i++) {
-      const candidate = document.querySelector('.role-workspace');
+      const candidate = document.querySelector('.role-setup, .draw-workspace');
       if (candidate?.getAttribute('aria-busy') === 'false' && candidate.querySelector('.player-label, [role="alert"]')) break;
       await sleep(100);
     }
-    const panel = document.querySelector('.role-workspace');
+    let panel = document.querySelector('.role-setup, .draw-workspace');
     if (!panel || typeof window.lolDesktop?.readLobby !== 'function') throw new Error('Desktop bridge or panel missing');
     const players = [...panel.querySelectorAll('.player-label')].map((item) => item.textContent);
     const error = panel.querySelector('[role="alert"]')?.textContent || '';
@@ -73,6 +73,9 @@ try {
       const applyToggle = panel.querySelector('[aria-label="抽完更新我的 LoL 分路"]');
       if (!applyToggle || applyToggle.checked) throw new Error('Auto-apply must default to off in a fresh profile');
       if (${liveApply}) { applyToggle.click(); await sleep(50); }
+      panel.querySelector('.finish-setup').click();
+      for (let i = 0; i < 100 && !document.querySelector('.draw-workspace'); i++) await sleep(50);
+      panel = document.querySelector('.draw-workspace');
       panel.querySelector('.primary-draw').click();
       for (let i = 0; i < 250 && panel.querySelector('.primary-draw').textContent !== '重新抽籤'; i++) await sleep(100);
       drawn = panel.querySelector('.primary-draw').textContent === '重新抽籤';
@@ -111,7 +114,7 @@ try {
     await sleep(50);
     [...document.querySelectorAll('button')].find((button) => button.textContent === '加入').click();
     await sleep(50);
-    /* Single-page layout: no preference wizard. */
+    document.querySelector('.finish-setup').click();
     await sleep(50);
     document.querySelector('.primary-draw').click();
     for (let i = 0; i < 50 && document.querySelector('.primary-draw').textContent !== '重新抽籤'; i++) await sleep(100);

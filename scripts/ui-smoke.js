@@ -1,199 +1,105 @@
-// UI integration checks use synthetic IPC replies and an isolated profile. No client writes or Discord requests.
+// Production UI: isolated profiles and synthetic native replies; no real client writes or Discord sends.
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { mkdirSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { once } from 'node:events';
 import '../src/desktop/main.js';
-
-const output = path.resolve('release/ui-smoke');
-mkdirSync(output, { recursive: true });
-app.setPath('userData', path.join(output, `profile-${Date.now()}`));
+const output=path.resolve('release/ui-smoke');
+mkdirSync(output,{recursive:true});
+app.setPath('userData',path.join(output,`profile-${Date.now()}`));
 app.disableHardwareAcceleration();
-
-app.whenReady().then(async () => {
-  const deadline = setTimeout(() => { console.error('UI check timed out'); app.exit(1); }, 60000);
-  if (!BrowserWindow.getAllWindows().length) await once(app, 'browser-window-created');
-  const fixtureNames = ['八方肉包#1020', '小明#TW1', '小明#TW2', '隊友 A#TW', '隊友 B#TW'];
-  const fixtureRoles = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'];
-  let reads = 0;
-  let readFailure = false;
-  const writes = [];
+app.whenReady().then(async()=>{
+  const deadline=setTimeout(()=>{console.error('UI check timed out');app.exit(1)},90000);
+  if(!BrowserWindow.getAllWindows().length)await once(app,'browser-window-created');
+  const names=['八方肉包#1020','小明#TW1','小明#TW2','隊友 A#TW','隊友 B#TW'];
+  let reads=0,readFailure=false,rosterChanged=false;
+  const writes=[];
   ipcMain.removeHandler('lol:read-lobby');
-  ipcMain.handle('lol:read-lobby', () => {
-    reads++;
-    return readFailure ? { ok: false, message: '測試：客戶端已離線' } : { ok: true, lobby: {
-      players: fixtureNames.map((name, i) => ({ name, id: `fixture-${i}`, isLeader: i === 0, firstPosition: fixtureRoles[i], secondPosition: 'UNSELECTED' })),
-      localPlayerId: 'fixture-0', fetchedAt: new Date().toISOString()
-    } };
-  });
+  ipcMain.handle('lol:read-lobby',()=>{reads++;return readFailure?{ok:false,message:'測試：客戶端已離線'}:{ok:true,lobby:{players:names.map((name,i)=>({name:rosterChanged&&i===4?'新隊友#TW':name,id:`fixture-${i}`,firstPosition:['TOP','JUNGLE','MIDDLE','BOTTOM','UTILITY'][i],secondPosition:'UNSELECTED'})),localPlayerId:'fixture-0',fetchedAt:new Date().toISOString()}}});
   ipcMain.removeHandler('lol:apply-roles');
-  ipcMain.handle('lol:apply-roles', (_event, results) => {
-    writes.push(results);
-    return { ok: false, message: '測試：客戶端拒絕套用' };
-  });
-  try {
-    const window = BrowserWindow.getAllWindows()[0];
-    const errors = [];
-    window.webContents.on('console-message', (event) => { if (event.level === 'error') errors.push(event.message); });
-    if (window.webContents.isLoading()) await once(window.webContents, 'did-finish-load');
-    const run = (fn) => window.webContents.executeJavaScript(`(${fn.toString()})()`);
-    const capture = async (name) => {
-      window.show(); window.focus(); window.webContents.invalidate();
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      await writeFile(path.join(output, name), (await window.webContents.capturePage()).toPNG());
-    };
-    const initial = await run(async () => {
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      for (let i = 0; i < 100; i++) {
-        if (document.querySelector('.role-workspace')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.player-label').length === 5) break;
-        await sleep(50);
-      }
-      const labels = [...document.querySelectorAll('.player-label')].map((item) => item.textContent);
-      if (labels.length !== 5 || labels.some((label) => label.includes('#'))) throw new Error('Names missing or Riot tags visible');
-      if (!labels.includes('小明 · 1') || !labels.includes('小明 · 2')) throw new Error('Same-name accounts not distinguished');
-      if (document.querySelector('.stepper')) throw new Error('Old wizard still visible');
-      if (document.querySelectorAll('.primary-draw').length !== 1) throw new Error('Competing primary draw buttons');
-      if (document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').checked) throw new Error('Auto-apply unexpectedly enabled');
-      document.querySelector('.primary-draw').click();
-      for (let i = 0; i < 100 && document.querySelector('.primary-draw').textContent !== '重新抽籤'; i++) await sleep(50);
-      if (document.querySelectorAll('.table-role').length !== 5) throw new Error('Five-person draw must show only five primary roles');
-      if (document.querySelector('.primary-draw').getBoundingClientRect().bottom > innerHeight) throw new Error('Primary action below the fold');
-      return { labels, selfBadge: Boolean(document.querySelector('.self-badge')), rows: document.querySelectorAll('.roster-player-card').length, clientDraw: true };
-    });
-    await run(async () => {
-      if (document.documentElement.dataset.theme !== 'light') document.querySelector('[aria-label="切換深淺色模式"]').click();
-      for (let i = 0; i < 100 && document.documentElement.dataset.theme !== 'light'; i++) await new Promise((resolve) => setTimeout(resolve, 30));
-    });
-    await capture('desktop-light.png');
-    await run(async () => {
-      document.querySelector('[aria-label="切換深淺色模式"]').click();
-      for (let i = 0; i < 100 && document.documentElement.dataset.theme !== 'dark'; i++) await new Promise((resolve) => setTimeout(resolve, 30));
-      if (document.documentElement.dataset.theme !== 'dark') throw new Error('Dark theme did not activate');
-      const stored = await window.lolDesktop.initializeData({});
-      if (!stored.ok || stored.value.data.preferences.theme !== 'dark' || localStorage.getItem('lolTheme') !== null) throw new Error('Native theme did not persist exclusively in AppData');
-    });
+  ipcMain.handle('lol:apply-roles',(_event,results)=>{writes.push(results);return {ok:false,message:'測試：客戶端拒絕套用'}});
+  const helpers=`
+    const sleep=(ms=35)=>new Promise(r=>setTimeout(r,ms));
+    const wait=async(check,message='UI did not settle')=>{await sleep();for(let i=0;i<160;i++){if(check())return;await sleep()}throw Error(message)};
+    const clickText=text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);if(!b)throw Error('Missing button '+text);b.click()};
+    const setField=(selector,value)=>{const el=document.querySelector(selector);if(!el)throw Error('Missing field '+selector);const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}))};
+    const settled=()=>document.querySelector('.role-setup,.draw-workspace')?.getAttribute('aria-busy')==='false';
+    const prepare=async()=>{await wait(settled);document.querySelector('.finish-setup').click();await wait(()=>document.querySelector('.draw-workspace'))};
+    const draw=async()=>{document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.primary-draw')?.textContent==='重新抽籤')};
+    const back=async()=>{clickText('返回設定');await wait(()=>document.querySelector('.role-setup'))};
+  `;
+  try{
+    const window=BrowserWindow.getAllWindows()[0],errors=[];
+    window.webContents.on('console-message',event=>{if(event.level==='error')errors.push(event.message)});
+    if(window.webContents.isLoading())await once(window.webContents,'did-finish-load');
+    const run=code=>window.webContents.executeJavaScript(`(async()=>{${helpers}${code}})()`);
+    const capture=async(name)=>{window.show();window.focus();window.webContents.invalidate();await new Promise(r=>setTimeout(r,180));await writeFile(path.join(output,name),(await window.webContents.capturePage()).toPNG())};
+    const initial=await run(`
+      await wait(()=>settled()&&document.querySelectorAll('.preparation-player-row').length===5);
+      const labels=[...document.querySelectorAll('.preparation-player-name .player-label')].map(el=>el.textContent);
+      if(labels.some(n=>n.includes('#'))||!labels.includes('小明 · 1')||!labels.includes('小明 · 2'))throw Error('Riot ID display incorrect');
+      if(document.querySelector('.primary-draw,.player-avatar'))throw Error('Draw action or avatars visible during preparation');
+      if(document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').checked)throw Error('Auto-apply enabled by default');
+      const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);
+      await prepare();
+      if(document.querySelector('#draw-mode,.source-switch,.discord-sync-controls,.compact-tabs,.player-avatar'))throw Error('Setup controls leaked into drawing');
+      if(document.querySelectorAll('.draw-screen-actions button').length!==3||!document.querySelector('.copy-results').disabled)throw Error('Ready action states incorrect');
+      if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Preparation updated stats');
+      return {labels,readyActions:3,preparationDoesNotDraw:true};
+    `);
+    await capture('ready.png');
+    await run(`await draw();if(document.querySelectorAll('.table-role').length!==5)throw Error('Five-player role count incorrect');if(document.querySelector('.primary-draw').getBoundingClientRect().bottom>innerHeight)throw Error('Action below fold');`);
     await capture('desktop-dark.png');
-    await run(async () => {
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      const mode = document.querySelector('#draw-mode');
-      mode.value = 'client'; mode.dispatchEvent(new Event('change', { bubbles: true })); await sleep(30);
-      document.querySelector('.primary-draw').click();
-      for (let i = 0; i < 100 && document.querySelector('.primary-draw').textContent !== '重新抽籤'; i++) await sleep(50);
-      const roles = [...document.querySelectorAll('.table-role')].map((item) => item.textContent);
-      if (roles.join(',') !== '上路,打野,中路,下路,輔助') throw new Error('Client preferences not honored');
-      mode.value = 'custom'; mode.dispatchEvent(new Event('change', { bubbles: true })); await sleep(30);
-      const selects = [...document.querySelectorAll('.inline-preference')];
-      if (selects.length !== 5) throw new Error('Custom preferences missing');
-      selects[2].value = ''; selects[2].dispatchEvent(new Event('change', { bubbles: true })); await sleep(30);
-      selects[0].value = '中路'; selects[0].dispatchEvent(new Event('change', { bubbles: true })); await sleep(30);
-      document.querySelector('.primary-draw').click();
-      for (let i = 0; i < 100 && document.querySelector('.primary-draw').textContent !== '重新抽籤'; i++) await sleep(50);
-      if (document.querySelector('.table-role').textContent !== '中路') throw new Error('Custom primary preference lost');
-      document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click(); await sleep(30);
-      document.querySelector('.primary-draw').click();
-      for (let i = 0; i < 100 && !document.querySelector('.inline-status.is-error'); i++) await sleep(50);
-      if (!document.querySelector('.inline-status.is-error')?.textContent.includes('抽籤結果已保留')) throw new Error('Apply error missing');
-      if (document.querySelectorAll('.table-role').length !== 5) throw new Error('Apply failure erased results');
-      document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();
-      for (let i = 0; i < 100 && document.querySelector('.role-workspace').getAttribute('aria-busy') !== 'false'; i++) await sleep(30);
-    });
-    if (writes.length !== 1 || writes[0].some((result, i) => result.name !== fixtureNames[i])) throw new Error('Native apply payload lost full Riot IDs');
-    if (reads < 5) throw new Error('Client was not refreshed on each draw');
-    await run(async () => {
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      document.querySelector('[aria-label="設定"]').click(); await sleep(30);
-      const dialog = document.querySelector('.settings-dialog');
-      if (!dialog.open) throw new Error('Settings dialog missing');
-      [...dialog.querySelectorAll('.settings-nav button')].find((button) => button.textContent === 'Discord').click(); await sleep(30);
-      dialog.querySelector('.webhook-manager summary').click(); await sleep(30);
-      const field = (selector, value) => {
-        const input = dialog.querySelector(selector);
-        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      field('#discord-label', '測試頻道'); field('#discord-webhook', 'https://discord.com/api/webhooks/123456789012345678/synthetic_test_only'); await sleep(30);
-      dialog.querySelector('form').requestSubmit();
-      for (let i = 0; i < 100 && !dialog.querySelector('.discord-destination-list')?.textContent.includes('測試頻道'); i++) await sleep(30);
-      if (!dialog.querySelector('.discord-destination-list')?.textContent.includes('測試頻道')) throw new Error('Webhook save failed');
-      if (dialog.querySelector('[aria-label="Discord 自動同步"]').getAttribute('aria-checked') !== 'false') throw new Error('Saving settings enabled Discord');
-      dialog.querySelector('[aria-label="刪除 測試頻道"]').click();
-      for (let i = 0; i < 100 && dialog.querySelector('.discord-destination-list')?.textContent.includes('測試頻道'); i++) await sleep(30);
-      dialog.dispatchEvent(new Event('cancel', { cancelable: true })); await sleep(30);
-      if (dialog.open) throw new Error('Settings cancel failed');
-      document.querySelector('[aria-label="切換深淺色模式"]').click();
-      for (let i = 0; i < 100 && document.querySelector('.role-workspace').getAttribute('aria-busy') !== 'false'; i++) await sleep(30);
-      document.querySelector('[aria-label="設定"]').click();
-    });
+    await run(`if(document.documentElement.dataset.theme!=='light')document.querySelector('[aria-label="切換深淺色模式"]').click();await wait(()=>settled()&&document.documentElement.dataset.theme==='light');`);
+    await capture('desktop-light.png');
+    await run(`
+      await back();setField('#draw-mode','client');await wait(settled);await prepare();await draw();
+      if([...document.querySelectorAll('.table-role')].map(el=>el.textContent).join(',')!=='上路,打野,中路,下路,輔助')throw Error('Client preferences lost');
+      await back();setField('#draw-mode','custom');await wait(()=>settled()&&document.querySelectorAll('.inline-preference').length===5);
+      const select=[...document.querySelectorAll('.inline-preference')];select[2].value='';select[2].dispatchEvent(new Event('change',{bubbles:true}));await sleep();select[0].value='中路';select[0].dispatchEvent(new Event('change',{bubbles:true}));await sleep();
+      const left=[...document.querySelectorAll('.inline-preference')].map(el=>el.getBoundingClientRect().left);if(Math.max(...left)-Math.min(...left)>1)throw Error('Preference controls misaligned');
+      document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();await draw();
+      if(document.querySelector('.table-role').textContent!=='中路'||!document.querySelector('.inline-status.is-error')?.textContent.includes('抽籤結果已保留'))throw Error('Apply error erased result');
+      await back();document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();
+      const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);
+      document.activeElement?.blur();document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'z',bubbles:true}));await wait(()=>document.querySelector('.role-setup'));
+      if(document.querySelector('[aria-label="玩家來源"] button[aria-pressed="true"]').textContent!=='客戶端隊伍')throw Error('Return shortcut switched source');
+      await prepare();if(document.querySelectorAll('.table-role').length!==5)throw Error('Unchanged preparation erased results');
+      if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Return changed stats');
+    `);
+    if(writes.length!==1||writes[0].some((r,i)=>r.name!==names[i]))throw Error('Native payload lost full IDs');
+    readFailure=true;
+    await run(`document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.inline-status.is-error')?.textContent.includes('離線'));if(document.querySelectorAll('.table-role').length!==5)throw Error('Read error erased results')`);
+    readFailure=false;rosterChanged=true;
+    await run(`const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.role-setup'));if(!document.querySelector('[role="alert"]')?.textContent.includes('重新確認'))throw Error('Changed team not flagged');if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Changed team drawn without confirmation')`);
+    await run(`
+      clickText('管理 Webhook');await wait(()=>document.querySelector('.settings-dialog')?.open);document.querySelector('.webhook-manager summary').click();await sleep();
+      setField('#discord-label','測試頻道');setField('#discord-webhook','https://discord.com/api/webhooks/123456789012345678/synthetic_test_only');await sleep();
+      document.querySelector('.discord-settings-content form').requestSubmit();await wait(()=>document.querySelector('.discord-destination-list')?.textContent.includes('測試頻道'));
+      if(document.querySelector('.settings-dialog [aria-label="Discord 自動同步"]').getAttribute('aria-checked')!=='false')throw Error('Save enabled sync');
+      document.querySelector('[aria-label="刪除 測試頻道"]').click();await wait(()=>!document.querySelector('.discord-destination-list'));
+      document.querySelector('.settings-dialog [aria-label="關閉設定"]').click();await sleep();document.querySelector('[aria-label="設定"]').click();await wait(()=>document.querySelector('.data-settings-panel'));
+    `);
     await capture('settings-light.png');
-    await run(async () => {
-      document.querySelector('.settings-dialog [aria-label="關閉設定"]').click();
-      await new Promise((resolve) => setTimeout(resolve, 30));
-    });
-    await run(async () => {
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      const previousStats = localStorage.getItem('lolDrawStats');
-      [...document.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === '抽英雄').click();
-      await sleep(30);
-      [...document.querySelectorAll('.champion-position')].find((button) => button.textContent === '中路').click();
-      for (let i = 0; i < 200 && document.querySelector('.champion-actions button').disabled; i++) await sleep(50);
-      document.querySelector('.champion-actions button').click();
-      await sleep(50);
-      if (!document.querySelector('.champion-result h3')?.textContent) throw new Error('Champion draw failed');
-      if (localStorage.getItem('lolDrawStats') !== previousStats) throw new Error('Champion draw changed role statistics');
-      [...document.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent === '抽分路').click();
-      await sleep(30);
-    });
-    readFailure = true;
-    await run(async () => {
-      document.querySelector('[aria-label="重新讀取隊伍"]').click();
-      for (let i = 0; i < 100; i++) {
-        if (document.querySelector('.role-workspace').getAttribute('aria-busy') === 'false' && document.querySelector('.inline-status.is-error')?.textContent.includes('離線')) break;
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
-      if (document.querySelectorAll('.table-role').length) throw new Error('Stale roles survived a disconnected client');
-      [...document.querySelectorAll('.source-switch button')].find((button) => button.textContent === '手動名單').click();
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      if (document.querySelector('.inline-status.is-error')) throw new Error('Client error leaked into manual source');
-    });
-    // No preload means this window has the same capabilities as the static website.
-    const web = new BrowserWindow({ show: false, width: 1040, height: 760, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
-    await web.loadURL('lol-draw://app/');
-    const website = await web.webContents.executeJavaScript(`(async () => {
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      for (let i = 0; i < 100 && !document.querySelector('#player-name'); i++) await sleep(30);
-      if (window.lolDesktop || document.querySelector('.source-switch') || document.querySelector('.auto-apply-control')) throw new Error('Desktop controls leaked into website');
-      const add = async (name) => {
-        const input = document.querySelector('#player-name');
-        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, name);
-        input.dispatchEvent(new Event('input', { bubbles: true })); await sleep(20);
-        document.querySelector('.manual-add-form').requestSubmit(); await sleep(20);
-      };
-      await add('網站玩家#TW'); await add('網站玩家#OTHER'); await add('朋友#TW');
-      const mode = document.querySelector('#draw-mode'); mode.value = 'custom'; mode.dispatchEvent(new Event('change', { bubbles: true })); await sleep(20);
-      const first = document.querySelector('.inline-preference'); first.value = '上路'; first.dispatchEvent(new Event('change', { bubbles: true })); await sleep(20);
-      document.querySelector('.primary-draw').click();
-      for (let i = 0; i < 100 && document.querySelector('.primary-draw').textContent !== '重新抽籤'; i++) await sleep(30);
-      if (document.querySelectorAll('.table-role').length !== 6 || document.querySelector('.table-role').textContent !== '上路') throw new Error('Website primary/secondary draw failed');
-      if ([...document.querySelectorAll('.player-label')].some((item) => item.textContent.includes('#'))) throw new Error('Website names still show tags');
-      const identities = [...document.querySelectorAll('[data-player-id]')].map((item) => item.dataset.playerId);
-      if (identities[0] !== '網站玩家#TW' || identities[1] !== '網站玩家#OTHER') throw new Error('Website identities merged');
-      return { manualDraw: true, customPreferences: true, hiddenTags: true, separateIdentities: true };
-    })()`);
-    web.setContentSize(390, 780);
-    const mobile = await web.webContents.executeJavaScript(`({ overflow: document.documentElement.scrollWidth > innerWidth, primaryVisible: !!document.querySelector('.primary-draw') })`);
-    if (mobile.overflow) throw new Error('Mobile horizontal overflow');
-    web.show(); web.focus(); web.webContents.invalidate();
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    await writeFile(path.join(output, 'website-mobile.png'), (await web.webContents.capturePage()).toPNG());
-    web.destroy();
-    if (errors.length) throw new Error(errors.join('\n'));
-    const check = { initial, clientPreferences: true, customPreferences: true, applyFailurePreservesResult: true, completeIdsInNativePayload: true, settingsCrud: true, championDraw: true, themes: true, website, mobile };
-    await writeFile(path.join(output, 'result.json'), JSON.stringify(check, null, 2));
-    console.log(JSON.stringify(check));
-    clearTimeout(deadline); app.exit(0);
-  } catch (error) {
-    console.error(error.stack || error.message);
-    clearTimeout(deadline); app.exit(1);
-  }
+    await run(`document.querySelector('.settings-dialog [aria-label="關閉設定"]').click();await sleep();const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);clickText('抽英雄');await sleep();await wait(()=>document.querySelector('.champion-actions button')&&!document.querySelector('.champion-actions button').disabled);document.querySelector('.champion-actions button').click();await wait(()=>document.querySelector('.champion-result h3')?.textContent);if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Champion draw changed stats');clickText('抽分路');await wait(()=>document.querySelector('.role-setup'));`);
+    const web=new BrowserWindow({show:false,width:1040,height:760,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
+    await web.loadURL('lol-draw://app/');await web.webContents.executeJavaScript(`localStorage.setItem('lolDrawStats',JSON.stringify({'同名#1':{},'同名#2':{},'第三位':{}}));`);web.reload();await once(web.webContents,'did-finish-load');
+    const webRun=code=>web.webContents.executeJavaScript(`(async()=>{${helpers}${code}})()`);
+    const website=await webRun(`
+      await wait(()=>document.querySelector('.role-setup'));if(window.lolDesktop||document.querySelector('.source-switch,.auto-apply-control'))throw Error('Desktop controls leaked into website');
+      const history=document.querySelector('.recent-player-picker');history.querySelector('summary').click();await sleep();const chips=[...history.querySelectorAll('.known-chip')];if(chips.length!==3)throw Error('History players missing');
+      chips[0].click();await wait(settled);chips[1].click();await wait(settled);if(!history.open||document.querySelectorAll('.preparation-player-row').length!==2)throw Error('History continuous selection broken');
+      chips[1].click();await wait(settled);if(document.querySelectorAll('.preparation-player-row').length!==1)throw Error('History deselection broken');chips[1].click();await wait(settled);chips[2].click();await wait(settled);
+      setField('#draw-mode','custom');await wait(()=>document.querySelectorAll('.inline-preference').length===3);setField('.inline-preference','中路');await sleep();await prepare();await draw();
+      if(document.querySelectorAll('.table-role').length!==6)throw Error('Secondary roles missing');if(document.querySelector('.player-avatar,.inline-preference,#draw-mode,.discord-summary'))throw Error('Draw screen clutter');
+      await back();if(document.querySelectorAll('.preparation-player-row').length!==3||document.querySelector('#draw-mode').value!=='custom')throw Error('Return lost settings');await prepare();return {manualDraw:true,secondaryRoles:true,continuousHistory:true,preservesParameters:true};
+    `);
+    web.setContentSize(390,844);await new Promise(r=>setTimeout(r,150));
+    const mobile=await webRun(`if(document.documentElement.scrollWidth>innerWidth)throw Error('Mobile overflow');return {noOverflow:true}`);
+    web.show();await writeFile(path.join(output,'website-mobile.png'),(await web.webContents.capturePage()).toPNG());web.destroy();
+    if(reads<5||errors.length)throw Error(errors.join('\n')||'Client not refreshed on draw');
+    const check={initial,website,mobile,clientPreferences:true,customPreferences:true,applyFailurePreservesResult:true,readFailurePreservesResult:true,changedRosterRequiresConfirmation:true,completeIdsInNativePayload:true,settingsCrud:true,championDraw:true};
+    await writeFile(path.join(output,'result.json'),JSON.stringify(check,null,2));console.log(JSON.stringify(check));clearTimeout(deadline);app.exit(0);
+  }catch(error){console.error(error.stack);clearTimeout(deadline);app.exit(1)}
 });

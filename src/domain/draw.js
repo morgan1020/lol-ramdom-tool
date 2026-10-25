@@ -55,7 +55,7 @@ export function createRouteKey(main, secondary) {
   return [main, secondary].sort((a, b) => a.localeCompare(b, 'zh-Hant')).join('|');
 }
 
-function validatePreferredRoles(names, preferredRoles) {
+export function validatePreferredRoles(names, preferredRoles) {
   const constrainedRoles = names
     .map((name) => preferredRoles[name])
     .filter(Boolean);

@@ -1,0 +1,111 @@
+/* Approved preparation -> drawing flow, shared by web and desktop. */
+.role-setup { --setup-control-height: 40px; --setup-action-width: 40px; --setup-preference-width: 106px; --setup-control-gap: 12px; }
+.compact-app .container { width: min(1060px, calc(100% - 48px)); }
+.compact-header { min-height: 52px; }
+.preparation-heading { margin: 25px 0 22px; }
+.preparation-heading h2 { margin: 0; font-size: 25px; font-weight: 650; }
+.preparation-heading p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; }
+.preparation-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(290px, 1fr); gap: 20px; }
+.preparation-panel { min-width: 0; padding: 23px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface-strong); box-shadow: var(--shadow-sm); }
+.preparation-panel-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 17px; }
+.preparation-panel h3 { margin: 0; font-size: 16px; font-weight: 650; }
+.preparation-panel-title > span, .preparation-source { color: var(--text-muted); font-size: 12px; }
+.preparation-source { margin: 0 0 14px; }
+.role-setup .source-switch { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 9px; padding: 4px; background: var(--surface-muted); }
+.role-setup .source-switch button { flex: 1; justify-content: center; padding: 7px; }
+.role-setup .source-switch .is-selected { color: var(--primary); }
+.preparation-client-status { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 13px; color: var(--text-muted); font-size: 12px; }
+.preparation-client-status .text-button { font-size: 12px; }
+.preparation-player-list { display: grid; gap: 9px; }
+.preparation-player-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--setup-preference-width) var(--setup-action-width); align-items: center; gap: var(--setup-control-gap); min-height: 62px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-muted); }
+.preparation-player-name { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.preparation-player-name .player-label { white-space: normal; overflow-wrap: anywhere; font-size: 14px; }
+.preparation-player-row .inline-preference { grid-column: 2; width: 100%; height: var(--setup-control-height); min-height: var(--setup-control-height); margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+.preparation-player-row .remove-player { grid-column: 3; position: static; margin: 0; width: var(--setup-action-width); height: var(--setup-control-height); border: 1px solid transparent; border-radius: 8px; font-size: 20px; }
+.client-preference-label { grid-column: 2; text-align: right; color: var(--text-muted); font-size: 12px; }
+.preparation-empty { padding: 24px 4px; color: var(--text-muted); text-align: center; font-size: 13px; }
+.role-setup .manual-add-form { display: grid; grid-template-columns: minmax(0, 1fr) var(--setup-preference-width) var(--setup-action-width); align-items: center; padding: 0 13px; margin-bottom: 14px; gap: var(--setup-control-gap); }
+.role-setup .manual-add-form > input { width: 100%; min-width: 0; height: var(--setup-control-height); min-height: var(--setup-control-height); padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-muted); color: var(--text); font-size: 13px; }
+.role-setup .manual-add-form > .btn { width: var(--setup-action-width); height: var(--setup-control-height); min-height: var(--setup-control-height); padding: 0; border-radius: 8px; font-size: 13px; }
+.role-setup .recent-player-picker { flex: 0 0 auto; }
+.role-setup .recent-player-picker > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 7px; padding: 8px 10px; height: var(--setup-control-height); min-height: var(--setup-control-height); font-size: 13px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: var(--surface-strong); }
+.role-setup .recent-player-picker > summary::-webkit-details-marker { display: none; }
+.role-setup .recent-player-picker[open] > summary { border-color: var(--primary); color: var(--primary); }
+.role-setup .recent-player-popover { top: calc(100% + 8px); width: min(300px, 80vw); max-height: 240px; }
+.role-setup .recent-player-popover .known-hints { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.role-setup .recent-player-popover .known-chip { min-height: 32px; font-size: 12px; padding: 5px 10px; }
+.preparation-group + .preparation-group { border-top: 1px solid var(--border); padding-top: 21px; margin-top: 22px; }
+.preparation-group > h3 { margin-bottom: 14px; }
+.preparation-group .draw-mode-field { display: block; }
+.preparation-group .draw-mode-field > span { display: none; }
+.preparation-group .draw-mode-field select { width: 100%; height: var(--setup-control-height); min-height: var(--setup-control-height); padding: 8px 10px; background: var(--surface-muted); }
+.preparation-group .auto-apply-control { flex-direction: row-reverse; justify-content: space-between; font-size: 13px; }
+.preparation-group .auto-apply-control input { right: 0; }
+.preparation-group .auto-apply-control small { margin-top: 4px; }
+.preparation-group .discord-sync-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 0; border: 0; margin: 0; background: none; }
+.preparation-group .discord-sync-label { font-size: 13px; }
+.preparation-group .discord-destination-select, .preparation-group .discord-current-name, .preparation-group .discord-sync-error { grid-column: 1 / -1; width: 100%; }
+.preparation-group .discord-current-name { padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; margin: 0; color: var(--text-muted); font-size: 12px; }
+.preparation-group .discord-destination-select select { width: 100%; height: var(--setup-control-height); min-height: var(--setup-control-height); background: var(--surface-muted); }
+.preparation-group .manage-webhook { margin-top: 12px; font-size: 12px; }
+.preparation-actions { display: flex; justify-content: flex-end; margin-top: 23px; }
+.compact-app .finish-setup { min-height: 42px; min-width: 205px; gap: 12px; display: inline-flex; justify-content: center; align-items: center; }
+.preparation-error { margin-top: 16px; }
+.draw-workspace { display: flex; flex-direction: column; min-height: calc(100dvh - 152px); border: 0; border-radius: 0; background: none; box-shadow: none; }
+.draw-screen-title { margin: 38px 0 30px; text-align: center; font-size: 19px; font-weight: 550; }
+.draw-workspace .roster-card-grid { grid-template-columns: repeat(var(--player-count), minmax(0, 1fr)); padding: 0; gap: 14px; min-height: 0; width: 100%; margin: 0 auto; }
+.draw-workspace .count-1 { max-width: 280px; }
+.draw-workspace .count-2 { max-width: 540px; }
+.draw-workspace .count-3 { max-width: 760px; }
+.draw-workspace .roster-player-card { position: relative; display: flex; flex-direction: column; align-items: center; height: 302px; min-height: 302px; padding: 26px 13px 20px; border-color: var(--border); background: var(--surface-strong); }
+.draw-workspace .roster-player-header { display: block; margin: 0; min-height: 26px; padding: 0; text-align: center; border: 0; }
+.draw-workspace .player-label { margin: 0; font-size: 17px; white-space: normal; overflow-wrap: anywhere; }
+.draw-workspace .self-badge { position: absolute; top: 11px; right: 11px; font-size: 10px; }
+.draw-card-result { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 19px; width: 100%; padding-top: 10px; }
+.draw-workspace .table-role { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; font-size: 23px; font-weight: 600; min-width: 0; }
+.draw-workspace .table-role-icon { width: 64px; height: 64px; background: none; border-radius: 0; }
+.draw-workspace .table-role-icon > .role-glyph { width: 64px; height: 64px; }
+.draw-workspace .draw-secondary { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-muted); }
+.draw-workspace .table-role.is-secondary { flex-direction: row; gap: 7px; font-size: 13px; }
+.draw-workspace .table-role.is-secondary .table-role-icon, .draw-workspace .table-role.is-secondary .role-glyph { width: 18px; height: 18px; margin: 0; background: none; }
+.draw-workspace .table-role.is-secondary .role-glyph { background: currentColor; }
+.draw-workspace .empty-role { color: var(--border-strong); font-size: 29px; font-weight: 300; }
+.draw-feedback { margin-top: 18px; min-height: 24px; }
+.draw-screen-actions { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: auto; padding: 24px 0 18px; }
+.compact-app .draw-screen-actions .btn { min-width: 130px; min-height: 44px; }
+.compact-app .draw-screen-actions .primary-draw { min-width: 155px; }
+.compact-app .draw-screen-actions .btn-return { min-width: auto; margin-right: 8px; border-color: transparent; background: none; color: var(--text-muted); }
+.is-draw-view .compact-header { border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+@media (max-width: 760px) {
+  .preparation-grid { grid-template-columns: 1fr; }
+  .preparation-panel { padding: 19px; }
+  .compact-app .container { width: calc(100% - 30px); }
+  .draw-workspace .roster-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .draw-workspace .count-1 { grid-template-columns: 1fr; }
+  .draw-workspace .roster-card-grid.count-3 > :last-child, .draw-workspace .roster-card-grid.count-5 > :last-child { grid-column: 1 / -1; width: calc(50% - 6px); justify-self: center; }
+  .draw-workspace .roster-player-card { height: 246px; min-height: 246px; }
+  .draw-workspace .table-role-icon, .draw-workspace .table-role-icon > .role-glyph { width: 49px; height: 49px; }
+  .draw-screen-actions { position: sticky; bottom: 0; background: var(--bg); padding-top: 16px; gap: 8px; }
+  .compact-app .draw-screen-actions .btn { min-width: 95px; padding: 0 10px; }
+  .compact-app .draw-screen-actions .primary-draw { min-width: 118px; }
+  .compact-app .draw-screen-actions .btn-return { min-width: auto; margin-right: 0; padding-left: 0; }
+}
+@media (max-width: 400px) {
+  .role-setup .manual-add-form { display: flex; flex-wrap: wrap; padding: 0; gap: 8px; }
+  .role-setup .manual-add-form > input { flex-basis: 100%; width: 100%; }
+  .role-setup .recent-player-picker { margin-left: auto; }
+  .role-setup { --setup-preference-width: 90px; --setup-action-width: 36px; --setup-control-gap: 8px; }
+  .preparation-player-row { padding: 9px; }
+}
+.draw-workspace .roster-player-header .self-badge { left: auto; right: 11px; width: auto; }
+.draw-workspace .roster-player-card.has-result .table-role { animation: none; }
+.preparation-group .discord-sync-controls > .discord-sync-error { position: static; max-width: none; }
+
+/* Compact mode selection, shared by both tools. */
+.compact-navigation { height: auto; min-height: 0; margin: 18px 0 24px; border: 0; }
+.compact-tabs { display: inline-flex; align-self: auto; align-items: center; gap: 3px; padding: 4px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-muted); }
+.compact-tabs button { display: inline-flex; align-items: center; justify-content: center; min-width: 91px; min-height: 32px; padding: 6px 15px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--text-muted); font-size: 13px; font-weight: 550; }
+.compact-tabs button[aria-selected='true'] { border-color: var(--border); background: var(--surface-strong); color: var(--primary); box-shadow: 0 1px 4px #0000000a; }
+.compact-tabs button[aria-selected='true']::after { content: none; }
+.compact-tabs button:hover:not(:disabled):not([aria-selected='true']) { color: var(--text); background: color-mix(in srgb, var(--surface-strong) 50%, transparent); }
+@media (max-width: 600px) { .compact-navigation { margin: 14px 0 20px; } .compact-tabs button { min-width: 83px; padding: 6px 12px; } }

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { getActiveDiscordDestination, getDiscordDestinationLabel } from '../domain/discordDestinations.js';
 
-export function DiscordSyncPanel({ settings, status, onSelect, onToggle }) {
+export function DiscordSyncPanel({ settings, status, onSelect, onToggle, disabled = false, label = 'Discord 同步' }) {
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
   const active = getActiveDiscordDestination(settings);
-  const sending = status.state === 'sending' || pending;
+  const sending = disabled || status.state === 'sending' || pending;
   const runAction = async (action) => {
     setPending(true);
     try { await action(); setError(''); }
@@ -13,7 +13,7 @@ export function DiscordSyncPanel({ settings, status, onSelect, onToggle }) {
     finally { setPending(false); }
   };
   return <section className="discord-sync-controls" aria-label="Discord 同步">
-    <span className="discord-sync-label">Discord <span>同步</span></span>
+    <span className="discord-sync-label">{label}</span>
     <button className="discord-sync-switch" type="button" role="switch" aria-checked={settings.enabled} aria-label="Discord 自動同步" disabled={sending || !active} onClick={() => runAction(onToggle)}>
       <span className="discord-switch-track" aria-hidden="true"><span /></span>
     </button>

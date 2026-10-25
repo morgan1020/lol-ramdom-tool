@@ -16,6 +16,7 @@ export function KnownPlayers({ names, selectedPlayers, disabled, onToggle }) {
             key={name}
             className={selected ? 'known-chip is-selected' : 'known-chip'}
             type="button"
+            aria-pressed={selected}
             disabled={disabled}
             title={selected ? '點擊取消選取' : '點擊加入名單'}
             onClick={() => onToggle(name)}
