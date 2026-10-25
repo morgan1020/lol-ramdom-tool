@@ -1,6 +1,6 @@
 {
   "name": "lol-random-tool",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "LOL role drawing tool for Web and Windows desktop",
   "type": "module",
   "main": "src/desktop/main.js",
@@ -10,14 +10,15 @@
     "preview": "vite preview",
     "desktop": "npm run build && electron .",
     "desktop:pack": "npm run build && electron-builder --win --x64 --dir",
-    "desktop:build": "npm run build && electron-builder --win portable --x64",
+    "desktop:build": "npm run build && electron-builder --win nsis portable --x64",
     "desktop:smoke": "npm run build && electron scripts/desktop-smoke.js",
     "ui:smoke": "npm run build && electron scripts/ui-smoke.js",
     "storage:smoke": "npm run build && electron scripts/storage-smoke.js",
     "test": "node --test",
     "update:champions": "node scripts/update-champions.mjs",
     "update:champion-positions": "npm run update:champions && node scripts/update-champion-positions.mjs",
-    "update:data": "npm run update:champion-positions"
+    "update:data": "npm run update:champion-positions",
+    "desktop:installer": "npm run build && electron-builder --win nsis --x64"
   },
   "engines": {
     "node": ">=20"
@@ -47,6 +48,7 @@
     "asar": true,
     "win": {
       "target": [
+        "nsis",
         "portable"
       ],
       "icon": "public/favicon-dice.png",
@@ -54,6 +56,23 @@
     },
     "portable": {
       "artifactName": "LOL-Random-Tool-${version}-Windows.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "英雄聯盟抽籤工具",
+      "artifactName": "LOL-Random-Tool-${version}-Windows-Setup.${ext}",
+      "installerLanguages": [
+        "zh_TW",
+        "en_US"
+      ],
+      "language": "1028"
     }
   }
 }

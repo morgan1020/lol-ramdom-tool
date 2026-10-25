@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPlayerLabels } from '../domain/playerNames.js';
+import { UiIcon } from './UiIcon.jsx';
 
 export function KnownPlayers({ names, selectedPlayers, disabled, onToggle }) {
   const labels = createPlayerLabels(names);
@@ -18,11 +19,11 @@ export function KnownPlayers({ names, selectedPlayers, disabled, onToggle }) {
             type="button"
             aria-pressed={selected}
             disabled={disabled}
-            title={selected ? '點擊取消選取' : '點擊加入名單'}
+            title={`${name} · ${selected ? '點擊取消選取' : '點擊加入名單'}`}
             onClick={() => onToggle(name)}
           >
-            {selected && <svg className="known-player-check" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>}
-            {labels[name]}
+            <UiIcon name={selected ? 'check' : 'plus'} />
+            <span>{labels[name]}</span>
           </button>
         );
       })}

@@ -1,3 +1,4 @@
+import { notify, dismissNotice } from '../notifications.js';
 import { useCallback, useRef, useState } from 'react';
 import { clearDiscordSync, loadDiscordSync, saveDiscordSync } from '../storage/discordSync.js';
 import { changeDesktopDiscord, desktopRequest, hasDesktopData } from '../storage/desktopData.js';
@@ -21,6 +22,7 @@ export function useDiscordSync() {
   const lastDraw = useRef(null);
 
   const applySettings = (next) => {
+    dismissNotice('discord-delivery');
     settingsRef.current = next;
     requestId.current += 1;
     isSending.current = false;
@@ -31,7 +33,7 @@ export function useDiscordSync() {
   const mutate = async (action, payload, webAction) => {
     if (mutationInProgress.current || isSending.current) throw new Error('正在處理 Discord 設定，請稍候');
     mutationInProgress.current = true; setPending(true);
-    try { applySettings(hasDesktopData() ? await changeDesktopDiscord(action, payload) : webAction()); }
+    try { applySettings(hasDesktopData() ? await changeDesktopDiscord(action, payload) : webAction()); if (action === 'toggle' || action === 'select') notify('Discord 設定已儲存', { id: 'discord-settings' }); }
     finally { mutationInProgress.current = false; setPending(false); }
   };
   const configure = (destination) => mutate('configure', destination, () => saveDiscordSync(upsertDiscordDestination(settingsRef.current, destination)));
@@ -41,7 +43,7 @@ export function useDiscordSync() {
   const clear = () => mutate('clear', null, clearDiscordSync);
 
   const syncDraw = useCallback(async (results) => {
-    if (mutationInProgress.current) return;
+    if (mutationInProgress.current || isSending.current) return false;
     const currentSettings = settingsRef.current;
     const destination = getActiveDiscordDestination(currentSettings);
     if (!currentSettings.enabled || !destination) return;
@@ -53,9 +55,10 @@ export function useDiscordSync() {
     try {
       if (hasDesktopData()) await desktopRequest('sendDataDiscord', results);
       else await sendActiveDiscordDraw(currentSettings, results);
-      if (currentRequest === requestId.current) setStatus({ state: 'sent', message: `本次分路結果已傳送到 ${label}` });
+      if (currentRequest === requestId.current) { setStatus({ state: 'sent', message: `本次分路結果已傳送到 ${label}` }); notify(`已傳送到 ${label}`, { id: 'discord-delivery' }); }
     } catch (error) {
-      if (currentRequest === requestId.current) setStatus({ state: 'error', message: error.message });
+      if (currentRequest === requestId.current) { setStatus({ state: 'error', message: error.message }); notify(error.message || 'Discord 傳送失敗', { id: 'discord-delivery', type: 'error', action: { label: '重送', onClick: () => lastDraw.current ? syncDraw(lastDraw.current.results) : undefined } }); }
+      return false;
     } finally {
       if (currentRequest === requestId.current) isSending.current = false;
     }

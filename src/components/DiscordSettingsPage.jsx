@@ -1,3 +1,4 @@
+import { notify, dismissNotice } from '../notifications.js';
 import React, { useState } from 'react';
 import { getDiscordDestinationLabel } from '../domain/discordDestinations.js';
 
@@ -5,15 +6,15 @@ export function DiscordSettingsPage({ settings, status, onConfigure, onRemove, o
   const [editingId, setEditingId] = useState('');
   const [label, setLabel] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const setError = message => { if (message) notify(message, { id: 'webhook-editor', type: 'error' }); else dismissNotice('webhook-editor'); };
+  const setNotice = message => { if (message) notify(message); };
   const [pending, setPending] = useState(false);
   const sending = status.state === 'sending' || pending;
   const resetEditor = () => { setEditingId(''); setLabel(''); setWebhookUrl(''); };
   const runAction = async (action) => {
     setPending(true);
     try { await action(); setError(''); }
-    catch (actionError) { setError(actionError.message); }
+    catch (actionError) { notify(actionError.message || '無法儲存設定', { id: 'webhook-editor', type: 'error', action: { label: '重試', onClick: () => runAction(action) } }); return false; }
     finally { setPending(false); }
   };
   const edit = (destination) => {
@@ -22,7 +23,7 @@ export function DiscordSettingsPage({ settings, status, onConfigure, onRemove, o
   return <section className="discord-settings-page" aria-label="Webhook 管理">
     {!compact && <div className="flow-heading"><span>設定</span><h2>Discord 連動設定</h2><p>替不同伺服器的 Webhook 取名，抽籤前選擇要同步的位置。</p></div>}
     <div className="flow-panel discord-settings-content">
-      <p className="discord-local-note">設定只保存在目前裝置。新增與編輯不會傳送訊息。</p>
+      <p className="discord-local-note">設定保存在此裝置，儲存不會傳送訊息。</p>
       <h3>{editingId ? '編輯 Webhook' : '新增 Webhook'}</h3>
       <form onSubmit={(event) => {
         event.preventDefault();
@@ -38,8 +39,6 @@ export function DiscordSettingsPage({ settings, status, onConfigure, onRemove, o
         <input id="discord-webhook" type="password" required={!editingId} autoComplete="off" spellCheck={false} value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} placeholder={editingId ? '貼上新網址可更換' : '貼上 Discord Webhook 網址'} disabled={sending} />
         <div className="discord-sync-actions"><button className="btn btn-primary" type="submit" disabled={sending || !label.trim()}>儲存設定</button>{editingId && <button className="btn btn-secondary" type="button" disabled={sending} onClick={resetEditor}>取消編輯</button>}</div>
       </form>
-      {error && <p className="discord-sync-error" role="alert">{error}</p>}
-      {notice && <p className="discord-settings-notice" role="status">{notice}</p>}
       <h3>已儲存的 Webhook</h3>
       {settings.destinations.length === 0 ? <p className="discord-local-note">尚未新增 Webhook。</p> : <ul className="discord-destination-list">{settings.destinations.map((destination) => <li key={destination.id}>
         <div><strong>{getDiscordDestinationLabel(destination)}</strong>{settings.activeDestinationId === destination.id && <span>目前選取</span>}</div>

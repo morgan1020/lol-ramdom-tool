@@ -8,9 +8,17 @@ React + Vite 版英雄聯盟抽籤工具，同時提供靜態網站與 Windows �
 
 大視窗的內容寬度會隨視窗延展，上限為 1680px；1440px 以上同步增加字級、控制項與結果卡片尺寸，避免最大化後仍維持小視窗比例。準備頁按鈕仍緊接內容，手機版保留原有列表與底部操作區。
 
+主畫面以圖示呈現新增、複製與規則狀態，保留操作名稱、錯誤訊息及圖示提示。歷史玩家選單最寬 520px、採兩欄與至少 56px 的選項高度，依畫面空間決定展開位置；可連續選取，按 Esc 或點擊外部關閉。
+
+準備頁的玩家、規則與 Discord 共用一張設定面板。結果卡以較小的內框呈現備用分路，指定主位以框線與鎖頭標示，標記取自該次抽籤實際使用的偏好。結果頁底部顯示目前選取的 Discord 目的地名稱，傳送開關以明確文字標示，設定開關同時呈現文字、勾叉符號與綠灰配色。
+
+分路模式以「隨機／沿用／指定」分段按鈕切換（「沿用」僅桌面客戶端來源提供），支援方向鍵。套用分路與 Discord 使用相同開關樣式，Discord 設定直接顯示。分路套用成功使用與複製相同的浮動通知。
+
+Discord 目的地在準備頁標題旁以緊湊選擇器顯示；設定視窗、玩家主位偏好及匯入方式共用相同選單元件，支援鍵盤選取與 Esc 關閉，浮動選單不會被設定對話框遮住。
+
 ## Windows 桌面 App
 
-執行 `release/LOL-Random-Tool-1.4.0-Windows.exe` 即可使用，不需安裝 Node.js。這是尚未簽章的可攜式版本；首次啟動需解壓縮，可能較慢。版本更新時關閉舊版並替換執行檔即可，目前沒有自動更新。
+建議執行 `release/LOL-Random-Tool-1.4.3-Windows-Setup.exe` 安裝，不需安裝 Node.js；更新時可直接執行新版安裝程式。另提供 `release/LOL-Random-Tool-1.4.3-Windows.exe` 免安裝版。兩種版本皆尚未簽章，並共用此 Windows 帳號的設定與紀錄，目前沒有背景自動更新。
 
 1. 在同一台 Windows 電腦開啟並登入 LoL 客戶端，建立組隊大廳。
 2. 開啟 App，預設選取「客戶端隊伍」，會讀取一次目前名單；人員變動後可在準備頁按「重新讀取」。這不是持續即時監看。
@@ -42,7 +50,7 @@ LCU 並非 Riot 保證相容的第三方服務，客戶端改版可能需要更�
 npm install
 npm run desktop        # 建置共用介面並啟動桌面 App
 npm run desktop:pack   # 產生 release/win-unpacked/ 資料夾
-npm run desktop:build  # 產生 Windows x64 可攜式執行檔
+npm run desktop:build  # 產生 Windows x64 安裝版與免安裝版
 npm run desktop:smoke  # 使用獨立資料目錄測試讀取與抽籤，截圖放在 release/smoke/
 npm run ui:smoke       # 使用虛構 IPC 測試五人、同名、主題、設定及網站，截圖放在 release/ui-smoke/
 npm run storage:smoke  # 隔離資料夾內驗證真實系統加密、移轉、匯入／匯出；不連線 Discord
@@ -169,3 +177,11 @@ npm test
 - 主題：`lolTheme`
 
 若瀏覽器內仍有舊主題 key `lol-theme`，第一次儲存主題時會移除。
+
+## Windows 安裝與更新
+
+執行 `npm run desktop:build` 會同時產生 Windows 安裝版與免安裝版。安裝版位於 `release/LOL-Random-Tool-<版本>-Windows-Setup.exe`，可選擇安裝位置，並建立桌面與開始功能表捷徑。
+
+更新時直接執行新版安裝程式，沿用原安裝位置即可覆蓋更新，不必先解除安裝。安裝版與免安裝版使用相同的應用程式識別和 `%APPDATA%/lol-random-tool` 資料目錄；統計、主題、分路設定與 Discord 設定都保留。Webhook 加密資料需由同一個 Windows 帳號讀取。解除安裝預設也保留資料，之後重新安裝可繼續使用。
+
+此版本支援手動覆蓋更新，尚未加入背景自動下載更新。

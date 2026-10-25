@@ -299,3 +299,221 @@ body { min-height: 0; overflow: hidden; background: var(--bg); font-family: 'Seg
   .refined-app .stats-scroll th:first-child { min-width: 90px; }
   .refined-app .stats-actions .shortcut-hint { display: none; }
 }
+
+/* Compact visual cues retain accessible names and native hover hints. */
+.ui-icon { flex: none; vertical-align: middle; }
+.refined-app .btn, .refined-app .text-button, .refined-app .preparation-panel h3,
+.refined-app .visual-summary { display: inline-flex; align-items: center; gap: 8px; }
+.refined-app .btn { justify-content: center; }
+.refined-app .icon-action { width: 48px; min-width: 48px; padding-inline: 0; flex: none; }
+.refined-app .preparation-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.refined-app .preparation-empty > svg { width: 36px; height: 36px; opacity: .7; }
+.refined-app .visual-summary { line-height: 1; font-variant-numeric: tabular-nums; }
+.rule-icons { display: flex; gap: 16px; color: var(--text-muted); margin-top: 14px; }
+.rule-icons > span { display: inline-flex; align-items: center; gap: 2px; }
+.sync-indicator { display: inline-flex; align-items: center; gap: 12px; }
+.sync-indicator > i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+.sync-indicator > .is-on { background: var(--accent); }
+.refined-app .recent-player-popover { position: fixed; left: var(--picker-left, 16px); top: var(--picker-top, 16px); right: auto; bottom: auto; width: min(520px, calc(100vw - 32px)); max-height: min(420px, calc(100dvh - 32px)); padding: 20px; z-index: 15; overscroll-behavior: contain; }
+.recent-player-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.refined-app .recent-player-header > h3 { margin: 0; font-size: 16px; }
+.recent-player-header h3 > span { color: var(--text-muted); font-size: 13px; font-weight: 400; }
+.history-close { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 6px; color: var(--text-muted); background: var(--surface-muted); }
+.refined-app .recent-player-popover .known-hints { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.refined-app .recent-player-popover .known-chip { justify-content: flex-start; min-width: 0; width: 100%; min-height: 56px; padding: 12px 14px; gap: 10px; font-size: 16px; text-align: left; }
+.refined-app .recent-player-popover .known-chip > span { min-width: 0; overflow-wrap: anywhere; }
+.refined-app .recent-player-popover .muted-text { grid-column: 1 / -1; font-size: 14px; }
+@media (max-width: 700px) {
+  .refined-app .draw-action-buttons { grid-template-columns: 48px minmax(0, 1fr); }
+  .refined-app .visual-summary { justify-content: center; }
+  .refined-app .recent-player-popover { padding: 16px; }
+  .refined-app .recent-player-popover .known-chip { font-size: 15px; padding: 12px 10px; }
+  .refined-app .rule-icons { display: none; }
+}
+
+/* Primary role stays dominant; the smaller inset shows the fallback role. */
+.refined-app .draw-workspace .table-role-icon { position: relative; overflow: visible; }
+.refined-app .draw-workspace .table-role.is-assigned > .table-role-icon::before { content: ""; position: absolute; inset: -9px; border: 1.5px solid var(--text-muted); border-radius: 8px; }
+.assignment-marker { position: absolute; right: -17px; bottom: -15px; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--text-muted); border-radius: 6px; color: var(--text); background: var(--surface-strong); }
+.assignment-marker > svg { width: 18px; height: 18px; }
+.refined-app .draw-workspace .draw-secondary { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-muted); }
+.discord-draw-status { display: inline-flex; align-items: center; gap: 9px; min-width: 0; max-width: 50%; color: var(--text-muted); font-size: 13px; }
+.discord-destination-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discord-draw-status > i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+.discord-draw-status.is-off { opacity: 1; }
+.discord-draw-status.is-sent > i { background: var(--accent); }
+.discord-draw-status.is-sending > i { background: var(--text); }
+.discord-draw-status.is-error > i, .discord-draw-status.is-unconfigured > i { background: var(--danger); }
+@media (min-width: 901px) {
+  .refined-app .draw-workspace .roster-player-header { min-height: 48px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .refined-app .draw-workspace .draw-card-result { padding-top: 18px; gap: 18px; }
+}
+@media (min-width: 1440px) { .discord-draw-status { font-size: 15px; } }
+@media (max-width: 900px) {
+  .refined-app .draw-workspace .table-role.is-assigned > .table-role-icon::before { inset: -5px; border-radius: 6px; }
+  .assignment-marker { width: 20px; height: 20px; right: -10px; bottom: -10px; }
+  .assignment-marker > svg { width: 12px; height: 12px; }
+  .refined-app .draw-workspace .draw-secondary { justify-self: start; padding: 3px 8px; margin-top: 5px; }
+}
+@media (max-width: 700px) {
+  .discord-draw-status { max-width: 100%; justify-content: center; min-height: 20px; font-size: 12px; }
+  .discord-draw-status > svg { width: 16px; height: 16px; }
+}
+
+/* One preparation surface gives the roster and settings shared edges. */
+.refined-app .preparation-grid { gap: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-strong); align-items: stretch; }
+.refined-app .preparation-grid > .roster-preparation { border: 0; border-right: 1px solid var(--border); border-radius: 0; background: none; }
+.refined-app .preparation-settings { display: flex; flex-direction: column; gap: 0; }
+.refined-app .preparation-settings > .draw-preparation { border: 0; border-radius: 0; background: none; }
+.refined-app .preparation-settings > .discord-preparation { border: 0; border-top: 1px solid var(--border); border-radius: 0; margin-inline: 20px; background: none; }
+.refined-app .preparation-settings > .discord-preparation > summary { padding-inline: 0; }
+.refined-app .preparation-settings > .discord-preparation > .preparation-group { padding-inline: 0; }
+@media (min-width: 1440px) { .refined-app .preparation-settings > .discord-preparation { margin-inline: 28px; } }
+@media (min-width: 701px) and (max-width: 1100px) { .refined-app .preparation-settings > .discord-preparation { margin-inline: 16px; } }
+@media (min-width: 701px) and (max-width: 900px) {
+  .refined-app .preparation-grid > .roster-preparation { border-right: 0; border-bottom: 1px solid var(--border); }
+  .refined-app .preparation-settings { display: grid; grid-template-columns: 1fr 1fr; }
+  .refined-app .preparation-settings > .discord-preparation { border: 0; border-left: 1px solid var(--border); margin: 0; padding-inline: 16px; }
+}
+@media (max-width: 700px) {
+  .refined-app .preparation-grid > .roster-preparation { border-right: 0; border-bottom: 1px solid var(--border); }
+  .refined-app .preparation-settings > .discord-preparation { margin-inline: 14px; }
+}
+
+/* Discord sending is explicit in words, symbols and switch position. */
+.discord-availability { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 6px; color: var(--text); background: var(--surface-muted); font-size: 12px; white-space: nowrap; }
+.discord-availability > svg { width: 16px; height: 16px; }
+.discord-availability.is-enabled { color: var(--accent); border-color: var(--accent); background: var(--surface-strong); }
+.refined-app .discord-sync-switch { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; width: auto; min-width: 104px; min-height: 44px; padding: 0 2px; }
+.discord-switch-caption { color: var(--text); font-size: 14px; font-weight: 600; }
+.refined-app .discord-switch-track { width: 48px; height: 28px; padding: 3px; border: 1px solid #606770; background: #606770; }
+.refined-app .discord-switch-track > span { display: grid; place-items: center; width: 20px; height: 20px; color: #606770; background: #fff; box-shadow: none; }
+.refined-app .discord-switch-track > span > svg { width: 14px; height: 14px; }
+.refined-app .discord-sync-switch[aria-checked='true'] .discord-switch-track { border-color: #247b50; background: #247b50; }
+.refined-app .discord-sync-switch[aria-checked='true'] .discord-switch-track > span { transform: translateX(20px); color: #247b50; }
+.refined-app .discord-sync-switch:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.refined-app .discord-sync-switch:disabled { opacity: .65; }
+
+/* One control vocabulary for role mode, client updates and Discord. */
+.refined-app .preparation-settings h2 { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.draw-mode-options { display: grid; grid-template-columns: repeat(var(--mode-count), minmax(0, 1fr)); gap: 6px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-muted); }
+.draw-mode-options > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 64px; padding: 8px 4px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-muted); font: inherit; font-size: 13px; }
+.draw-mode-options > button[aria-checked='true'] { border-color: var(--border-strong); color: var(--text); background: var(--surface-strong); }
+.draw-mode-options > button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.refined-app .preparation-group .auto-apply-control { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; }
+.setting-control-label, .refined-app .discord-sync-label { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; font-weight: 500; }
+.refined-app .preparation-settings > .discord-preparation { padding-top: 12px; padding-bottom: 20px; }
+.setting-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.refined-app .setting-section-heading h2 { margin: 0; }
+.refined-app .setting-section-heading .manage-webhook { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-muted); }
+.refined-app .preparation-settings > .discord-preparation > .preparation-group { padding-bottom: 0; }
+@media (max-width: 700px) {
+  .refined-app .draw-preparation .preparation-group:first-child { display: block; }
+  .refined-app .draw-preparation .preparation-group > h2 { margin: 0 0 12px; }
+  .draw-mode-options > button { flex-direction: row; min-height: 44px; gap: 8px; }
+  .refined-app .preparation-settings > .discord-preparation { padding-top: 6px; padding-bottom: 14px; }
+}
+
+/* Discord destination sits beside its heading, with an app-styled menu. */
+.discord-section-heading { gap: 8px; }
+.discord-section-heading h2 { flex: none; }
+.discord-destination-picker, .discord-destination-static { margin-left: auto; min-width: 0; max-width: 180px; }
+.discord-destination-picker { position: relative; flex: 0 1 180px; }
+.discord-destination-trigger, .discord-destination-static { min-height: 36px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface-muted); font: inherit; font-size: 12px; }
+.discord-destination-trigger { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; }
+.discord-destination-trigger > span, .discord-destination-static { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discord-destination-trigger > svg { width: 15px; height: 15px; }
+.discord-destination-trigger[aria-expanded='true'] { border-color: var(--text-muted); }
+.discord-destination-menu { position: fixed; left: 16px; top: 16px; z-index: 25; display: grid; gap: 4px; width: min(280px, calc(100vw - 32px)); max-height: min(320px, calc(100dvh - 32px)); overflow: auto; overscroll-behavior: contain; padding: 6px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-strong); box-shadow: var(--shadow); }
+.discord-destination-menu > button { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 5px; background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left; }
+.discord-destination-menu > button > span { min-width: 0; overflow-wrap: anywhere; }
+.discord-destination-menu > button[aria-selected='true'], .discord-destination-menu > button:hover { background: var(--surface-muted); }
+.discord-destination-menu > button:focus-visible, .discord-destination-trigger:focus-visible { outline: 2px solid var(--text-muted); outline-offset: -2px; }
+.discord-destination-error { position: absolute; right: 0; bottom: -18px; color: var(--danger); }
+@media (max-width: 700px) {
+  .discord-destination-trigger { min-height: 44px; }
+  .discord-destination-picker, .discord-destination-static { max-width: 160px; }
+}
+
+/* Shared selectors, including menus inside native settings dialogs. */
+.app-select { position: relative; min-width: 0; }
+.app-select-trigger { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; min-height: 40px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-muted); color: var(--text); font: inherit; font-size: 13px; }
+.app-select-trigger > .ui-icon { width: 15px; height: 15px; }
+.app-select-option-label { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.app-select-trigger .app-select-option-label > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-select-option-label > .ui-icon, .app-select-option-label > .role-glyph { flex: none; width: 20px; height: 20px; }
+.app-select-menu { position: fixed; inset: auto; left: 16px; top: 16px; margin: 0; z-index: 25; display: grid; gap: 4px; width: min(280px, calc(100vw - 32px)); max-height: min(320px, calc(100dvh - 32px)); overflow: auto; overscroll-behavior: contain; padding: 6px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-strong); color: var(--text); box-shadow: var(--shadow); }
+.app-select-menu::backdrop { background: transparent; pointer-events: none; }
+.app-select-menu > button { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 5px; background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left; }
+.app-select-menu .app-select-option-label > span { overflow-wrap: anywhere; }
+.app-select-menu > button[aria-selected='true'], .app-select-menu > button:hover:not(:disabled) { background: var(--surface-muted); }
+.app-select-menu > button:disabled { color: var(--text-muted); cursor: not-allowed; }
+.app-select-menu > button:disabled .app-select-option-label > span { text-decoration: none; }
+.app-select-menu > button:focus-visible, .app-select-trigger:focus-visible { outline: 2px solid var(--text-muted); outline-offset: -2px; }
+.refined-app .preparation-player-row .app-select.inline-preference { padding: 0; border: 0; background: none; }
+.refined-app .preparation-player-row .app-select-trigger { min-height: 44px; height: 100%; background: var(--surface-strong); }
+.discord-panel-destination { flex: 0 1 220px; min-width: 0; max-width: 100%; }
+.discord-panel-destination > .discord-destination-picker { margin-left: 0; max-width: 220px; }
+
+/* Shared feedback stays out of the document flow and above modal surfaces. */
+.toast-wrap[popover] { position: fixed; inset: auto 20px 20px auto; margin: 0; padding: 0; width: min(460px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 40px); overflow: auto; border: 0; background: transparent; color: var(--text); display: grid; gap: 10px; pointer-events: none; }
+.toast-wrap::backdrop { background: transparent; pointer-events: none; }
+.toast { box-sizing: border-box; width: 100%; max-width: none; padding: 12px; gap: 10px; border-radius: 8px; background: var(--surface-strong); border: 1px solid var(--border-strong); box-shadow: 0 4px 18px #0002; pointer-events: auto; font-size: 14px; line-height: 1.5; }
+.toast-mark { color: var(--accent); background: transparent; border-radius: 0; }
+.toast.is-error .toast-mark { color: var(--danger); }
+.toast.is-warning .toast-mark { color: #946516; }
+:root[data-theme='dark'] .toast.is-warning .toast-mark { color: #e8c174; }
+.toast-message { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast-action, .toast-close { flex: none; min-height: 36px; display: inline-flex; justify-content: center; align-items: center; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-muted); color: var(--text); font: inherit; cursor: pointer; }
+.toast-action { padding: 5px 10px; font-weight: 600; }
+.toast-close { width: 36px; padding: 0; background: transparent; border-color: transparent; color: var(--text-muted); }
+.toast-close:hover { color: var(--text); background: var(--surface-muted); }
+.toast button:disabled { opacity: .55; cursor: wait; }
+.toast button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+/* Native dialogs share header, close target, body spacing and footer geometry. */
+.dialog-layer { padding: 0; margin: auto; border: 0; width: min(840px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); overflow: visible; background: transparent; color: var(--text); }
+.dialog-layer::backdrop, .settings-dialog::backdrop { background: #080b1299; }
+.dialog-layer .stats-content { width: 100%; max-height: min(760px, calc(100dvh - 32px)); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); }
+.refined-app .settings-dialog { width: min(840px, calc(100% - 32px)); max-height: min(760px, calc(100dvh - 32px)); }
+.stats-header, .settings-dialog-header { min-height: 64px; padding: 12px 20px; box-sizing: border-box; }
+.stats-header h2, .settings-dialog-header h2 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: 0; }
+.stats-actions, .settings-dialog-footer { min-height: 68px; padding: 12px 20px; box-sizing: border-box; }
+.stats-close, .settings-dialog-header .toolbar-icon { width: 40px; height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-muted); }
+.stats-close:hover, .settings-dialog-header .toolbar-icon:hover { color: var(--text); background: var(--surface-muted); border-color: var(--border); }
+.settings-panel h3, .discord-settings-content h3 { font-size: 16px; font-weight: 650; }
+.settings-panel p, .settings-panel label { line-height: 1.6; }
+.settings-panel .webhook-manager { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.settings-panel .discord-settings-content { padding: 0; border: 0; background: none; }
+.settings-panel .discord-settings-page .flow-actions { margin-top: 20px; }
+.settings-panel .settings-info { padding: 12px 0; border: 0; background: none; }
+.settings-panel .settings-note, .settings-panel .discord-local-note { font-size: 13px; color: var(--text-muted); }
+.refined-app .toolbar-button, .refined-app .toolbar-icon, .refined-app .icon-action, .refined-app .remove-player, .refined-app .history-close { min-width: 44px; min-height: 44px; border-radius: 6px; }
+.compact-app .draw-screen-actions .btn.copy-results { width: 44px; min-width: 44px; padding-inline: 0; flex: 0 0 44px; }
+.refined-app .compact-tabs button[aria-selected='true'], .refined-app .source-switch button[aria-pressed='true'], .refined-app .champion-position[aria-pressed='true'], .champion-pool-tab[aria-selected='true'], .settings-nav button[aria-selected='true'] { color: var(--text); background: var(--surface-strong); border-color: var(--border-strong); box-shadow: none; }
+.refined-app button:disabled, .app-select-menu button:disabled { cursor: not-allowed; }
+.refined-app button:focus-visible, .dialog-layer button:focus-visible { outline: 2px solid var(--text-muted); outline-offset: 3px; }
+@media (max-width: 700px) {
+  .toast-wrap[popover] { inset: auto 12px 12px; width: auto; max-height: calc(100dvh - 24px); }
+  .toast { gap: 8px; padding: 10px; font-size: 13px; }
+  .toast-action { max-width: 100px; }
+  .stats-header, .settings-dialog-header, .stats-actions, .settings-dialog-footer { padding-inline: 14px; }
+  .dialog-layer .stats-content { max-height: calc(100dvh - 24px); }
+}
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+.refined-app .settings-dialog { overflow: hidden; }
+.settings-shell { max-height: min(758px, calc(100dvh - 34px)); }
+.settings-dialog-header, .settings-dialog-footer { flex-shrink: 0; }
+.settings-layout { min-height: 0; flex: 1 1 auto; }
+.settings-nav { flex-shrink: 0; }
+
+.refined-app .settings-panel h3 { font-size: 16px; font-weight: 650; }
+.refined-app .settings-panel .setting-section-heading h3 { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+.refined-app .settings-panel .setting-section-heading { margin-bottom: 16px; }
+.refined-app .settings-panel label { font-size: 13px; font-weight: 500; }
+.refined-app .settings-panel input { min-height: 44px; font-size: 14px; border-radius: 6px; }
+.refined-app .settings-panel .discord-destination-list li { padding: 12px 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; }
+.refined-app .settings-panel .discord-destination-list strong { font-size: 14px; font-weight: 600; }
+
+/* Keep setup actions reachable while a notification is visible. */
+body:has(.role-setup):not(:has(dialog[open])) .toast-wrap[popover] { bottom: 100px; }

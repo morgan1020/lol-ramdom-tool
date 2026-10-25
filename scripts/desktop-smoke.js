@@ -71,7 +71,7 @@ try {
     let ownDraw = [];
     if (players.length) {
       const applyToggle = panel.querySelector('[aria-label="抽完更新我的 LoL 分路"]');
-      if (!applyToggle || applyToggle.checked) throw new Error('Auto-apply must default to off in a fresh profile');
+      if (!applyToggle || applyToggle.getAttribute('aria-checked') === 'true') throw new Error('Auto-apply must default to off in a fresh profile');
       if (${liveApply}) { applyToggle.click(); await sleep(50); }
       panel.querySelector('.finish-setup').click();
       for (let i = 0; i < 100 && !document.querySelector('.draw-workspace'); i++) await sleep(50);
@@ -83,8 +83,8 @@ try {
       if (document.querySelectorAll('.roster-card-grid [data-player-id]').length !== players.length) throw new Error('Result count mismatch');
       if (${liveApply}) {
         for (let i = 0; i < 250 && panel.getAttribute('aria-busy') !== 'false'; i++) await sleep(100);
-        appliedMessage = panel.querySelector('.inline-status')?.textContent || '';
-        applySucceeded = Boolean(panel.querySelector('.inline-status.is-success'));
+        appliedMessage = document.querySelector('[data-notice-id="apply-roles"]')?.textContent || '';
+        applySucceeded = Boolean(document.querySelector('[data-notice-id="apply-roles"].is-success'));
         const ownCard = [...document.querySelectorAll('.roster-card-grid [data-player-id]')].find((card) => card.dataset.playerId === ${JSON.stringify(baseline?.name || '')});
         ownDraw = [...(ownCard?.querySelectorAll('.table-role > span:last-child') || [])].map((role) => role.textContent);
       }

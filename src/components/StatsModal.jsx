@@ -1,20 +1,21 @@
+import { ModalFrame } from './ModalFrame.jsx';
+import { UiIcon } from './UiIcon.jsx';
 import React from 'react';
 import { positions } from '../domain/draw.js';
 import { sortPlayerNames } from '../domain/stats.js';
 import { createPlayerLabels } from '../domain/playerNames.js';
 
 export function StatsModal({ open, stats, onClose, onClear }) {
-  if (!open) return null;
 
   const names = sortPlayerNames(stats);
   const labels = createPlayerLabels(names);
 
   return (
-    <div className="stats-modal open" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="stats-content" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+    <ModalFrame open={open} onClose={onClose} labelId="stats-title">
+      <section className="stats-content" aria-labelledby="stats-title">
         <div className="stats-header">
           <h2 id="stats-title">歷史統計</h2>
-          <button className="stats-close" type="button" onClick={onClose} aria-label="關閉統計">×</button>
+          <button className="stats-close" type="button" onClick={onClose} aria-label="關閉統計"><UiIcon name="close" /></button>
         </div>
         <div className="stats-scroll">
           <table>
@@ -41,6 +42,6 @@ export function StatsModal({ open, stats, onClose, onClear }) {
           <button className="btn btn-secondary btn-danger-text" type="button" onClick={onClear}>清空紀錄</button>
         </div>
       </section>
-    </div>
+    </ModalFrame>
   );
 }

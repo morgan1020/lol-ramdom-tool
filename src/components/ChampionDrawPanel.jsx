@@ -1,3 +1,4 @@
+import { notify, dismissNotice } from '../notifications.js';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { drawChampion } from '../domain/drawChampion.js';
 import { preloadImage } from '../domain/preloadImage.js';
@@ -14,7 +15,7 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
   const [isRevealing, setIsRevealing] = useState(false);
   const [revealVersion, setRevealVersion] = useState(0);
   const [resultImageFailed, setResultImageFailed] = useState(false);
-  const [error, setError] = useState('');
+
   const prepareRequestId = useRef(0);
   const revealTimer = useRef(null);
 
@@ -30,11 +31,13 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
       const imageStatus = await preloadImage(champion.imageUrl);
       if (prepareRequestId.current !== requestId) return;
 
+      dismissNotice('champion-prepare');
       setQueuedResult({ champion, imageStatus });
-      setError('');
+
     } catch (prepareError) {
       if (prepareRequestId.current !== requestId) return;
-      setError(prepareError.message || '準備英雄失敗，請重試');
+      notify(prepareError.message || '準備英雄失敗', { id: 'champion-prepare', type: 'error', action: { label: '重試', onClick: () => prepareNextChampion(position) } });
+      return false;
     } finally {
       if (prepareRequestId.current === requestId) setIsPreparing(false);
     }
@@ -47,7 +50,7 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
     };
   }, [prepareNextChampion, selectedPosition]);
 
-  useEffect(() => () => clearTimeout(revealTimer.current), []);
+  useEffect(() => () => { clearTimeout(revealTimer.current); dismissNotice('champion-prepare'); }, []);
 
   const handleDraw = () => {
     if (!queuedResult || isPreparing || isRevealing) return;
@@ -57,7 +60,8 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
     setResultImageFailed(queuedResult.imageStatus === 'error');
     setRevealVersion((version) => version + 1);
     setIsRevealing(true);
-    setError('');
+
+    notify('英雄已抽出', { id: 'champion-draw' });
     prepareNextChampion(selectedPosition);
     revealTimer.current = setTimeout(() => setIsRevealing(false), 240);
   };
@@ -80,7 +84,6 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
       <div className="flow-heading">
         <span>獨立模式</span>
         <h1 id="champion-draw-title">抽一位英雄</h1>
-        <p>可從全英雄隨機抽選，也可以指定路線縮小英雄池。</p>
       </div>
       <div className="champion-panel">
         <div className="champion-position-picker" role="group" aria-label="選擇英雄路線">
@@ -112,7 +115,6 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
         ) : (
           <div className="champion-empty" role="status">{isPreparing ? `正在準備${selectedPositionLabel}英雄…` : '按下按鈕開始抽英雄'}</div>
         )}
-        {error && <p className="champion-error" role="alert">{error}</p>}
         <div className="champion-actions">
           <button className="btn btn-primary btn-large" type="button" disabled={isPreparing || isRevealing || !queuedResult} onClick={handleDraw}>
             {isRevealing ? '揭曉中…' : isPreparing ? '準備下一隻…' : result ? '重新抽一隻' : '開始抽英雄'}

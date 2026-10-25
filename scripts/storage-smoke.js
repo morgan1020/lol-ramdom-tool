@@ -93,13 +93,13 @@ app.whenReady().then(async () => {
       if (value.stats['舊玩家#TW'].上路 !== 2 || value.stats['新玩家#TW'].打野 !== 3 || !value.stats['保留玩家#TW']) throw new Error('Merge or repeat-import behavior incorrect');
       const revision = value.revision;
       selectFile('not-json');
-      for (let i = 0; i < 100 && !document.querySelector('.data-error'); i++) await sleep();
-      if (!document.querySelector('.data-error')) throw new Error('Malformed import did not show error');
+      for (let i = 0; i < 100 && !document.querySelector('.toast.is-error'); i++) await sleep();
+      if (!document.querySelector('.toast.is-error')) throw new Error('Malformed import did not show error');
       value = (await window.lolDesktop.initializeData({})).value.data;
       if (value.revision !== revision) throw new Error('Invalid import changed data');
       selectFile(JSON.stringify({ '取代玩家#TW': { 中路: 4 } }));
       for (let i = 0; i < 100 && !document.querySelector('.stats-import-preview'); i++) await sleep();
-      const mode = document.querySelector('#stats-import-mode'); mode.value = 'replace'; mode.dispatchEvent(new Event('change', { bubbles: true })); await sleep();
+      const mode = document.querySelector('#stats-import-mode'); mode.click(); await sleep(); document.getElementById(mode.getAttribute('aria-controls')).querySelector('[data-value="replace"]').click(); await sleep();
       if (!document.querySelector('.data-replace-warning')) throw new Error('Replace warning missing');
       [...document.querySelectorAll('.stats-import-preview button')].find((button) => button.textContent === '確認取代全部紀錄').click();
       for (let i = 0; i < 100 && document.querySelector('.stats-import-preview'); i++) await sleep();
