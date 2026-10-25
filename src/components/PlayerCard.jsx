@@ -1,21 +1,9 @@
 import React from 'react';
 import { positions } from '../domain/draw.js';
-import bottomIcon from '../../assets/roles/Bottom_icon.png';
-import jungleIcon from '../../assets/roles/Jungle_icon.png';
-import middleIcon from '../../assets/roles/Middle_icon.png';
-import supportIcon from '../../assets/roles/Support_icon.png';
-import topIcon from '../../assets/roles/Top_icon.png';
-
-const roleAssets = {
-  上路: topIcon,
-  打野: jungleIcon,
-  中路: middleIcon,
-  下路: bottomIcon,
-  輔助: supportIcon
-};
+import { RoleIcon } from './RoleIcon.jsx';
 
 function RoleColumn({ role, label }) {
-  return <div className="role-col">{label && <span className="role-label">{label}</span>}<img src={roleAssets[role]} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /><div className="role-name">{role}</div></div>;
+  return <div className="role-col">{label && <span className="role-label">{label}</span>}<RoleIcon role={role} /><div className="role-name">{role}</div></div>;
 }
 
 export function PlayerCard({ player, result, preferredRole, hasDrawn, unavailableRoles = [], onRemove, onPreferredRoleChange }) {
@@ -27,7 +15,7 @@ export function PlayerCard({ player, result, preferredRole, hasDrawn, unavailabl
       {positions.map((position) => {
         const selected = preferredRole === position;
         const unavailable = unavailableRoles.includes(position) && !selected;
-        return <button key={position} className={selected ? 'role-choice is-selected' : 'role-choice'} type="button" disabled={unavailable} title={unavailable ? '已被其他玩家選為偏好主位' : position} onClick={() => onPreferredRoleChange(player, position)}><img src={roleAssets[position]} alt="" /><span>{position}</span></button>;
+        return <button key={position} className={selected ? 'role-choice is-selected' : 'role-choice'} type="button" disabled={unavailable} title={unavailable ? '已被其他玩家選為偏好主位' : position} onClick={() => onPreferredRoleChange(player, position)}><RoleIcon role={position} /><span>{position}</span></button>;
       })}
     </div></div>}
     {result && <div className="card-result"><RoleColumn role={result.main} label={result.secondary ? '主要' : ''} />{result.secondary && <><div className="role-divider" aria-hidden="true" /><RoleColumn role={result.secondary} label="次要" /></>}</div>}

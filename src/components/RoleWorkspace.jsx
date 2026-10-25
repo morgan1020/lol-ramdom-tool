@@ -3,16 +3,10 @@ import { positions } from '../domain/draw.js';
 import { createPlayerLabels } from '../domain/playerNames.js';
 import { describeClientPosition } from '../domain/clientRoster.js';
 import { KnownPlayers } from './KnownPlayers.jsx';
-import topIcon from '../../assets/roles/Top_icon.png';
-import jungleIcon from '../../assets/roles/Jungle_icon.png';
-import middleIcon from '../../assets/roles/Middle_icon.png';
-import bottomIcon from '../../assets/roles/Bottom_icon.png';
-import supportIcon from '../../assets/roles/Support_icon.png';
-
-const roleIcons = { 上路: topIcon, 打野: jungleIcon, 中路: middleIcon, 下路: bottomIcon, 輔助: supportIcon };
+import { RoleIcon } from './RoleIcon.jsx';
 
 export function RoleBadge({ role, secondary = false }) {
-  return role ? <span className={`table-role${secondary ? ' is-secondary' : ''}`}><span className="table-role-icon"><img src={roleIcons[role]} alt="" /></span><span>{role}</span></span> : <span className="empty-role">—</span>;
+  return role ? <span className={`table-role${secondary ? ' is-secondary' : ''}`}><span className="table-role-icon"><RoleIcon role={role} /></span><span>{role}</span></span> : <span className="empty-role">—</span>;
 }
 
 export function DrawModeSelect({ source, drawMode, onChange, disabled, id = 'draw-mode' }) {

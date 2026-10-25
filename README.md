@@ -2,7 +2,7 @@
 
 React + Vite 版英雄聯盟抽籤工具，同時提供靜態網站與 Windows 桌面 App，兩者共用抽籤介面與規則。Discord 使用 Webhook 同步，不包含 Discord Bot。
 
-1.3.0 提供玩家卡片介面、桌面 AppData 儲存、Webhook 加密、舊資料自動移轉與統計匯出／匯入。網站保留相同卡片介面與統計備份功能。
+1.3.0 提供玩家卡片介面、桌面 AppData 儲存、Webhook 加密、舊資料自動移轉與統計匯出／匯入。網站保留相同卡片介面與統計備份功能。五路圖示採用 [CommunityDragon SVG](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/)，隨程式打包，使用 CSS mask 配合深淺色主題；來源與處理方式記錄於 `assets/roles/svg/README.md`。
 
 ## Windows 桌面 App
 
