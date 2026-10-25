@@ -15,7 +15,9 @@ export function RoleWorkspace({ lobby, players, results, busy, loading, error, a
   const labels = createPlayerLabels(players.map((player) => player.name));
   const resultByName = Object.fromEntries(results.map((result) => [result.name, result]));
   return <section className="role-workspace draw-workspace" aria-label="抽籤操作" aria-busy={busy}>
-    <h2 className="draw-screen-title">{results.length ? '抽籤結果' : '隊伍已就緒'}</h2>
+    <div className="workspace-scroll">
+    <header className="draw-heading"><div><h1 className="draw-screen-title">{results.length ? '本次抽籤結果' : '隊伍已就緒'}</h1><p>{results.length ? '每個人的位置，這次就這樣決定。' : '玩家已確認，按下開始抽籤揭曉分路。'}</p></div><button className="btn btn-return" type="button" disabled={busy} onClick={onReturn}>返回設定</button></header>
+    <p className="result-scope">玩家分路 · {players.length} 人</p>
     <div className={`roster-card-grid count-${players.length}${busy ? ' is-busy' : ''}`} role="list" aria-label="隊伍分路" style={{ '--player-count': Math.max(1, players.length) }}>
       {players.map((player) => {
         const result = resultByName[player.name];
@@ -27,9 +29,11 @@ export function RoleWorkspace({ lobby, players, results, busy, loading, error, a
     </div>
     <div className="draw-feedback" aria-live="polite">
       {error && <p className="inline-status is-error" role="alert">{error}</p>}
-      {applyStatus.state === 'error' && <p className="inline-status is-error" role="alert">{applyStatus.message}</p>}
+      {applyStatus.message && <p className={`inline-status is-${applyStatus.state}`} role={applyStatus.state === 'error' ? 'alert' : 'status'}>{applyStatus.message}</p>}
+      {discordStatus.message && discordStatus.state !== 'error' && <p className={`inline-status is-${discordStatus.state}`} role="status">{discordStatus.message}</p>}
       {discordStatus.state === 'error' && <div className="inline-status is-error" role="alert"><span>{discordStatus.message}</span><button className="text-button" type="button" disabled={busy} onClick={onRetryDiscord}>重送本次結果</button></div>}
     </div>
-    <footer className="draw-screen-actions"><button className="btn btn-return" type="button" disabled={busy} onClick={onReturn}>返回設定</button><button className="btn btn-secondary copy-results" type="button" disabled={busy || !results.length} onClick={onCopy}>複製結果</button><button className="btn btn-primary primary-draw" type="button" disabled={busy} onClick={onDraw}>{busy ? loading ? '讀取中…' : '處理中…' : results.length ? '重新抽籤' : '開始抽籤'}</button></footer>
+    </div>
+    <footer className="draw-screen-actions"><p className="action-summary"><strong>{results.length ? '分路已揭曉' : '隊伍已就緒'}</strong><span>{players.length} 位玩家 · 主位不重複</span></p><div className="draw-action-buttons"><button className="btn btn-secondary copy-results" type="button" disabled={busy || !results.length} onClick={onCopy}>複製結果</button><button className="btn btn-primary primary-draw" type="button" disabled={busy} onClick={onDraw}>{busy ? loading ? '讀取中…' : '處理中…' : results.length ? '重新抽籤' : '開始抽籤'}</button></div></footer>
   </section>;
 }

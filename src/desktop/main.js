@@ -24,7 +24,7 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'lol-draw', privileges: { standa
 function createWindow() {
   mainWindow = new BrowserWindow({
     title: '英雄聯盟抽籤工具', width: 1040, height: 760, minWidth: 760, minHeight: 640,
-    autoHideMenuBar: true, backgroundColor: '#0e1420',
+    autoHideMenuBar: true, backgroundColor: '#f4f5f7',
     icon: path.join(assetRoot, 'favicon-dice.png'),
     webPreferences: { preload: path.join(directory, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });

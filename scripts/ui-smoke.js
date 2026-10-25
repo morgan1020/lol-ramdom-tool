@@ -44,15 +44,77 @@ app.whenReady().then(async()=>{
       const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);
       await prepare();
       if(document.querySelector('#draw-mode,.source-switch,.discord-sync-controls,.compact-tabs,.player-avatar'))throw Error('Setup controls leaked into drawing');
-      if(document.querySelectorAll('.draw-screen-actions button').length!==3||!document.querySelector('.copy-results').disabled)throw Error('Ready action states incorrect');
+      if(document.querySelectorAll('.draw-workspace button').length!==3||!document.querySelector('.copy-results').disabled)throw Error('Ready action states incorrect');
       if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Preparation updated stats');
       return {labels,readyActions:3,preparationDoesNotDraw:true};
     `);
     await capture('ready.png');
     await run(`await draw();if(document.querySelectorAll('.table-role').length!==5)throw Error('Five-player role count incorrect');if(document.querySelector('.primary-draw').getBoundingClientRect().bottom>innerHeight)throw Error('Action below fold');`);
+    await run(`if(document.documentElement.dataset.theme!=='dark')document.querySelector('[aria-label="切換深淺色模式"]').click();await wait(()=>settled()&&document.documentElement.dataset.theme==='dark');`);
     await capture('desktop-dark.png');
     await run(`if(document.documentElement.dataset.theme!=='light')document.querySelector('[aria-label="切換深淺色模式"]').click();await wait(()=>settled()&&document.documentElement.dataset.theme==='light');`);
     await capture('desktop-light.png');
+    const desktopLayout=await run(`
+      if(document.querySelector('.workspace-sidebar'))throw Error('Removed sidebar is still present');
+      const canvas=document.querySelector('main.container').getBoundingClientRect();
+      if(Math.abs((canvas.left+canvas.right)/2-innerWidth/2)>1)throw Error('Desktop workspace is not centered');
+      if(!document.querySelector('.compact-header .app-brand').getClientRects().length)throw Error('Top brand navigation missing');
+      const icons=[...document.querySelectorAll('.draw-workspace img.role-glyph')];
+      if(icons.length!==5||icons.some(img=>!img.complete||!img.naturalWidth||getComputedStyle(img).maskImage!=='none'))throw Error('Original gold icons not rendered as images');
+      const positions=[...document.querySelectorAll('.roster-player-card')].map(card=>card.getBoundingClientRect());
+      if(Math.max(...positions.map(p=>p.top))-Math.min(...positions.map(p=>p.top))>1)throw Error('Desktop results not on one row');
+      return {topNavigation:true,centeredWorkspace:true,originalGoldImages:true,fiveColumns:true};
+    `);
+    const originalSize=window.getContentSize();
+    const originalMinimum=window.getMinimumSize();
+    const wideLayouts=[];
+    for(const [width,height] of [[1920,1080],[2560,1360]]){
+      window.setContentSize(width,height);await new Promise(r=>setTimeout(r,150));
+      const layout=await run(`
+        const canvas=document.querySelector('main.container').getBoundingClientRect();
+        const cards=[...document.querySelectorAll('.roster-player-card')].map(el=>el.getBoundingClientRect());
+        const action=document.querySelector('.draw-screen-actions').getBoundingClientRect();
+        if(canvas.width<innerWidth*.63||canvas.width>1681)throw Error('Wide workspace is too narrow or unbounded');
+        if(document.documentElement.scrollWidth>innerWidth||cards.some(card=>card.bottom>action.top)||action.bottom>innerHeight)throw Error('Wide result overflow');
+        if(parseFloat(getComputedStyle(document.querySelector('.player-label')).fontSize)<16)throw Error('Wide player text too small');
+        return {width:innerWidth,height:innerHeight,canvasWidth:canvas.width};
+      `);
+      await capture(`wide-results-${width}.png`);
+      await run(`await back()`);
+      await run(`
+        const button=document.querySelector('.finish-setup').getBoundingClientRect();
+        const grid=document.querySelector('.preparation-grid').getBoundingClientRect();
+        const actions=document.querySelector('.preparation-actions').getBoundingClientRect();
+        if(button.bottom>innerHeight||button.top<grid.bottom||actions.top-grid.bottom>130)throw Error('Wide preparation action detached or clipped');
+        if(parseFloat(getComputedStyle(document.querySelector('.preparation-player-name .player-label')).fontSize)<16)throw Error('Wide preparation text too small');
+      `);
+      await capture(`wide-preparation-${width}.png`);
+      await run(`await prepare()`);
+      wideLayouts.push(layout);
+    }
+    window.setContentSize(...originalSize);await new Promise(r=>setTimeout(r,150));
+    window.setMinimumSize(320,480);
+    window.setContentSize(390,844);await new Promise(r=>setTimeout(r,150));
+    await capture('five-player-mobile.png');
+    const fivePlayerMobile=await run(`
+      const cards=[...document.querySelectorAll('.roster-player-card')].map(card=>card.getBoundingClientRect());
+      const actions=document.querySelector('.draw-screen-actions').getBoundingClientRect();
+      const scroll=document.querySelector('.workspace-scroll');
+      if(document.documentElement.scrollWidth>innerWidth||cards.length!==5)throw Error('Five-player mobile overflow');
+      if(cards.some(card=>card.bottom>actions.top||card.height<89))throw Error('Actions obscure a player result: '+JSON.stringify({cards,actions}));
+      if(actions.bottom>innerHeight||scroll.scrollHeight>scroll.clientHeight+2)throw Error('Five-player mobile result not fully visible');
+      return {allFiveVisible:true,noActionOverlap:true};
+    `);
+    await run(`await back()`);
+    const mobilePreparation=await run(`
+      const button=document.querySelector('.finish-setup').getBoundingClientRect();
+      const actions=document.querySelector('.preparation-actions').getBoundingClientRect();
+      if(button.bottom>innerHeight||button.top<actions.top||button.height<44)throw Error('Mobile preparation action is not reachable');
+      return {actionVisible:true};
+    `);
+    await capture('preparation-mobile.png');
+    await run(`await prepare()`);
+    window.setContentSize(...originalSize);window.setMinimumSize(...originalMinimum);await new Promise(r=>setTimeout(r,150));
     await run(`
       await back();setField('#draw-mode','client');await wait(settled);await prepare();await draw();
       if([...document.querySelectorAll('.table-role')].map(el=>el.textContent).join(',')!=='上路,打野,中路,下路,輔助')throw Error('Client preferences lost');
@@ -74,7 +136,7 @@ app.whenReady().then(async()=>{
     readFailure=false;rosterChanged=true;
     await run(`const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.role-setup'));if(!document.querySelector('[role="alert"]')?.textContent.includes('重新確認'))throw Error('Changed team not flagged');if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Changed team drawn without confirmation')`);
     await run(`
-      clickText('管理 Webhook');await wait(()=>document.querySelector('.settings-dialog')?.open);document.querySelector('.webhook-manager summary').click();await sleep();
+      document.querySelector('.discord-preparation').open=true;clickText('管理 Webhook');await wait(()=>document.querySelector('.settings-dialog')?.open);document.querySelector('.webhook-manager summary').click();await sleep();
       setField('#discord-label','測試頻道');setField('#discord-webhook','https://discord.com/api/webhooks/123456789012345678/synthetic_test_only');await sleep();
       document.querySelector('.discord-settings-content form').requestSubmit();await wait(()=>document.querySelector('.discord-destination-list')?.textContent.includes('測試頻道'));
       if(document.querySelector('.settings-dialog [aria-label="Discord 自動同步"]').getAttribute('aria-checked')!=='false')throw Error('Save enabled sync');
@@ -86,6 +148,20 @@ app.whenReady().then(async()=>{
     const web=new BrowserWindow({show:false,width:1040,height:760,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
     await web.loadURL('lol-draw://app/');await web.webContents.executeJavaScript(`localStorage.setItem('lolDrawStats',JSON.stringify({'同名#1':{},'同名#2':{},'第三位':{}}));`);web.reload();await once(web.webContents,'did-finish-load');
     const webRun=code=>web.webContents.executeJavaScript(`(async()=>{${helpers}${code}})()`);
+    await webRun(`await wait(()=>document.querySelector('.role-setup'));document.querySelector('.recent-player-picker summary').click();await sleep();document.querySelector('.known-chip').click();await wait(settled);`);
+    for(const appearance of ['dark','light']){
+      await webRun(`
+        if(document.documentElement.dataset.theme!==${JSON.stringify(appearance)})document.querySelector('[aria-label="切換深淺色模式"]').click();
+        await wait(()=>settled()&&document.documentElement.dataset.theme===${JSON.stringify(appearance)});
+        await sleep(200);
+        document.querySelector('.recent-player-picker').open=true;
+        const luminance=color=>{const rgb=color.match(/[0-9.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4});return rgb[0]*0.2126+rgb[1]*0.7152+rgb[2]*0.0722};
+        for(const chip of document.querySelectorAll('.known-chip')){const style=getComputedStyle(chip),a=luminance(style.color),b=luminance(style.backgroundColor);if((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)<4.5)throw Error('History player text has insufficient contrast: '+JSON.stringify({theme:document.documentElement.dataset.theme,selected:chip.getAttribute('aria-pressed'),color:style.color,background:style.backgroundColor}))}
+        for(const label of ['歷史統計','設定']){const button=document.querySelector('.compact-header [aria-label="'+label+'"]');if(!button.querySelector('svg')||!button.title||button.textContent.trim())throw Error('Toolbar icon or accessible name missing')}
+      `);
+      web.show();web.webContents.invalidate();await new Promise(r=>setTimeout(r,180));await writeFile(path.join(output,`history-${appearance}.png`),(await web.webContents.capturePage()).toPNG());
+    }
+    await webRun(`document.querySelector('.known-chip[aria-pressed="true"]').click();await wait(settled);document.querySelector('.recent-player-picker').open=false;`);
     const website=await webRun(`
       await wait(()=>document.querySelector('.role-setup'));if(window.lolDesktop||document.querySelector('.source-switch,.auto-apply-control'))throw Error('Desktop controls leaked into website');
       const history=document.querySelector('.recent-player-picker');history.querySelector('summary').click();await sleep();const chips=[...history.querySelectorAll('.known-chip')];if(chips.length!==3)throw Error('History players missing');
@@ -99,7 +175,7 @@ app.whenReady().then(async()=>{
     const mobile=await webRun(`if(document.documentElement.scrollWidth>innerWidth)throw Error('Mobile overflow');return {noOverflow:true}`);
     web.show();await writeFile(path.join(output,'website-mobile.png'),(await web.webContents.capturePage()).toPNG());web.destroy();
     if(reads<5||errors.length)throw Error(errors.join('\n')||'Client not refreshed on draw');
-    const check={initial,website,mobile,clientPreferences:true,customPreferences:true,applyFailurePreservesResult:true,readFailurePreservesResult:true,changedRosterRequiresConfirmation:true,completeIdsInNativePayload:true,settingsCrud:true,championDraw:true};
+    const check={initial,desktopLayout,wideLayouts,fivePlayerMobile,mobilePreparation,website,mobile,historyReadableInBothThemes:true,accessibleToolbarIcons:true,clientPreferences:true,customPreferences:true,applyFailurePreservesResult:true,readFailurePreservesResult:true,changedRosterRequiresConfirmation:true,completeIdsInNativePayload:true,settingsCrud:true,championDraw:true};
     await writeFile(path.join(output,'result.json'),JSON.stringify(check,null,2));console.log(JSON.stringify(check));clearTimeout(deadline);app.exit(0);
   }catch(error){console.error(error.stack);clearTimeout(deadline);app.exit(1)}
 });

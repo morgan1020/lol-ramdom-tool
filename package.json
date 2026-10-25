@@ -1,6 +1,6 @@
 {
   "name": "lol-random-tool",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "description": "LOL role drawing tool for Web and Windows desktop",
   "type": "module",
   "main": "src/desktop/main.js",

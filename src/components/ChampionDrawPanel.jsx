@@ -79,7 +79,7 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
     <section className="champion-flow" aria-labelledby="champion-draw-title">
       <div className="flow-heading">
         <span>獨立模式</span>
-        <h2 id="champion-draw-title">抽英雄</h2>
+        <h1 id="champion-draw-title">抽一位英雄</h1>
         <p>可從全英雄隨機抽選，也可以指定路線縮小英雄池。</p>
       </div>
       <div className="champion-panel">

@@ -15,6 +15,7 @@ import { ChampionDrawPanel } from './components/ChampionDrawPanel.jsx';
 import { ChampionPoolModal } from './components/ChampionPoolModal.jsx';
 import { StatsModal } from './components/StatsModal.jsx';
 import { ThemeToggle } from './components/ThemeToggle.jsx';
+import { ToolbarIcon } from './components/ToolbarIcon.jsx';
 import { ToastHost } from './components/ToastHost.jsx';
 import { RoleWorkspace } from './components/RoleWorkspace.jsx';
 import { RoleSetup } from './components/RoleSetup.jsx';
@@ -25,11 +26,11 @@ import { importStats, parseStatsBackup } from './domain/statsBackup.js';
 import './styles.css';
 import './workspace.css';
 import './flow.css';
+import './refined.css';
 
 function getInitialTheme() {
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  try { return loadTheme(undefined, prefersDark); }
-  catch { return prefersDark ? 'dark' : 'light'; }
+  try { return loadTheme(undefined); }
+  catch { return 'light'; }
 }
 
 export default function App({ initialData }) {
@@ -284,10 +285,23 @@ export default function App({ initialData }) {
     setToolMode(next); setStatsOpen(false); setChampionPoolOpen(false);
   };
   const drawingView = toolMode === 'roles' && phase === 'draw';
-  return <div className={`app compact-app${drawingView ? ' is-draw-view' : ''}`}><main className="container">
-    <header className="compact-header"><div className="app-brand"><img src="/favicon-dice.png" alt="" /><h1>英雄聯盟抽籤</h1></div><div className="compact-header-actions"><button className="toolbar-button" type="button" disabled={busy} onClick={() => toolMode === 'roles' ? setStatsOpen(true) : setChampionPoolOpen(true)} aria-label={toolMode === 'roles' ? '歷史統計' : '英雄池一覽'}><span aria-hidden="true">◷</span><span className="toolbar-text">{toolMode === 'roles' ? '歷史統計' : '英雄池'}</span></button><ThemeToggle theme={theme} onToggle={toggleTheme} />{!drawingView && <button className="toolbar-icon" type="button" aria-label="設定" title="設定" disabled={busy} onClick={() => openSettings('data')}>⚙</button>}</div></header>
+  useEffect(() => {
+    document.querySelector('.workspace-scroll')?.scrollTo(0, 0);
+  }, [phase, toolMode]);
+  return <div className={`app compact-app refined-app${drawingView ? ' is-draw-view' : ''}`}>
+    <main className="container">
+    <header className="compact-header">
+      <div className="app-brand"><img src="/favicon-dice.png" alt="" /><span>英雄聯盟抽籤</span></div>
+      <div className="compact-header-actions">
+        <button className="toolbar-button" type="button" disabled={busy} onClick={() => toolMode === 'roles' ? setStatsOpen(true) : setChampionPoolOpen(true)} aria-label={toolMode === 'roles' ? '歷史統計' : '英雄池一覽'} title={toolMode === 'roles' ? '歷史統計' : '英雄池一覽'}><ToolbarIcon name={toolMode === 'roles' ? 'stats' : 'pool'} /></button>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <button className="toolbar-icon" type="button" aria-label="設定" title="設定" disabled={busy} onClick={() => openSettings('data')}><ToolbarIcon name="settings" /></button>
+      </div>
+    </header>
     {!drawingView && <div className="compact-navigation"><nav className="compact-tabs" role="tablist" aria-label="工具模式">{[['roles', '抽分路'], ['champions', '抽英雄']].map(([value, label]) => <button key={value} role="tab" type="button" disabled={busy} aria-selected={toolMode === value} onClick={() => changeToolMode(value)}>{label}</button>)}</nav></div>}
+    <div className="tool-content">
     {toolMode === 'roles' ? phase === 'setup' ? <RoleSetup isDesktop={isDesktop} source={source} onSourceChange={changeSource} lobby={clientLobby} players={players} busy={busy} loading={clientLoading} error={error} drawMode={drawMode} onDrawModeChange={changeDrawMode} preferredRoles={preferredRoles} onPreferredRoleChange={changePreferredRole} autoApplyRoles={autoApplyRoles} onAutoApplyRolesChange={toggleAutoApplyRoles} onRefresh={refreshClient} onPrepare={finishSetup} onRemove={removePlayer} inputValue={inputValue} onInputChange={setInputValue} onAdd={() => addPlayer()} knownNames={knownNames} onToggleKnown={(name) => manualPlayers.includes(name) ? removePlayer(name) : addPlayer(name)} discordSync={discordSync} onManageWebhook={() => openSettings('discord')} /> : <RoleWorkspace lobby={{ localPlayerId: prepared?.localPlayerId }} players={visiblePlayers} results={results} busy={busy} loading={clientLoading} error={error} applyStatus={applyStatus} onReturn={returnToSetup} onDraw={handleDraw} onCopy={handleCopy} discordStatus={hasResults ? discordSync.status : { state: 'idle', message: '' }} onRetryDiscord={discordSync.retry} /> : <ChampionDrawPanel championData={championData} positionData={championPositionData} selectedPosition={championPosition} onPositionChange={setChampionPosition} />}
+    </div>
     <footer className="compact-footer"><span>資料來源：<a href="https://developer.riotgames.com/docs/lol#data_dragon" target="_blank" rel="noreferrer">Riot Data Dragon</a> · <a href="https://www.communitydragon.org/" target="_blank" rel="noreferrer">CommunityDragon</a></span></footer>
   </main><SettingsDialog open={settingsOpen} tab={settingsTab} onTabChange={setSettingsTab} onClose={() => setSettingsOpen(false)} isDesktop={isDesktop} discordSync={discordSync} stats={stats} dataInfo={initialData?.info} dataNotice={initialData?.notice} onImportStats={handleImportStats} /><StatsModal open={statsOpen} stats={stats} onClose={() => setStatsOpen(false)} onClear={handleClearStats} /><ChampionPoolModal open={championPoolOpen} championData={championData} positionData={championPositionData} initialPosition={championPosition} onClose={() => setChampionPoolOpen(false)} /><ToastHost toasts={toasts} /></div>;
 }

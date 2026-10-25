@@ -2,9 +2,11 @@
 
 React + Vite 版英雄聯盟抽籤工具，同時提供靜態網站與 Windows 桌面 App，兩者共用抽籤介面與規則。Discord 使用 Webhook 同步，不包含 Discord Bot。
 
-1.4.0 採用「準備設定 → 抽籤操作」流程，集中設定玩家與參數，抽籤畫面保留卡片及三個主要操作。保留桌面 AppData 儲存、Webhook 加密、舊資料自動移轉與統計匯出／匯入。網站保留相同卡片介面與統計備份功能。五路圖示採用 [CommunityDragon SVG](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/)，隨程式打包，使用 CSS mask 配合深淺色主題；來源與處理方式記錄於 `assets/roles/svg/README.md`。
+採用「準備設定 → 抽籤操作」流程，集中設定玩家與參數。桌面版以頂部導覽切換工具，結果以五欄卡片呈現；手機版以單欄玩家列表呈現，底部操作區與可捲動內容分開，不遮擋玩家結果。Discord 同步設定可展開。新使用者預設明亮主題，既有深淺色偏好繼續保留。保留桌面 AppData 儲存、Webhook 加密、舊資料自動移轉與統計匯出／匯入。五路圖示直接呈現 [CommunityDragon SVG](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/) 的原始金色，隨程式打包；來源與處理方式記錄於 `assets/roles/svg/README.md`。
 
-玩家列表與卡片不顯示頭像；歷史玩家可連續點選加入／取消。準備頁的輸入框、主位選單與按鈕使用一致高度及欄位對齊，抽分路／抽英雄以緊湊的分段按鈕切換。可用 `npm run dev` 預覽網站，或 `npm run desktop` 以開發模式查看桌面版。
+玩家列表與卡片不顯示頭像；歷史玩家可連續點選加入／取消。準備頁的輸入框、主位選單與按鈕使用一致高度及欄位對齊；桌面與手機皆以頂部分段按鈕切換抽分路／抽英雄。可用 `npm run dev` 預覽網站，或 `npm run desktop` 以開發模式查看桌面版。
+
+大視窗的內容寬度會隨視窗延展，上限為 1680px；1440px 以上同步增加字級、控制項與結果卡片尺寸，避免最大化後仍維持小視窗比例。準備頁按鈕仍緊接內容，手機版保留原有列表與底部操作區。
 
 ## Windows 桌面 App
 
