@@ -1,6 +1,8 @@
 import React from 'react';
+import { createPlayerLabels } from '../domain/playerNames.js';
 
-export function KnownPlayers({ names, selectedPlayers, onToggle }) {
+export function KnownPlayers({ names, selectedPlayers, disabled, onToggle }) {
+  const labels = createPlayerLabels(names);
   if (names.length === 0) {
     return <div className="known-hints"><span className="muted-text">尚未累積歷史玩家</span></div>;
   }
@@ -14,10 +16,11 @@ export function KnownPlayers({ names, selectedPlayers, onToggle }) {
             key={name}
             className={selected ? 'known-chip is-selected' : 'known-chip'}
             type="button"
+            disabled={disabled}
             title={selected ? '點擊取消選取' : '點擊加入名單'}
             onClick={() => onToggle(name)}
           >
-            {name}
+            {labels[name]}
           </button>
         );
       })}

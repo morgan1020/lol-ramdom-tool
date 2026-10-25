@@ -4,3 +4,4 @@ data/*.sqlite
 npm-debug.log*
 .DS_Store
 dist/
+release/

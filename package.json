@@ -1,12 +1,19 @@
 {
   "name": "lol-random-tool",
-  "version": "1.0.0",
-  "description": "React + Vite web tool for LOL role drawing",
+  "version": "1.3.0",
+  "description": "LOL role drawing tool for Web and Windows desktop",
   "type": "module",
+  "main": "src/desktop/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "desktop": "npm run build && electron .",
+    "desktop:pack": "npm run build && electron-builder --win --x64 --dir",
+    "desktop:build": "npm run build && electron-builder --win portable --x64",
+    "desktop:smoke": "npm run build && electron scripts/desktop-smoke.js",
+    "ui:smoke": "npm run build && electron scripts/ui-smoke.js",
+    "storage:smoke": "npm run build && electron scripts/storage-smoke.js",
     "test": "node --test",
     "update:champions": "node scripts/update-champions.mjs",
     "update:champion-positions": "npm run update:champions && node scripts/update-champion-positions.mjs",
@@ -16,10 +23,37 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^5.1.2",
-    "vite": "^7.3.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0",
+    "vite": "^7.3.7"
+  },
+  "build": {
+    "appId": "tw.lolrandom.desktop",
+    "productName": "LOL Random Tool",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/desktop/**/*",
+      "src/domain/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "public/favicon-dice.png",
+      "signExecutable": false
+    },
+    "portable": {
+      "artifactName": "LOL-Random-Tool-${version}-Windows.exe"
+    }
+  }
 }

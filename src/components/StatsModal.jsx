@@ -1,11 +1,13 @@
 import React from 'react';
 import { positions } from '../domain/draw.js';
 import { sortPlayerNames } from '../domain/stats.js';
+import { createPlayerLabels } from '../domain/playerNames.js';
 
 export function StatsModal({ open, stats, onClose, onClear }) {
   if (!open) return null;
 
   const names = sortPlayerNames(stats);
+  const labels = createPlayerLabels(names);
 
   return (
     <div className="stats-modal open" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -25,7 +27,7 @@ export function StatsModal({ open, stats, onClose, onClear }) {
             <tbody>
               {names.map((name) => (
                 <tr key={name}>
-                  <td>{name}</td>
+                  <td>{labels[name]}</td>
                   {positions.map((position) => <td key={position}>{stats[name]?.[position] || 0}</td>)}
                 </tr>
               ))}

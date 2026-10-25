@@ -3,11 +3,14 @@ import { getActiveDiscordDestination, getDiscordDestinationLabel } from '../doma
 
 export function DiscordSyncPanel({ settings, status, onSelect, onToggle }) {
   const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
   const active = getActiveDiscordDestination(settings);
-  const sending = status.state === 'sending';
-  const runAction = (action) => {
-    try { action(); setError(''); }
+  const sending = status.state === 'sending' || pending;
+  const runAction = async (action) => {
+    setPending(true);
+    try { await action(); setError(''); }
     catch (actionError) { setError(actionError.message); }
+    finally { setPending(false); }
   };
   return <section className="discord-sync-controls" aria-label="Discord 同步">
     <span className="discord-sync-label">Discord <span>同步</span></span>
