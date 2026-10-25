@@ -23,7 +23,7 @@ export function ToastHost() {
   if (!toasts.length) return null;
   return createPortal(<div ref={layer} className="toast-wrap" popover="manual" aria-label="操作通知">
     {toasts.map(toast => <div className={`toast is-${toast.type}`} key={toast.id} data-notice-id={toast.id} role={toast.type === 'error' ? 'alert' : 'status'} aria-atomic="true" onMouseEnter={() => toastStore.pause(toast.id, 'hover')} onMouseLeave={() => toastStore.resume(toast.id, 'hover')} onFocusCapture={() => toastStore.pause(toast.id, 'focus')} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) toastStore.resume(toast.id, 'focus'); }}>
-      <span className="toast-mark" aria-hidden="true"><UiIcon name={toast.type === 'success' ? 'check' : toast.type === 'error' ? 'close' : 'warning'} /></span>
+      <span className="toast-mark" aria-hidden="true"><UiIcon name={toast.type === 'success' ? 'check' : toast.type === 'error' ? 'error' : 'warning'} /></span>
       <span className="toast-message">{toast.message}</span>
       {toast.action && <button className="toast-action" type="button" disabled={toast.pending} onClick={() => void toastStore.runAction(toast.id)}>{toast.pending ? '處理中…' : toast.action.label}</button>}
       <button className="toast-close" type="button" aria-label="關閉通知" title="關閉通知" disabled={toast.pending} onClick={() => toastStore.dismiss(toast.id)}><UiIcon name="close" /></button>
