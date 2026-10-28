@@ -1,5 +1,7 @@
 # LOL 抽籤工具
 
+本專案原始程式碼與原創文件採用 [MIT License](LICENSE)。Riot／CommunityDragon 遊戲素材、資料與第三方套件依各自條款提供，來源、授權範圍及骰子圖示的 AI 產生紀錄見 [第三方聲明](THIRD_PARTY_NOTICES.md)。
+
 React + Vite 版英雄聯盟抽籤工具，同時提供靜態網站與 Windows 桌面 App，兩者共用抽籤介面與規則。Discord 使用 Webhook 同步，不包含 Discord Bot。
 
 採用「準備設定 → 抽籤操作」流程，集中設定玩家與參數。桌面版以頂部導覽切換工具，結果以五欄卡片呈現；手機版以單欄玩家列表呈現，底部操作區與可捲動內容分開，不遮擋玩家結果。Discord 同步設定可展開。新使用者預設明亮主題，既有深淺色偏好繼續保留。保留桌面 AppData 儲存、Webhook 加密、舊資料自動移轉與統計匯出／匯入。五路圖示直接呈現 [CommunityDragon SVG](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/) 的原始金色，隨程式打包；來源與處理方式記錄於 `assets/roles/svg/README.md`。

@@ -21,7 +21,7 @@ app.whenReady().then(async()=>{
   ipcMain.handle('lol:apply-roles',(_event,results)=>{writes.push(results);return applySuccess?{ok:true,applied:{name:names[0],firstPosition:'MIDDLE',secondPosition:'UNSELECTED',fetchedAt:new Date().toISOString()}}:{ok:false,message:'測試：客戶端拒絕套用'}});
   const helpers=`
     const sleep=(ms=35)=>new Promise(r=>setTimeout(r,ms));
-    const wait=async(check,message='UI did not settle')=>{await sleep();for(let i=0;i<160;i++){if(check())return;await sleep()}throw Error(message)};
+    const wait=async(check,message='UI did not settle')=>{await sleep();for(let i=0;i<160;i++){if(check())return;await sleep()}throw Error(message+': '+check.toString()+'; '+JSON.stringify({busy:document.querySelector('.role-setup,.draw-workspace')?.getAttribute('aria-busy'),toasts:[...document.querySelectorAll('.toast')].map(el=>el.textContent)}))};
     const clickText=text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);if(!b)throw Error('Missing button '+text);b.click()};
     const setField=async(selector,value)=>{
       const el=typeof selector==='string'?document.querySelector(selector):selector;if(!el)throw Error('Missing field '+selector);
@@ -134,7 +134,7 @@ app.whenReady().then(async()=>{
       const select=[...document.querySelectorAll('.inline-preference')];await setField(select[2],'');await setField(select[0],'中路');
       const left=[...document.querySelectorAll('.inline-preference')].map(el=>el.getBoundingClientRect().left);if(Math.max(...left)-Math.min(...left)>1)throw Error('Preference controls misaligned');
       document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();await draw();
-      if(document.querySelector('.table-role').textContent!=='中路'||!document.querySelector('.toast.is-error')?.textContent.includes('抽籤結果已保留'))throw Error('Apply error erased result');
+      if(document.querySelector('.table-role').textContent!=='中路'||!document.querySelector('[data-notice-id="apply-roles"].is-error')?.textContent.includes('抽籤結果已保留'))throw Error('Apply error erased result');
       if(document.querySelectorAll('.assignment-marker').length!==4||document.querySelectorAll('.roster-player-card')[2].querySelector('.assignment-marker'))throw Error('Unspecified custom roles marked as assigned');
       await back();document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();
       const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);
@@ -146,9 +146,9 @@ app.whenReady().then(async()=>{
     if(writes.length!==1||writes[0].some((r,i)=>r.name!==names[i]))throw Error('Native payload lost full IDs');
     await capture('assigned-results.png');
     readFailure=true;
-    await run(`document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.toast.is-error')?.textContent.includes('離線'));if(document.querySelectorAll('.table-role').length!==5)throw Error('Read error erased results')`);
+    await run(`document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('[data-notice-id="draw-error"].is-error')?.textContent.includes('離線'));if(!document.querySelector('[data-notice-id="apply-roles"].is-error'))throw Error('Concurrent apply error fixture missing');if(document.querySelectorAll('.table-role').length!==5)throw Error('Read error erased results')`);
     readFailure=false;applySuccess=true;
-    await run(`await back();document.querySelector('.preparation-client-status button').click();await wait(()=>settled()&&document.querySelectorAll('.preparation-player-row').length===5);document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();await draw();await wait(()=>document.querySelector('.toast')?.textContent.includes('分路已套用'));if(document.querySelector('.inline-status.is-success,.client-apply-indicator'))throw Error('Apply success still uses banner or card marker')`);
+    await run(`await back();document.querySelector('.preparation-client-status button').click();await wait(()=>settled()&&document.querySelectorAll('.preparation-player-row').length===5);document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();await draw();await wait(()=>document.querySelector('[data-notice-id="apply-roles"].is-success')?.textContent.includes('分路已套用'));if(document.querySelector('.inline-status.is-success,.client-apply-indicator'))throw Error('Apply success still uses banner or card marker')`);
     await capture('apply-toast.png');
     await run(`await back();document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare()`);
     applySuccess=false;rosterChanged=true;
@@ -215,7 +215,7 @@ app.whenReady().then(async()=>{
     await webRun(`
       document.querySelector('[aria-label="設定"]').click();await wait(()=>document.querySelector('.settings-dialog').open);
       [...document.querySelectorAll('.settings-nav button')].find(el=>el.textContent==='Discord').click();await sleep();
-      const trigger=document.querySelector('.settings-dialog .discord-panel-destination .app-select-trigger');if(!trigger)throw Error('Settings still uses native Discord selector');
+      const trigger=document.querySelector('.settings-dialog .setting-section-heading .discord-destination-trigger');if(!trigger)throw Error('Settings still uses native Discord selector');
       trigger.click();await sleep();const menu=document.querySelector('.settings-dialog .app-select-menu'),box=menu.getBoundingClientRect();
       if(!menu.matches(':popover-open')||box.left<0||box.right>innerWidth||!menu.contains(document.elementFromPoint(box.left+box.width/2,box.top+box.height/2)))throw Error('Settings destination menu is hidden behind modal');
       document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));await sleep();

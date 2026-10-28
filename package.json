@@ -1,6 +1,7 @@
 {
   "name": "lol-random-tool",
   "version": "1.4.3",
+  "license": "MIT",
   "description": "LOL role drawing tool for Web and Windows desktop",
   "type": "module",
   "main": "src/desktop/main.js",
@@ -46,6 +47,10 @@
       "package.json"
     ],
     "asar": true,
+    "extraFiles": [
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md"
+    ],
     "win": {
       "target": [
         "nsis",
