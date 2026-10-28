@@ -22,7 +22,11 @@ LOL Random Tool is not endorsed by Riot Games and does not reflect the views or 
 
 `public/favicon-dice.png` 由專案擁有者使用 ChatGPT Image 文生圖產生（擁有者於 2026-10-29 確認），非取自 Riot／CommunityDragon。此圖示隨本專案以 MIT 條款提供。
 
-## Discord 圖示
+## GitHub、Discord 與平台圖示
+
+`src/components/UiIcon.jsx` 的 GitHub SVG path 取自 [Simple Icons 16.0.0 的 github.svg](https://github.com/simple-icons/simple-icons/blob/16.0.0/icons/github.svg)，依 [該版本 CC0 1.0 Universal](https://github.com/simple-icons/simple-icons/blob/16.0.0/LICENSE.md) 提供，內嵌後使用目前文字色呈現。GitHub 商標權仍屬原權利人。
+
+下載箭頭與四格視窗平台示意由本專案以 SVG 幾何圖形繪製，隨 MIT 條款提供。Windows 名稱及商標仍屬 Microsoft；平台標示不表示獲得官方認可。
 
 `src/components/UiIcon.jsx` 的 Discord SVG path 取自 [Simple Icons 的 discord.svg](https://github.com/simple-icons/simple-icons/blob/develop/icons/discord.svg)，以 JSX 內嵌並使用目前文字色呈現。Simple Icons 依 [CC0 1.0 Universal](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md) 提供；此部分保留 CC0，不因所在程式檔案採 MIT 而改變原條款。Discord 品牌與商標權利仍屬原權利人；CC0 不授予商標權。
 

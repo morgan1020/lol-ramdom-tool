@@ -5,7 +5,8 @@
 ## 專案結構與模組規劃
 本專案為 React + Vite 網站與 Electron Windows 桌面 App，共用抽籤介面及規則。Discord 以 Webhook 同步，不包含 Discord Bot。
 
-- `README.md`：使用方式、開發、桌面打包與部署說明。
+- `README.md`：對外專案首頁，介紹用途、主要功能、線上使用與 App 下載狀態。
+- `docs/guide.md`：完整操作、開發、桌面打包、資料更新與部署說明。
 - `src/App.jsx`、`src/components/`：共用介面及互動流程。
 - `src/domain/`：抽籤、統計、名單、英雄資料與通知等核心規則。
 - `src/desktop/`：Electron 主程序、preload、LCU 連線及本機加密資料儲存。
@@ -32,7 +33,7 @@
 - `npm run desktop:pack`：產生 `release/win-unpacked/`。
 - `npm run desktop:build -- --publish never`：建置 Windows x64 安裝版及免安裝版，不自動上傳。
 - `npm run desktop:installer`：僅建置 Windows 安裝版。
-- `npm run update:data`：依序更新英雄及分路資料；單項更新見 README。
+- `npm run update:data`：依序更新英雄及分路資料；單項更新見 `docs/guide.md`。
 - `npm test`：執行測試（`node --test`）。
 - `npm run ui:smoke`：使用隔離資料與合成 IPC 驗證共用介面。
 - `npm run storage:smoke`：使用隔離資料驗證系統加密、移轉與備份，不傳送真實 Discord 訊息。
@@ -43,7 +44,7 @@
 - 介面文案與使用者回覆預設台灣繁體中文。
 - 核心規則優先放 `src/domain/`，避免耦合 React、Electron 或外部 API。
 - 位置與統計規則變更時，必須同步更新測試。
-- 使用／開發說明維護於 `README.md`；補充評估放 `docs/`，素材與套件權利維護於 `THIRD_PARTY_NOTICES.md`。不要新增已淘汰的 Discord Bot 文件或指令。
+- README 維持精簡的產品介紹與導覽；完整使用／開發細節放 `docs/guide.md`，補充評估放 `docs/`，素材與套件權利維護於 `THIRD_PARTY_NOTICES.md`。不要新增已淘汰的 Discord Bot 文件或指令。
 - 不將玩家資料、Webhook、LCU 憑證、`.env`、AppData 或測試 profile 納入 Git 或發佈附件。
 - MIT 僅適用本專案可授權的內容；Riot／CommunityDragon 素材與第三方套件保留原條款。更新依賴或素材時同步來源與聲明。
 

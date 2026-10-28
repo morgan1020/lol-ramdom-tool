@@ -20,6 +20,7 @@ import { ToastHost } from './components/ToastHost.jsx';
 import { RoleWorkspace } from './components/RoleWorkspace.jsx';
 import { RoleSetup } from './components/RoleSetup.jsx';
 import { SettingsDialog } from './components/SettingsDialog.jsx';
+import { ProjectLinks } from './components/ProjectLinks.jsx';
 import { useDiscordSync } from './hooks/useDiscordSync.js';
 import { hasDesktopData, saveDesktopPreferences, importDesktopStats } from './storage/desktopData.js';
 import { importStats, parseStatsBackup } from './domain/statsBackup.js';
@@ -304,7 +305,7 @@ export default function App({ initialData }) {
         <button className="toolbar-icon" type="button" aria-label="設定" title="設定" disabled={busy} onClick={() => openSettings('data')}><ToolbarIcon name="settings" /></button>
       </div>
     </header>
-    {!drawingView && <div className="compact-navigation"><nav className="compact-tabs" role="tablist" aria-label="工具模式" onKeyDown={navigateTabs}>{[['roles', '抽分路'], ['champions', '抽英雄']].map(([value, label]) => <button key={value} role="tab" type="button" disabled={busy} aria-selected={toolMode === value} tabIndex={toolMode === value ? 0 : -1} onClick={() => changeToolMode(value)}>{label}</button>)}</nav></div>}
+    {!drawingView && <div className="compact-navigation"><nav className="compact-tabs" role="tablist" aria-label="工具模式" onKeyDown={navigateTabs}>{[['roles', '抽分路'], ['champions', '抽英雄']].map(([value, label]) => <button key={value} role="tab" type="button" disabled={busy} aria-selected={toolMode === value} tabIndex={toolMode === value ? 0 : -1} onClick={() => changeToolMode(value)}>{label}</button>)}</nav>{!isDesktop && <ProjectLinks />}</div>}
     <div className="tool-content">
     {toolMode === 'roles' ? phase === 'setup' ? <RoleSetup isDesktop={isDesktop} source={source} onSourceChange={changeSource} lobby={clientLobby} players={players} busy={busy} loading={clientLoading} error={error} drawMode={drawMode} onDrawModeChange={changeDrawMode} preferredRoles={preferredRoles} onPreferredRoleChange={changePreferredRole} autoApplyRoles={autoApplyRoles} onAutoApplyRolesChange={toggleAutoApplyRoles} onRefresh={refreshClient} onPrepare={finishSetup} onRemove={removePlayer} inputValue={inputValue} onInputChange={setInputValue} onAdd={() => addPlayer()} knownNames={knownNames} onToggleKnown={(name) => manualPlayers.includes(name) ? removePlayer(name) : addPlayer(name)} discordSync={discordSync} onManageWebhook={() => openSettings('discord')} /> : <RoleWorkspace assignedPreferences={hasResults ? snapshot.preferences : {}} discordEnabled={discordSync.settings.enabled} discordDestination={getActiveDiscordDestination(discordSync.settings)?.label} lobby={{ localPlayerId: prepared?.localPlayerId }} players={visiblePlayers} results={results} busy={busy} loading={clientLoading} error={error} onReturn={returnToSetup} onDraw={handleDraw} onCopy={handleCopy} discordStatus={hasResults ? discordSync.status : { state: 'idle', message: '' }} onRetryDiscord={discordSync.retry} /> : <ChampionDrawPanel championData={championData} positionData={championPositionData} selectedPosition={championPosition} onPositionChange={setChampionPosition} />}
     </div>
