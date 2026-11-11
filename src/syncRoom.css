@@ -1,0 +1,56 @@
+.sync-room-panel { width: 100%; height: 100%; min-height: 0; padding: 0 0 26px; overflow-y: auto; }
+.sync-room-heading, .sync-room-toolbar, .sync-section-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.sync-room-heading { align-items: flex-start; }
+.sync-room-heading h1 { margin: 5px 0 8px; font-size: clamp(24px, 3vw, 32px); }
+.sync-room-heading p, .sync-room-scope, .sync-room-help, .sync-field small, .sync-room-actions p { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.sync-room-heading p { margin: 0; }
+.sync-room-scope { margin: 20px 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-muted); }
+.sync-connection { flex: 0 0 auto; padding: 7px 11px; border: 1px solid var(--border); border-radius: 30px; font-size: 12px; color: var(--text-muted); }
+.sync-connection-connected, .sync-ready, .sync-room-notice { color: var(--accent); }
+.sync-room-error { color: var(--danger); border: 1px solid currentColor; border-radius: 10px; padding: 12px; overflow-wrap: anywhere; }
+.sync-room-notice, .sync-room-closed, .sync-room-waiting { font-size: 14px; line-height: 1.5; }
+.sync-connect-form { display: grid; gap: 22px; max-width: 640px; }
+.sync-connect-form .source-switch { max-width: 360px; }
+.sync-field { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
+.sync-field small { font-weight: 400; }
+.sync-field input { width: 100%; min-width: 0; border: 1px solid var(--border-strong); border-radius: 10px; padding: 12px; color: var(--text); background: var(--surface-strong); font: inherit; font-weight: 400; }
+.sync-field input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.sync-field input:disabled { opacity: .65; }
+.sync-identity-input { display: flex; gap: 10px; }
+.sync-identity-input .btn { flex-shrink: 0; }
+.sync-connect-form > .btn { justify-self: start; }
+.sync-room-help { margin: 0; }
+.sync-room-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.sync-member-section, .sync-result-section { min-width: 0; border: 1px solid var(--border); border-radius: 14px; padding: 20px; background: var(--surface-strong); }
+.sync-room-toolbar { margin-bottom: 24px; }
+.sync-room-code { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.sync-room-code strong { font-size: 25px; letter-spacing: .08em; overflow-wrap: anywhere; }
+.sync-room-code .text-button { display: inline-flex; padding: 7px; }
+.sync-section-title h2 { margin: 0; font-size: 17px; }
+.sync-section-title > span { color: var(--text-muted); font-size: 13px; }
+.sync-member-list, .sync-result-list { list-style: none; margin: 14px 0; padding: 0; }
+.sync-member-list > li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.sync-member-name { min-width: 0; }
+.sync-member-name strong, .sync-result-list strong { overflow-wrap: anywhere; font-size: 14px; }
+.sync-member-name > div { display: flex; gap: 6px; margin-top: 6px; }
+.sync-member-state { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; font-size: 12px; color: var(--text-muted); }
+.sync-member-state .btn { padding: 7px 10px; font-size: 12px; }
+.sync-remove-member { color: var(--danger); font-size: 12px; }
+.sync-room-actions { margin: 16px 0; }
+.sync-room-actions > div { display: flex; gap: 10px; flex-wrap: wrap; }
+.sync-result-list > li { display: grid; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.sync-result-list > li > span { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; }
+.sync-result-list .role-glyph { width: 22px; height: 22px; }
+.sync-result-list small { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.sync-result-empty { padding: 45px 12px; text-align: center; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.sync-result-empty > svg { width: 28px; height: 28px; }
+@media (max-width: 900px) {
+  .sync-room-panel { padding: 20px; }
+  .sync-room-body { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .sync-room-heading { flex-direction: column; gap: 12px; }
+  .sync-identity-input { flex-direction: column; }
+  .sync-room-toolbar .btn, .sync-member-state .btn { width: auto; }
+  .sync-member-section, .sync-result-section { padding: 16px; }
+}

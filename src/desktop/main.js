@@ -7,6 +7,8 @@ import { applyCurrentPlayerRoles } from './applyRoles.js';
 import { DesktopDataStore } from './dataStore.js';
 import { registerDataIpc } from './dataIpc.js';
 import { createSystemEncryption } from './encryption.js';
+import { registerSyncRoomIpc } from './syncRoomIpc.js';
+import { bindSyncRoomWindowLifecycle } from './syncRoomLifecycle.js';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const assetRoot = path.resolve(directory, '../../dist');
@@ -14,6 +16,7 @@ const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inl
 let mainWindow;
 let lobbyRead;
 let applyingRoles = false;
+let syncRoomClient;
 
 function isAppSender(event) {
   return mainWindow && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame && event.senderFrame.url === appUrl;
@@ -28,6 +31,7 @@ function createWindow() {
     icon: path.join(assetRoot, 'favicon-dice.png'),
     webPreferences: { preload: path.join(directory, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
+  bindSyncRoomWindowLifecycle(mainWindow, syncRoomClient);
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -54,6 +58,7 @@ if (!app.requestSingleInstanceLock()) {
     const encryption = await createSystemEncryption(safeStorage);
     const store = new DesktopDataStore({ directory: path.join(app.getPath('userData'), 'data'), encryption });
     registerDataIpc({ ipcMain, store, isSender: isAppSender, getWindow: () => mainWindow, dialog, shell });
+    syncRoomClient = registerSyncRoomIpc({ ipcMain, isSender: isAppSender, getWindow: () => mainWindow });
     session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => callback(permission === 'clipboard-sanitized-write'));
     session.defaultSession.setPermissionCheckHandler((_webContents, permission) => permission === 'clipboard-sanitized-write');
     protocol.handle('lol-draw', async (request) => {

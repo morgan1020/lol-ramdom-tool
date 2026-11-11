@@ -1,6 +1,17 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('lolDesktop', {
+  syncRoom: {
+    connect: (options) => ipcRenderer.invoke('sync-room:connect', options),
+    command: (command) => ipcRenderer.invoke('sync-room:command', command),
+    disconnect: () => ipcRenderer.invoke('sync-room:disconnect'),
+    getState: () => ipcRenderer.invoke('sync-room:get-state'),
+    onState: (callback) => {
+      const listener = (_event, state) => callback(state);
+      ipcRenderer.on('sync-room:state', listener);
+      return () => ipcRenderer.removeListener('sync-room:state', listener);
+    }
+  },
   readLobby: () => ipcRenderer.invoke('lol:read-lobby'),
   applyRoles: (results) => ipcRenderer.invoke('lol:apply-roles', results),
   initializeData: (legacy) => ipcRenderer.invoke('data:initialize', legacy),

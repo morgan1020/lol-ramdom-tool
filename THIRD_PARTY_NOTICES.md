@@ -43,6 +43,7 @@ LOL Random Tool is not endorsed by Riot Games and does not reflect the views or 
 | Vite | 7.3.7 | MIT；[Vite](https://github.com/vitejs/vite)；建置工具 |
 | @vitejs/plugin-react | 5.2.0 | MIT；[Vite React plugin](https://github.com/vitejs/vite-plugin-react)；建置工具 |
 | electron-builder | 26.18.0 | MIT；[electron-builder](https://github.com/electron-userland/electron-builder)；打包工具，其 NSIS 等工具及其他相依元件各有自己的條款 |
+| ws | 8.22.2 | MIT；[ws](https://github.com/websockets/ws)；本機多人房間原型服務與整合測試使用，不隨桌面 App 打包；完整授權見安裝套件的 `LICENSE` |
 
 Windows 產物的執行檔旁提供本聲明與 `LICENSE`。React、React DOM、scheduler 原授權保留於 `resources/app.asar` 的對應 `node_modules/<套件>/LICENSE`；Electron 原授權保留為執行檔旁的 `LICENSE.electron.txt`，內含元件聲明保留為 `LICENSES.chromium.html`。以下另附前端 bundle 使用的 React／React DOM／scheduler 完整 MIT 聲明，方便網站與 App 再散布時一併保留。
 

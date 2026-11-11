@@ -15,6 +15,10 @@
     "desktop:smoke": "npm run build && electron scripts/desktop-smoke.js",
     "ui:smoke": "npm run build && electron scripts/ui-smoke.js",
     "storage:smoke": "npm run build && electron scripts/storage-smoke.js",
+    "room:server": "node scripts/sync-room-server.mjs",
+    "room:demo": "npm run build && node scripts/sync-room-demo.mjs",
+    "room:ui-smoke": "npm run build && electron scripts/sync-room-ui-smoke.js",
+    "room:test": "node --test tests/syncRoom.test.js tests/syncRoomServer.test.js tests/syncRoomClient.test.js tests/syncRoomIpc.test.js tests/syncRoomLifecycle.test.js",
     "test": "node --test",
     "update:champions": "node scripts/update-champions.mjs",
     "update:champion-positions": "npm run update:champions && node scripts/update-champion-positions.mjs",
@@ -22,7 +26,7 @@
     "desktop:installer": "npm run build && electron-builder --win nsis --x64"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "react": "^19.2.3",
@@ -32,7 +36,8 @@
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "45.0.0",
     "electron-builder": "26.18.0",
-    "vite": "^7.3.7"
+    "vite": "^7.3.7",
+    "ws": "^8.22.2"
   },
   "build": {
     "appId": "tw.lolrandom.desktop",

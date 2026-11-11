@@ -46,7 +46,7 @@ App 不需另裝 Node.js；目前未簽章，採手動更新。網站與 App 各
 
 ## 參與開發
 
-使用 React、Vite 與 Electron。請使用符合 Vite 需求的 Node.js（`^20.19.0 || >=22.12.0`）。
+使用 React、Vite 與 Electron。請使用 Node.js **22.12 以上**，以支援 Vite 與多人房間測試使用的內建 WebSocket。
 
 ```bash
 npm ci
@@ -60,6 +60,8 @@ npm run desktop:build -- --publish never # 打包 Windows App
 ```
 
 開發、資料更新、測試與部署細節見 [開發說明](docs/guide.md#開發)；協作規範見 [AGENTS.md](AGENTS.md)。問題與建議可透過 GitHub Issues 提出。
+
+開發中的桌面版提供「多人房間」測試頁：建立房間、核准成員、準備與同步抽籤結果。此功能尚未包含在上述 v1.4.3 下載檔；本機測試方式與限制見 [多人房間第一階段](docs/multiplayer-stage1.md)。
 
 ## 授權與致謝
 

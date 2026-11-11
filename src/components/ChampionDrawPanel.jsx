@@ -72,7 +72,7 @@ export function ChampionDrawPanel({ championData, positionData, selectedPosition
     onPositionChange(position);
     setResult(null);
     setResultImageFailed(false);
-    setError('');
+    dismissNotice('champion-prepare');
     if (position === selectedPosition) prepareNextChampion(position);
   };
 

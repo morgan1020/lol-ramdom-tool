@@ -24,7 +24,7 @@
 請保持根目錄簡潔，功能優先放在 `src/` 與 `tests/`。
 
 ## 建置、測試與開發指令
-以 `package.json` 的 scripts 與 `README.md` 為準。Node.js 版本須符合 Vite 的執行需求（目前 Vite 7 需 Node 20.19+ 或 22.12+ 等支援版本）；僅滿足專案宣告的 `>=20` 不一定足夠。
+以 `package.json` 的 scripts 與 `README.md` 為準。開發環境使用 Node.js 22.12 以上，以符合 Vite 與多人房間測試使用的內建 WebSocket 需求。
 
 - `npm ci`：依 lockfile 安裝；調整依賴時使用 `npm install` 並同步 lockfile。
 - `npm run dev`：啟動網站開發伺服器。
@@ -37,6 +37,9 @@
 - `npm test`：執行測試（`node --test`）。
 - `npm run ui:smoke`：使用隔離資料與合成 IPC 驗證共用介面。
 - `npm run storage:smoke`：使用隔離資料驗證系統加密、移轉與備份，不傳送真實 Discord 訊息。
+- `npm run room:test`：驗證多人房間規則、IPC 與本機 WebSocket，不讀寫真實 LCU 或傳送 Discord。
+- `npm run room:ui-smoke`：使用隔離 App、合成大廳與真實本機 WebSocket 驗證房間介面。
+- `npm run room:demo`：啟動本機服務及兩個隔離測試 App，供手動試玩；不操作真實 LoL 或 Discord。
 - `npm run desktop:smoke`：使用獨立資料目錄讀取真實 LoL 大廳並抽籤，不傳送 Discord；加上 `-- --apply-roles` 才會執行實機分路寫入及還原，需明確授權。
 
 ## 程式風格與命名慣例

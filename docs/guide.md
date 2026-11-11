@@ -32,7 +32,7 @@ Webhook 使用 Electron `safeStorage` 的非同步系統加密功能保存，完
 
 LCU 並非 Riot 保證相容的第三方服務，客戶端改版可能需要更新。對外發布前，依 [Riot LCU 說明](https://developer.riotgames.com/docs/lol#league-client-api)登記產品及使用端點。桌面安全設計參考 [Electron 官方指南](https://www.electronjs.org/docs/latest/tutorial/security)。
 
-目前產品 `898873` 已完成登記申請與網站驗證，精簡產品說明已儲存，狀態為 **Pending Review**，尚未核准。進度與端點揭露內容見 [Riot 登記紀錄](riot-registration.md)；儲存庫與 App 暫不公開或發布。
+截至 2026-10-29 的登記紀錄，產品 `898873` 已完成登記申請與網站驗證，狀態為 **Pending Review**，尚未核准；後續狀態需至 Portal 確認。進度與端點揭露內容見 [Riot 登記紀錄](riot-registration.md)。儲存庫與 v1.4.3 App 已依擁有者決定公開，公開不代表 Riot 核准。
 
 ```bash
 npm install
@@ -173,3 +173,7 @@ npm test
 更新時直接執行新版安裝程式，沿用原安裝位置即可覆蓋更新，不必先解除安裝。安裝版與免安裝版使用相同的應用程式識別和 `%APPDATA%/lol-random-tool` 資料目錄；統計、主題、分路設定與 Discord 設定都保留。Webhook 加密資料需由同一個 Windows 帳號讀取。解除安裝預設也保留資料，之後重新安裝可繼續使用。
 
 此版本支援手動覆蓋更新，尚未加入背景自動下載更新。
+
+## 多人房間（開發測試）
+
+開發分支的桌面版提供獨立多人房間頁，第一階段僅同步抽籤結果。啟動方式、雙視窗示範及驗收界線見 [多人房間第一階段](multiplayer-stage1.md)。開發環境需 Node.js 22.12 以上。
