@@ -176,4 +176,4 @@ npm test
 
 ## 多人房間（開發測試）
 
-開發分支的桌面版提供獨立多人房間頁，第一階段僅同步抽籤結果。啟動方式、雙視窗示範及驗收界線見 [多人房間第一階段](multiplayer-stage1.md)。開發環境需 Node.js 22.12 以上。
+開發分支的桌面版提供獨立多人房間頁，僅同步抽籤結果，不寫入 LoL／統計／Discord。本機啟動方式見 [第一階段](multiplayer-stage1.md)；Cloudflare 服務、邀請與 Windows 預覽包見 [雲端預覽與兩台電腦測試](multiplayer-cloud.md)。開發環境需 Node.js 22.12 以上。

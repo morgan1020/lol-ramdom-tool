@@ -40,6 +40,8 @@
 - `npm run room:test`：驗證多人房間規則、IPC 與本機 WebSocket，不讀寫真實 LCU 或傳送 Discord。
 - `npm run room:ui-smoke`：使用隔離 App、合成大廳與真實本機 WebSocket 驗證房間介面。
 - `npm run room:demo`：啟動本機服務及兩個隔離測試 App，供手動試玩；不操作真實 LoL 或 Discord。
+- `npm run room:cloud:test`、`npm run room:cloud:ui-smoke`：使用本機 Cloudflare runtime 驗證 Durable Object 與桌面介面，不等於公網或兩台實機驗收。
+- `npm run room:cloud:check`：雲端 Worker 部署乾跑，不上傳。`npm run room:preview:pack` 產生獨立識別的 Windows 預覽包。
 - `npm run desktop:smoke`：使用獨立資料目錄讀取真實 LoL 大廳並抽籤，不傳送 Discord；加上 `-- --apply-roles` 才會執行實機分路寫入及還原，需明確授權。
 
 ## 程式風格與命名慣例

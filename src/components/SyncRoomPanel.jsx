@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSyncRoom } from '../hooks/useSyncRoom.js';
 import { formatCopyText } from '../domain/copyFormat.js';
+import { formatRoomInvitation, parseRoomInvitation } from '../domain/roomInvitation.js';
 import { RoleIcon } from './RoleIcon.jsx';
 import { UiIcon } from './UiIcon.jsx';
 import '../syncRoom.css';
@@ -18,6 +19,8 @@ export function SyncRoomPanel() {
   const [reading, setReading] = useState(false);
   const [notice, setNotice] = useState('');
   const [localError, setLocalError] = useState('');
+  const [invitation, setInvitation] = useState('');
+  useEffect(() => { if (sync.serviceUrl) setUrl(sync.serviceUrl); }, [sync.serviceUrl]);
   const room = sync.room;
   const connected = sync.connection === 'connected';
   const self = room?.members.find((member) => member.id === sync.memberId);
@@ -53,6 +56,18 @@ export function SyncRoomPanel() {
     setLocalError(''); setNotice('');
     await sync.connect({ url: url.trim(), action, name: name.trim(), ...(action === 'join' ? { roomId: roomId.trim().toUpperCase() } : {}) });
   };
+  const applyInvitation = () => {
+    setLocalError(''); setNotice('');
+    try {
+      const parsed = parseRoomInvitation(invitation);
+      setUrl(parsed.url); setRoomId(parsed.roomId); setAction('join');
+      setNotice('已填入邀請，確認服務位址與自己的 Riot ID 後，再按加入');
+    } catch (error) { setLocalError(error.message); }
+  };
+  const copyInvitation = () => {
+    try { void copy(formatRoomInvitation({ url: sync.serviceUrl || url, roomId: room.roomId }), '已複製邀請，可傳給朋友貼上加入'); }
+    catch (error) { setLocalError(error.message); }
+  };
   const command = async (value) => {
     setLocalError(''); setNotice('');
     await sync.command(value);
@@ -77,14 +92,15 @@ export function SyncRoomPanel() {
         {[['create', '建立房間'], ['join', '加入房間']].map(([value, label]) => <button key={value} type="button" aria-pressed={action === value} className={action === value ? 'is-selected' : ''} disabled={busy} onClick={() => setAction(value)}>{label}</button>)}
       </div>
       <label className="sync-field" htmlFor="sync-player-name"><span>你的 Riot ID</span><div className="sync-identity-input"><input id="sync-player-name" value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" placeholder="玩家名稱#TW1" maxLength={200} disabled={busy} required /><button className="btn btn-secondary" type="button" onClick={readIdentity} disabled={busy}>{reading ? '讀取中…' : '從 LoL 讀取'}</button></div><small>請輸入完整名稱與 # 標籤，方便朋友辨識。</small></label>
-      {action === 'join' && <label className="sync-field" htmlFor="sync-room-code"><span>房間代碼</span><input id="sync-room-code" value={roomId} onChange={(event) => setRoomId(event.target.value.toUpperCase())} autoComplete="off" placeholder="輸入主持人提供的代碼" maxLength={24} disabled={busy} required /></label>}
-      <label className="sync-field" htmlFor="sync-server-url"><span>同步服務位址</span><input id="sync-server-url" type="text" value={url} onChange={(event) => setUrl(event.target.value)} autoComplete="off" spellCheck="false" placeholder="ws://127.0.0.1:8787/sync" maxLength={2048} disabled={busy} required /><small>所有人需連到同一個服務。本機測試預設位址為 ws://127.0.0.1:8787/sync。</small></label>
+      {action === 'join' && <><details className="sync-invitation-entry"><summary>貼上朋友的邀請</summary><label className="sync-field" htmlFor="sync-invitation"><span>完整邀請內容</span><textarea id="sync-invitation" value={invitation} onChange={(event) => setInvitation(event.target.value)} placeholder={'英雄聯盟抽籤工具房間邀請\n服務：wss://服務網址/rooms\n房碼：房間代碼'} rows={3} maxLength={4096} disabled={busy} /></label><button className="btn btn-secondary" type="button" disabled={busy || !invitation.trim()} onClick={applyInvitation}>套用邀請</button><p className="sync-room-help">只填入服務位址與房碼，不會立即連線。</p></details><label className="sync-field" htmlFor="sync-room-code"><span>房間代碼</span><input id="sync-room-code" value={roomId} onChange={(event) => setRoomId(event.target.value.toUpperCase())} autoComplete="off" placeholder="輸入主持人提供的代碼" maxLength={24} disabled={busy} required /></label></>}
+      <label className="sync-field" htmlFor="sync-server-url"><span>同步服務位址</span><input id="sync-server-url" type="text" value={url} onChange={(event) => setUrl(event.target.value)} autoComplete="off" spellCheck="false" placeholder="wss://你的服務.workers.dev/rooms" maxLength={2048} disabled={busy} required /><small>與朋友使用同一個服務。本機測試用 ws://127.0.0.1:8787/sync；跨電腦請填入已部署的 wss 雲端服務 /rooms 位址。</small></label>
       <button className="btn btn-primary" type="submit" disabled={busy || !validName || !url.trim() || (action === 'join' && !roomId.trim())}>{sync.initializing ? '正在讀取房間…' : busy ? '處理中…' : action === 'create' ? '建立房間' : '加入並等候核准'}</button>
       {sync.connection === 'connecting' && <button className="btn btn-secondary" type="button" onClick={() => sync.disconnect()}>取消連線</button>}
-      <p className="sync-room-help">第一階段需先啟動同步服務；尚未提供公開服務。每間最多 5 人，加入者需經主持人核准。</p>
+      <p className="sync-room-help">可連接本機測試服務或自行部署的雲端服務。每間最多 5 人，加入者需經主持人核准。服務會暫存房間成員名稱與抽籤結果；請使用信任的同步服務。</p>
     </form> : <div className="sync-room-body">
       <section className="sync-member-section" aria-labelledby="sync-members-title">
         <header className="sync-room-toolbar"><div><span className="eyebrow">房間代碼</span><div className="sync-room-code"><strong>{room.roomId}</strong><button type="button" className="text-button" onClick={() => copy(room.roomId, '已複製房間代碼')} aria-label="複製房間代碼"><UiIcon name="copy" /></button></div></div><button type="button" className="btn btn-secondary" disabled={busy} onClick={leave}>{isHost ? connected ? '關閉房間' : '離開本機連線' : '離開房間'}</button></header>
+        <div className="sync-room-invite"><p className="sync-room-service">{sync.serviceUrl || url}</p><button className="btn btn-secondary" type="button" onClick={copyInvitation}>複製邀請</button></div>
         <div className="sync-section-title"><h2 id="sync-members-title">房間成員</h2><span>{room.members.length} / 5</span></div>
         <ul className="sync-member-list">{room.members.map((member) => <li key={member.id} data-member-id={member.id}>
           <div className="sync-member-name"><strong>{member.name}</strong><div>{member.id === room.hostId && <span className="self-badge">主持人</span>}{member.id === sync.memberId && <span className="self-badge">你</span>}</div></div>

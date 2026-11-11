@@ -1,7 +1,11 @@
+import { randomBytes } from 'node:crypto';
+import { validateRoomServiceUrl } from '../domain/roomInvitation.js';
+
 const actions = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove']);
 const roles = new Set(['上路', '打野', '中路', '下路', '輔助']);
 const isId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 const isCount = value => Number.isSafeInteger(value) && value >= 0;
+class RoomTransportError extends Error {}
 const isName = value => typeof value === 'string' && value.length <= 200 && value === value.trim() &&
   value.split('#').length === 2 && value.split('#').every(part => part && part === part.trim()) && !/[\u0000-\u001f\u007f]/u.test(value);
 
@@ -42,24 +46,22 @@ function publicError(value) {
 }
 
 export function validateSyncRoomUrl(value) {
-  let url;
-  try { url = new URL(value); } catch { throw new Error('請輸入有效的同步服務網址'); }
-  if (url.username || url.password || url.search || url.hash ||
-    !(url.protocol === 'wss:' || (url.protocol === 'ws:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)))) {
-    throw new Error('同步服務需使用 wss；只有本機 localhost 可使用 ws，網址不可包含帳密、查詢或片段');
-  }
-  return url.href;
+  return validateRoomServiceUrl(value);
 }
 
 export class SyncRoomClient {
   constructor({ onState = () => {}, WebSocketImpl = globalThis.WebSocket, requestTimeoutMs = 8000,
-    reconnectDelayMs = 500, maxReconnectAttempts = 5 } = {}) {
+    reconnectDelayMs = 500, maxReconnectAttempts = 5, heartbeatIntervalMs = 25000, heartbeatTimeoutMs = 10000 } = {}) {
     this.onState = onState;
     this.WebSocketImpl = WebSocketImpl;
     this.requestTimeoutMs = requestTimeoutMs;
     this.reconnectDelayMs = reconnectDelayMs;
     this.maxReconnectAttempts = maxReconnectAttempts;
-    this.state = { connection: 'disconnected', memberId: null, room: null, error: '' };
+    this.heartbeatIntervalMs = heartbeatIntervalMs;
+    this.heartbeatTimeoutMs = heartbeatTimeoutMs;
+    this.heartbeatTimer = null;
+    this.heartbeatDeadline = null;
+    this.state = { connection: 'disconnected', memberId: null, room: null, error: '', serviceUrl: '' };
     this.pending = new Map();
     this.sequence = 0;
     this.generation = 0;
@@ -75,11 +77,41 @@ export class SyncRoomClient {
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error(message)); }
     this.pending.clear();
   }
+  clearHeartbeat() {
+    clearInterval(this.heartbeatTimer); this.heartbeatTimer = null;
+    clearTimeout(this.heartbeatDeadline); this.heartbeatDeadline = null;
+  }
+  startHeartbeat(socket, generation) {
+    const current = () => generation === this.generation && this.socket === socket;
+    if (!current()) return;
+    this.clearHeartbeat();
+    const lost = () => {
+      if (!current()) return;
+      // A half-open connection may never emit close. Retire its generation first.
+      this.generation++;
+      this.clearHeartbeat();
+      this.socket = null;
+      this.rejectPending('房間心跳逾時，連線中斷；操作不會自動重送，請確認結果');
+      if (this.token) this.scheduleReconnect();
+      else this.emit({ connection: 'disconnected' });
+      try { socket.close(); } catch { /* The retired socket cannot affect the new session. */ }
+    };
+    this.heartbeatTimer = setInterval(() => {
+      if (!current() || this.heartbeatDeadline) return;
+      if (socket.readyState !== 1) { lost(); return; }
+      this.heartbeatDeadline = setTimeout(lost, this.heartbeatTimeoutMs);
+      this.heartbeatDeadline.unref?.();
+      try { socket.send('{"type":"ping"}'); } catch { lost(); }
+    }, this.heartbeatIntervalMs);
+    this.heartbeatTimer.unref?.();
+  }
   disconnect() {
     this.connectOperation++;
     this.generation++;
     clearTimeout(this.reconnectTimer); this.reconnectTimer = null;
+    this.clearHeartbeat();
     this.token = null; this.url = null;
+    this.expectedRoomId = null;
     this.rejectPending('已中斷房間連線');
     const socket = this.socket; this.socket = null;
     if (socket && socket.readyState < 2) socket.close();
@@ -89,19 +121,44 @@ export class SyncRoomClient {
   destroy() { this.disconnect(); this.onState = () => {}; }
   async connect({ url, action, roomId, name } = {}) {
     let target;
+    let requestedRoomId;
+    let socketUrl;
     try {
       target = validateSyncRoomUrl(url);
       if (!['create', 'join'].includes(action)) throw new Error('請選擇建立或加入房間');
       if (typeof name !== 'string' || !isName(name.trim())) throw new Error('請輸入完整 Riot ID');
       if (action === 'join' && (typeof roomId !== 'string' || !/^[A-Z0-9]{6,16}$/i.test(roomId.trim()))) throw new Error('請輸入有效房間代碼');
+      const parsed = new URL(target);
+      if (parsed.pathname === '/rooms') {
+        parsed.pathname = '/rooms';
+        target = parsed.href;
+        requestedRoomId = action === 'create' ? randomBytes(5).toString('hex').toUpperCase() : roomId.trim().toUpperCase();
+        if (!/^[A-F0-9]{10}$/.test(requestedRoomId)) throw new Error('雲端房間代碼需為 10 位十六進位字元');
+        parsed.pathname = `/rooms/${requestedRoomId}`;
+      } else requestedRoomId = action === 'join' ? roomId.trim().toUpperCase() : undefined;
+      socketUrl = parsed.href;
     } catch (error) { this.emit({ error: error.message }); throw error; }
     this.disconnect();
     const operation = ++this.connectOperation;
-    this.url = target;
+    this.url = socketUrl;
+    this.expectedRoomId = requestedRoomId || null;
     this.attempts = 0;
-    this.emit({ connection: 'connecting' });
+    this.emit({ connection: 'connecting', serviceUrl: target });
+    const handshake = { type: action, name: name.trim(), roomId: requestedRoomId, handshakeToken: randomBytes(32).toString('hex') };
     try {
-      await this.open({ type: action, name: name.trim(), roomId: roomId?.trim().toUpperCase() });
+      if (operation !== this.connectOperation) throw new Error('房間連線已取代');
+      try {
+        await this.open(handshake);
+      } catch (error) {
+        if (!(error instanceof RoomTransportError) || operation !== this.connectOperation) throw error;
+        const socket = this.socket;
+        this.generation++;
+        this.socket = null;
+        this.rejectPending('房間連線已取代');
+        if (socket?.readyState < 2) socket.close();
+        await this.open(handshake);
+      }
+      if (operation !== this.connectOperation) throw new Error('房間連線已取代');
       return this.getState();
     } catch (error) {
       if (operation === this.connectOperation) { this.disconnect(); this.emit({ error: publicError(error.message) }); }
@@ -109,22 +166,23 @@ export class SyncRoomClient {
     }
   }
   request(payload) {
-    if (!this.socket || this.socket.readyState !== 1) return Promise.reject(new Error('房間尚未連線，請稍後再試'));
+    if (!this.socket || this.socket.readyState !== 1) return Promise.reject(new RoomTransportError('房間尚未連線，請稍後再試'));
     const requestId = ++this.sequence;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(requestId);
-        reject(new Error('操作逾時，結果可能已生效，請確認房間狀態；不會自動重送'));
+        reject(new RoomTransportError('操作逾時，結果可能已生效，請確認房間狀態；不會自動重送'));
       }, this.requestTimeoutMs);
       this.pending.set(requestId, { resolve, reject, timer });
       try { this.socket.send(JSON.stringify({ ...payload, requestId })); }
-      catch { clearTimeout(timer); this.pending.delete(requestId); reject(new Error('傳送失敗，請確認房間連線')); }
+      catch { clearTimeout(timer); this.pending.delete(requestId); reject(new RoomTransportError('傳送失敗，請確認房間連線')); }
     });
   }
   open(handshake) {
+    this.clearHeartbeat();
     const generation = ++this.generation;
     let socket;
-    try { socket = new this.WebSocketImpl(this.url); } catch { return Promise.reject(new Error('無法建立同步服務連線')); }
+    try { socket = new this.WebSocketImpl(this.url); } catch { return Promise.reject(new RoomTransportError('無法建立同步服務連線')); }
     this.socket = socket;
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -134,18 +192,20 @@ export class SyncRoomClient {
         if (error) reject(error); else resolve();
       };
       const current = () => generation === this.generation && this.socket === socket;
-      const openTimer = setTimeout(() => { finish(new Error('同步服務連線逾時')); socket.close(); }, this.requestTimeoutMs);
+      const openTimer = setTimeout(() => { finish(new RoomTransportError('同步服務連線逾時')); socket.close(); }, this.requestTimeoutMs);
       socket.addEventListener('open', async () => {
         if (!current()) return;
+        clearTimeout(openTimer);
         try {
           const reply = await this.request(handshake);
-          if (!current()) return;
+          if (!current() || settled) { finish(new Error('房間連線已取代')); return; }
           if (!isId(reply.memberId) || !reply.room.members.some(member => member.id === reply.memberId)) throw new Error('房間身分格式錯誤');
           if (handshake.type !== 'resume' && (typeof reply.token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(reply.token))) throw new Error('房間憑證格式錯誤');
           const room = validateRoomSnapshot(reply.room);
           this.token = reply.token || this.token;
           this.attempts = 0;
           this.emit({ connection: 'connected', memberId: reply.memberId, room, error: '' });
+          this.startHeartbeat(socket, generation);
           finish();
         } catch (error) { finish(error); socket.close(); }
       });
@@ -154,7 +214,9 @@ export class SyncRoomClient {
         try {
           if (typeof event.data !== 'string' || event.data.length > 65536) throw new Error('同步服務訊息過大或格式錯誤');
           const reply = JSON.parse(event.data);
-          if (reply.type === 'ack') {
+          if (reply.type === 'pong') {
+            clearTimeout(this.heartbeatDeadline); this.heartbeatDeadline = null;
+          } else if (reply.type === 'ack') {
             const pending = this.pending.get(reply.requestId);
             if (!pending) return;
             this.pending.delete(reply.requestId); clearTimeout(pending.timer);
@@ -166,6 +228,7 @@ export class SyncRoomClient {
             } else pending.reject(new Error(publicError(reply.message)));
           } else if (reply.type === 'state') this.acceptRoom(reply.room);
           else if (reply.type === 'ended') {
+            this.clearHeartbeat();
             this.token = null;
             this.emit({ connection: 'disconnected', room: null, memberId: null, error: publicError(reply.message) });
             socket.close();
@@ -175,19 +238,20 @@ export class SyncRoomClient {
           this.emit({ error: message }); finish(new Error(message)); socket.close();
         }
       });
-      socket.addEventListener('error', () => { if (current()) finish(new Error('無法連線同步服務，請確認服務已啟動')); });
+      socket.addEventListener('error', () => { if (current()) finish(new RoomTransportError('無法連線同步服務，請確認服務已啟動')); });
       socket.addEventListener('close', () => {
         if (!current()) { finish(new Error('房間連線已取代')); return; }
-        finish(new Error('同步服務連線已中斷'));
+        this.clearHeartbeat();
+        finish(new RoomTransportError('同步服務連線已中斷'));
         this.socket = null;
         this.rejectPending('房間連線中斷，操作不會自動重送，請確認結果');
         if (this.token) this.scheduleReconnect();
-        else this.emit({ connection: 'disconnected' });
       });
     });
   }
   acceptRoom(room) {
     const snapshot = validateRoomSnapshot(room);
+    if (this.expectedRoomId && snapshot.roomId !== this.expectedRoomId) throw new Error('同步服務回傳不同房間，已中止連線');
     const previous = this.state.room;
     if (previous?.roomId === room.roomId && previous.revision >= room.revision) return;
     this.emit({ room: snapshot });

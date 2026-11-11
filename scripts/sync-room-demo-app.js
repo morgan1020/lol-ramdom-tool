@@ -3,15 +3,16 @@ import { app, ipcMain } from 'electron';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateSyncRoomUrl } from '../src/desktop/syncRoomClient.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const role = process.env.SYNC_ROOM_DEMO_ROLE;
 const profile = path.resolve(process.env.SYNC_ROOM_DEMO_PROFILE || '');
 const output = path.join(root, 'release', 'sync-room-demo');
 const relative = path.relative(output, profile);
-const url = new URL(process.env.SYNC_ROOM_DEMO_URL || 'http://invalid');
+const url = new URL(validateSyncRoomUrl(process.env.SYNC_ROOM_DEMO_URL));
 if (!['host', 'guest'].includes(role) || !relative || relative.startsWith('..') || path.isAbsolute(relative) ||
-  url.protocol !== 'ws:' || url.hostname !== '127.0.0.1' || url.pathname !== '/sync' || !url.port) {
+  !['/sync', '/rooms'].includes(url.pathname.replace(/\/$/, ''))) {
   throw new Error('請透過 npm run room:demo 啟動隔離測試 App');
 }
 mkdirSync(profile, { recursive: true });

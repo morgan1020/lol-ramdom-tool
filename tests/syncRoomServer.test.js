@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createSyncRoomServer } from '../server/syncRoomServer.js';
 import { SyncRoomClient } from '../src/desktop/syncRoomClient.js';
+import { dropFirstHandshakeAck } from './helpers/dropFirstHandshakeAck.js';
 
 async function waitFor(check, message = '等待房間狀態逾時') {
   const end = Date.now() + 2500;
@@ -64,6 +65,32 @@ test('兩個本機客戶端完成核准、準備、抽籤及移除；不接觸 L
   assert.match(guest.getState().error, /移出/);
   assert.equal(host.getState().room.members.length, 1);
   assert.equal(host.getState().room.result, null);
+});
+
+test('本機建立 ACK 遺失後重試同一席位，憑證綁定原操作與身分', async t => {
+  const server = await setup(t, { maxRooms: 1 });
+  const { observed, WebSocketImpl } = dropFirstHandshakeAck();
+  const host = client(t, { WebSocketImpl, maxReconnectAttempts: 0 });
+  const state = await host.connect({ url: server.url, action: 'create', name: '主持人#TW1' });
+  const [initial, retry] = observed.requests;
+  assert.match(initial.handshakeToken, /^[a-f0-9]{64}$/);
+  assert.deepEqual(retry, { ...initial, requestId: retry.requestId });
+  assert.equal(state.memberId, observed.ack.memberId);
+  assert.equal(state.room.roomId, observed.ack.room.roomId);
+  assert.equal(state.room.members.length, 1);
+
+  const other = await rawClient(t, server.url);
+  assert.equal((await other.send({ ...initial, name: '其他人#TW1' })).ok, false);
+  assert.equal((await other.send({ ...initial, type: 'join', roomId: state.room.roomId })).ok, false);
+  assert.equal((await other.send({ ...initial, roomId: 'FFFFFFFFFF' })).ok, false);
+  await host.command({ type: 'ready', ready: true });
+  const drawn = await host.command({ type: 'draw' });
+  const recovered = await other.send({ ...initial, requestId: 10 });
+  assert.equal(recovered.memberId, state.memberId);
+  assert.equal(recovered.room.members[0].connected, true);
+  assert.equal(recovered.room.members[0].ready, false);
+  assert.equal(recovered.room.result, null);
+  assert.equal(recovered.room.resultVersion, drawn.resultVersion);
 });
 
 test('服務端以 session 身分授權並對重複抽籤 requestId 去重', async t => {
@@ -215,4 +242,21 @@ test('訊息洪水會關閉連線，避免快速重複操作耗用服務資源',
   const closed = new Promise(resolve => host.socket.once('close', resolve));
   for (let requestId = 2; requestId < 42; requestId++) host.socket.send(JSON.stringify({ type: 'ready', requestId, ready: true }));
   assert.equal(await closed, 1008);
+});
+
+test('心跳只回 pong，不改準備狀態、revision 或延長房間閒置期限', async t => {
+  let now = 100;
+  const server = await setup(t, { now: () => now, roomTtlMs: 100, heartbeatMs: 20 });
+  const host = await rawClient(t, server.url);
+  await host.send({ type: 'create', requestId: 1, name: '主持人#TW1' });
+  const ready = await host.send({ type: 'ready', requestId: 2, ready: true });
+  now += 90;
+  host.socket.send('{"type":"ping"}');
+  await waitFor(() => host.messages.some(message => message.type === 'pong'));
+  const states = host.messages.filter(message => message.type === 'state');
+  assert.equal(states.at(-1).room.revision, ready.room.revision);
+  assert.equal(states.at(-1).room.members[0].ready, true);
+  now += 11;
+  await waitFor(() => host.messages.some(message => message.type === 'ended'));
+  assert.match(host.messages.find(message => message.type === 'ended').message, /到期/);
 });

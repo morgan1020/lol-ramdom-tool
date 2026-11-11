@@ -13,9 +13,10 @@
 .sync-connect-form .source-switch { max-width: 360px; }
 .sync-field { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
 .sync-field small { font-weight: 400; }
-.sync-field input { width: 100%; min-width: 0; border: 1px solid var(--border-strong); border-radius: 10px; padding: 12px; color: var(--text); background: var(--surface-strong); font: inherit; font-weight: 400; }
-.sync-field input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.sync-field input:disabled { opacity: .65; }
+.sync-field input, .sync-field textarea { width: 100%; min-width: 0; border: 1px solid var(--border-strong); border-radius: 10px; padding: 12px; color: var(--text); background: var(--surface-strong); font: inherit; font-weight: 400; }
+.sync-field textarea { resize: vertical; line-height: 1.6; }
+.sync-field input:focus-visible, .sync-field textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.sync-field input:disabled, .sync-field textarea:disabled { opacity: .65; }
 .sync-identity-input { display: flex; gap: 10px; }
 .sync-identity-input .btn { flex-shrink: 0; }
 .sync-connect-form > .btn { justify-self: start; }
@@ -23,6 +24,13 @@
 .sync-room-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
 .sync-member-section, .sync-result-section { min-width: 0; border: 1px solid var(--border); border-radius: 14px; padding: 20px; background: var(--surface-strong); }
 .sync-room-toolbar { margin-bottom: 24px; }
+.sync-room-invite { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -8px 0 24px; }
+.sync-room-invite .btn { flex-shrink: 0; }
+.sync-room-service { margin: 0; color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
+.sync-invitation-entry { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.sync-invitation-entry summary { color: var(--text-muted); cursor: pointer; font-size: 14px; }
+.sync-invitation-entry[open] summary { margin-bottom: 16px; }
+.sync-invitation-entry .btn { margin: 12px 0; }
 .sync-room-code { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
 .sync-room-code strong { font-size: 25px; letter-spacing: .08em; overflow-wrap: anywhere; }
 .sync-room-code .text-button { display: inline-flex; padding: 7px; }

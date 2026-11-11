@@ -61,7 +61,7 @@ npm run desktop:build -- --publish never # 打包 Windows App
 
 開發、資料更新、測試與部署細節見 [開發說明](docs/guide.md#開發)；協作規範見 [AGENTS.md](AGENTS.md)。問題與建議可透過 GitHub Issues 提出。
 
-開發中的桌面版提供「多人房間」測試頁：建立房間、核准成員、準備與同步抽籤結果。此功能尚未包含在上述 v1.4.3 下載檔；本機測試方式與限制見 [多人房間第一階段](docs/multiplayer-stage1.md)。
+開發中的桌面版提供「多人房間」測試頁：建立房間、核准成員、準備、邀請朋友與同步抽籤結果。支援本機服務與 Cloudflare 雲端服務；此功能尚未包含在上述 v1.4.3 下載檔。[雲端預覽與兩台電腦測試](docs/multiplayer-cloud.md) · [本機第一階段](docs/multiplayer-stage1.md)。
 
 ## 授權與致謝
 

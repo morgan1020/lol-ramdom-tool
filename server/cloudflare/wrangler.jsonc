@@ -1,0 +1,17 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "lol-random-sync-rooms-preview",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-11",
+  "durable_objects": {
+    "bindings": [{ "name": "SYNC_ROOMS", "class_name": "SyncRoomDurableObject" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SyncRoomDurableObject"] }],
+  "ratelimits": [{ "name": "ROOM_CONNECTION_LIMITER", "namespace_id": "2026111101", "simple": { "limit": 60, "period": 60 } }],
+  "observability": { "enabled": false },
+  "vars": {
+    "ROOM_TTL_MS": "7200000",
+    "HOST_DISCONNECT_GRACE_MS": "60000",
+    "HANDSHAKE_TIMEOUT_MS": "10000"
+  }
+}

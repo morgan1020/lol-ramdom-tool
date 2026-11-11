@@ -4,15 +4,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import electron from 'electron';
 import { createSyncRoomServer } from '../server/syncRoomServer.js';
+import { validateSyncRoomUrl } from '../src/desktop/syncRoomClient.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
+const urlIndex = process.argv.indexOf('--url');
+if (urlIndex >= 0 && !process.argv[urlIndex + 1]) throw new Error('--url 需要同步服務位址');
+const remoteUrl = urlIndex >= 0 ? validateSyncRoomUrl(process.argv[urlIndex + 1]) : null;
 const runId = `${Date.now()}-${process.pid}`;
 const output = path.join(root, 'release', 'sync-room-demo');
 const childEnvironment = { ...process.env };
 delete childEnvironment.ELECTRON_RUN_AS_NODE;
 await mkdir(output, { recursive: true });
-const server = await createSyncRoomServer();
+const server = remoteUrl ? null : await createSyncRoomServer();
+const serviceUrl = remoteUrl || server.url;
 const children = new Set();
 const ready = new Set();
 let stopping = false;
@@ -34,7 +39,7 @@ async function stop(code = 0) {
     else child.kill();
   }));
   await Promise.all(exits);
-  await server.close();
+  await server?.close();
   finish();
 }
 
@@ -45,7 +50,7 @@ deadline = setTimeout(() => {
   void stop(1);
 }, 45000);
 
-console.log(`多人同步本機測試：${server.url}`);
+console.log(`多人同步雙視窗測試：${serviceUrl}`);
 console.log('正在開啟兩個隔離 App；主持人建立房間，再將代碼填入另一個視窗加入。');
 console.log('使用合成 Riot ID，禁止真實 LoL 讀寫與 Discord 傳送；關閉兩個視窗或按 Ctrl+C 結束。');
 
@@ -54,7 +59,7 @@ try {
     const profile = path.join(output, `profile-${runId}-${role}`);
     const child = spawn(electron, [path.join(root, 'scripts', 'sync-room-demo-app.js')], {
       cwd: root,
-      env: { ...childEnvironment, SYNC_ROOM_DEMO_ROLE: role, SYNC_ROOM_DEMO_URL: server.url, SYNC_ROOM_DEMO_PROFILE: profile },
+      env: { ...childEnvironment, SYNC_ROOM_DEMO_ROLE: role, SYNC_ROOM_DEMO_URL: serviceUrl, SYNC_ROOM_DEMO_PROFILE: profile },
       stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
       windowsHide: true
     });

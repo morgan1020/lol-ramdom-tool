@@ -60,14 +60,21 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
         if (binary) throw new Error('不支援二進位訊息');
         if (now() - rateStart >= 1000) { rateStart = now(); rateCount = 0; }
         if (++rateCount > 30) { socket.close(1008, 'Rate limit'); return; }
+        if (raw.toString() === '{"type":"ping"}') { send(socket, { type: 'pong' }); return; }
         request = JSON.parse(raw.toString());
         if (!request || typeof request !== 'object' || !validId(request.requestId)) throw new Error('訊息格式錯誤');
         const { requestId, type } = request;
         let session = socket.session;
         if (!session) {
-          if (type === 'resume') {
-            session = sessions.get(request.token);
+          const handshake = type === 'create' || type === 'join';
+          const token = handshake ? request.handshakeToken : undefined;
+          if (token !== undefined && (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token))) throw new Error('房間憑證格式錯誤');
+          const requestedRoomId = typeof request.roomId === 'string' ? request.roomId.toUpperCase() : request.roomId;
+          session = sessions.get(type === 'resume' ? request.token : token);
+          if (type === 'resume' || session) {
             if (!session || !rooms.has(session.roomId)) throw new Error('房間連線已失效，請重新加入');
+            if (handshake && (session.handshakeType !== type || session.handshakeName !== request.name ||
+              session.requestedRoomId !== requestedRoomId)) throw new Error('房間憑證與原始操作不符');
             const entry = rooms.get(session.roomId);
             if (entry.state.closed) throw new Error('房間已關閉');
             // A resume may replace a still-open socket. Always withdraw readiness
@@ -78,9 +85,9 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
             entry.state = reduceRoom(entry.state, session.memberId, { type: 'connection', connected: true });
             if (session.memberId === entry.state.hostId) entry.hostDisconnectedAt = null;
             entry.lastActive = now();
-            send(socket, { type: 'ack', requestId, ok: true, memberId: session.memberId, room: entry.state });
+            send(socket, { type: 'ack', requestId, ok: true, ...(handshake ? { token } : {}), memberId: session.memberId, room: entry.state });
             broadcast(entry);
-          } else if (type === 'create' || type === 'join') {
+          } else if (handshake) {
             if (type === 'create' && rooms.size >= maxRooms) throw new Error('房間數量已滿，請稍後再試');
             const memberId = randomUUID();
             let entry;
@@ -95,11 +102,12 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
               entry.state = reduceRoom(entry.state, memberId, { type: 'join', memberId, name: request.name });
               entry.lastActive = now();
             }
-            const token = randomBytes(32).toString('base64url');
-            session = { token, roomId: entry.state.roomId, memberId, socket: null, lastRequestId: requestId, replies: new Map() };
-            sessions.set(token, session);
+            const sessionToken = token ?? randomBytes(32).toString('base64url');
+            session = { token: sessionToken, roomId: entry.state.roomId, memberId, socket: null, lastRequestId: requestId, replies: new Map(),
+              handshakeType: type, handshakeName: request.name, requestedRoomId };
+            sessions.set(sessionToken, session);
             bind(socket, session);
-            send(socket, { type: 'ack', requestId, ok: true, token, memberId, room: entry.state });
+            send(socket, { type: 'ack', requestId, ok: true, token: sessionToken, memberId, room: entry.state });
             broadcast(entry);
           } else throw new Error('請先建立或加入房間');
           clearTimeout(timer);

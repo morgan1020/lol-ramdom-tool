@@ -7,9 +7,11 @@ import assert from 'node:assert/strict';
 import { createSyncRoomServer } from '../server/syncRoomServer.js';
 import { SyncRoomClient } from '../src/desktop/syncRoomClient.js';
 import { appUrl } from '../src/desktop/appProtocol.js';
+import { formatRoomInvitation, parseRoomInvitation } from '../src/domain/roomInvitation.js';
 import '../src/desktop/main.js';
 
-const output = path.resolve('release/sync-room-ui-smoke');
+const cloud = process.argv.includes('--cloud');
+const output = path.resolve(cloud ? 'release/sync-room-cloud-ui-smoke' : 'release/sync-room-ui-smoke');
 app.setPath('userData', path.join(output, `profile-${Date.now()}`));
 app.disableHardwareAcceleration();
 const sleep = (ms = 35) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -19,6 +21,26 @@ async function until(check, message) {
     await sleep();
   }
   throw new Error(message);
+}
+
+async function createTestServer() {
+  if (!cloud) return createSyncRoomServer({ port: 0 });
+  const { Miniflare, Log, LogLevel, convertV4MiniflareOptions } = await import('miniflare');
+  const root = path.resolve('.');
+  const mf = new Miniflare(convertV4MiniflareOptions({
+    name: 'sync-room-ui-test',
+    modules: ['server/cloudflare/worker.js', 'src/domain/syncRoom.js', 'src/domain/draw.js']
+      .map(file => ({ type: 'ESModule', path: path.join(root, file) })),
+    modulesRoot: root, compatibilityDate: '2026-11-11', host: '127.0.0.1', port: 0,
+    durableObjects: { SYNC_ROOMS: { className: 'SyncRoomDurableObject', useSQLite: true } },
+    resourcePersistencePath: path.join(output, `runtime-${Date.now()}`),
+    ratelimits: { ROOM_CONNECTION_LIMITER: { namespace_id: '2026111101', simple: { limit: 60, period: 60 } } },
+    log: new Log(LogLevel.ERROR)
+  }));
+  try {
+    const url = new URL(await mf.ready);
+    return { url: `${url.origin.replace(/^http/u, 'ws')}/rooms`, close: () => mf.dispose() };
+  } catch (error) { await mf.dispose(); throw error; }
 }
 
 app.whenReady().then(async () => {
@@ -44,13 +66,13 @@ app.whenReady().then(async () => {
     const consoleErrors = [];
     window.webContents.on('console-message', (event) => { if (event.level === 'error') consoleErrors.push(event.message); });
     if (window.webContents.isLoading()) await once(window.webContents, 'did-finish-load');
-    server = await createSyncRoomServer({ port: 0 });
+    server = await createTestServer();
     guest = new SyncRoomClient();
     const helpers = `
       const sleep = (ms = 35) => new Promise(resolve => setTimeout(resolve, ms));
       const wait = async (check) => { for (let i = 0; i < 180; i++) { if (await check()) return; await sleep(); } throw Error('UI did not settle: ' + check.toString()); };
       const click = (label) => { const button = [...document.querySelectorAll('button')].find(el => el.textContent.trim() === label); if (!button || button.disabled) throw Error('Unavailable button: ' + label); button.click(); };
-      const field = async (selector, value) => { const input = document.querySelector(selector); if (!input) throw Error('Missing field: ' + selector); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); await sleep(); };
+      const field = async (selector, value) => { const input = document.querySelector(selector); if (!input) throw Error('Missing field: ' + selector); Object.getOwnPropertyDescriptor(input.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); await sleep(); };
       const settled = () => document.querySelector('.sync-room-panel')?.getAttribute('aria-busy') === 'false';
     `;
     const run = (code) => window.webContents.executeJavaScript(`(async () => { ${helpers} ${code} })()`);
@@ -60,9 +82,22 @@ app.whenReady().then(async () => {
       await writeFile(path.join(output, name), (await window.webContents.capturePage()).toPNG());
     };
     await run(`await wait(() => [...document.querySelectorAll('[role="tab"]')].some(el => el.textContent === '多人房間' && !el.disabled)); click('多人房間'); await wait(settled); click('從 LoL 讀取'); await wait(() => settled() && document.querySelector('#sync-player-name').value === '房主#TW1');`);
+    await run(`
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { window.__roomCopiedText = text; } } });
+      click('加入房間'); await wait(() => document.querySelector('.sync-invitation-entry')); document.querySelector('.sync-invitation-entry').open = true;
+      await field('#sync-invitation', ${JSON.stringify(formatRoomInvitation({ url: server.url, roomId: 'A123456789' }))});
+      click('套用邀請');
+      await wait(() => document.querySelector('#sync-room-code').value === 'A123456789');
+      if (document.querySelector('#sync-server-url').value !== ${JSON.stringify(server.url)}) throw Error('Invitation did not set service');
+      if ((await window.lolDesktop.syncRoom.getState()).state.connection !== 'disconnected') throw Error('Invitation connected without explicit join');
+      click('建立房間');
+      await wait(() => !document.querySelector('.sync-invitation-entry'));
+    `);
     const statsBefore = await run(`return JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);`);
     await run(`await field('#sync-server-url', ${JSON.stringify(server.url)}); document.querySelector('.sync-connect-form').requestSubmit(); await wait(() => document.querySelector('.sync-room-code')); await wait(settled);`);
     const hostState = await run(`return (await window.lolDesktop.syncRoom.getState()).state;`);
+    const copiedInvitation = await run(`click('複製邀請'); await wait(() => Boolean(window.__roomCopiedText)); return window.__roomCopiedText;`);
+    assert.deepEqual(parseRoomInvitation(copiedInvitation), { url: server.url, roomId: hostState.room.roomId });
     await guest.connect({ url: server.url, action: 'join', roomId: hostState.room.roomId, name: '隊友#TW2' });
     await run(`await wait(() => document.querySelectorAll('.sync-member-list > li').length === 2); if (![...document.querySelectorAll('button')].find(el => el.textContent === '開始抽籤').disabled) throw Error('Draw enabled before approval');`);
     await capture('pending-approval.png');
@@ -127,7 +162,8 @@ app.whenReady().then(async () => {
     assert.equal(gameWrites, 0);
     assert.equal(discordSends, 0);
     assert.deepEqual(consoleErrors, []);
-    const report = { realLoopbackWebSocket: true, realDesktopIpc: true, syntheticLobby: true, approval: true,
+    const report = { realLoopbackWebSocket: true, cloudflareLocalRuntime: cloud, realDesktopIpc: true, syntheticLobby: true, approval: true,
+      invitationCopiesServiceAndRoom: true, invitationRequiresExplicitJoin: true, systemClipboardUntouched: true,
       identicalResults: true, tabReturnPreservesRoom: true, reconnectInvalidatesReadyAndResult: true,
       removeMember: true, closeRoom: true, layout, unchangedStats: true, desktopOriginalModes: true,
       websiteOriginalModes: true, websiteHasNoNativeRoom: true, gameWrites, discordSends };
