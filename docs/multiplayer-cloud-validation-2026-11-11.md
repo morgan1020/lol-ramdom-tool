@@ -21,6 +21,7 @@ Cloudflare Worker 與每房獨立 SQLite Durable Object、桌面 WSS 房間路�
 | `electron scripts/sync-room-ui-smoke.js --cloud` | 本機 Cloudflare `/rooms`、真 Electron IPC、邀請／結果一致／重連／關房通過；統計未變、LCU 寫入 0、Discord 傳送 0 |
 | Wrangler dry-run | Worker 與 SQLite migration、rate-limit binding 打包通過；乾跑不等於雲端部署 |
 | Windows Preview | `1.5.0-preview.1` x64 資料夾打包通過；asar 中 client、邀請 helper 及前端入口與已驗證來源一致 |
+| 預覽 EXE 實際啟動 | 啟動打包後的 EXE，確認 `lol-draw://app/` 載入、可切換多人房間並顯示建立／加入；使用指定隔離 profile，未連線房間 |
 
 本次依變更範圍驗證，未將上述結果描述成完整專案測試通過，也未執行真實多人 LCU 套用或乾淨 Windows 安裝／升級。
 
@@ -36,8 +37,12 @@ Cloudflare Worker 與每房獨立 SQLite Durable Object、桌面 WSS 房間路�
 
 UI 報告與截圖分別位於 `release/sync-room-ui-smoke/`、`release/sync-room-cloud-ui-smoke/`；CLI 只輸出去識別報告，不包含房碼、memberId、玩家名稱或 session token。
 
+打包啟動證據位於 `release/packaged-startup-smoke/result.json` 與 `room.png`。沙箱內第一次啟動以 `0x80000003` 結束，改由授權的沙箱外程序使用隔離 profile 後通過。確認資料寫入指定隔離目錄；尚未驗證省略隔離參數時的預設 AppData 路徑。測試未操作 LoL 或 Discord，結束後已關閉程序。
+
 ## 公網與實體機狀態
 
 本機 runtime 與桌面整合已完成。公網部署／WSS 驗證狀態另於取得實際部署結果後更新；不能以乾跑或本機 workerd 成功代替公網成功。
+
+既有 Cloudflare 帳號的初次 OAuth 登入完成，但部署與 workers.dev API 回覆 403；補充 Worker script／route 權限的裝置授權碼已逾時，待使用者重新完成瀏覽器授權。Worker 清單可讀取並不代表具有部署權限，目前未取得成功部署證據。
 
 兩台實體 Windows 電腦、不同網路與實際斷網復原仍待按 [雲端預覽指南](multiplayer-cloud.md) 手動驗收。服務不會因這些測試自動套用 LoL 分路或傳送 Discord。
