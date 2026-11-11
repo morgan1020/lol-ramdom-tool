@@ -41,8 +41,14 @@ UI 報告與截圖分別位於 `release/sync-room-ui-smoke/`、`release/sync-roo
 
 ## 公網與實體機狀態
 
-本機 runtime 與桌面整合已完成。公網部署／WSS 驗證狀態另於取得實際部署結果後更新；不能以乾跑或本機 workerd 成功代替公網成功。
+本機 runtime、桌面整合及公網預覽部署已完成。使用者完成補充 Worker script／route 權限的 OAuth 授權後，Wrangler 部署成功。
 
-既有 Cloudflare 帳號的初次 OAuth 登入完成，但部署與 workers.dev API 回覆 403；補充 Worker script／route 權限的裝置授權碼已逾時，待使用者重新完成瀏覽器授權。Worker 清單可讀取並不代表具有部署權限，目前未取得成功部署證據。
+- Worker：`lol-random-sync-rooms-preview`。
+- 實際服務位址及部署 Version ID 僅保留於本機部署紀錄，不納入公開文件。
+- HTTPS `/health` 實際回傳 `{"ok":true,"protocol":1}`。
+- 2026-11-11 13:36（台灣時間）公網 WSS 合成測試通過：建立、加入、未授權操作拒絕、抽籤結果一致、同席位重連、清除準備及結果、結果版本遞增、關房。
+- 報告：`release/sync-room-cloud-smoke/report-1794375403984.json`；`ok: true`，LCU 寫入 0，Discord 傳送 0。
+
+公網測試使用同一台電腦的兩個用戶端，確實經過遠端 TLS 與已部署 Worker，不等同於兩台實體電腦驗收。
 
 兩台實體 Windows 電腦、不同網路與實際斷網復原仍待按 [雲端預覽指南](multiplayer-cloud.md) 手動驗收。服務不會因這些測試自動套用 LoL 分路或傳送 Discord。

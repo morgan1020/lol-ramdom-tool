@@ -4,6 +4,14 @@ Windows 桌面 App 可透過 Cloudflare Worker 同步房間成員、準備狀態
 
 ## 在兩台 Windows 電腦試玩
 
+請使用自己部署或由信任的主持人提供的服務位址（兩台皆使用相同位址）。以下僅為格式範例：
+
+```text
+wss://YOUR_WORKER.workers.dev/rooms
+```
+
+已打包的 `release/cloud-preview/LOL-Random-Tool-1.5.0-preview.1-Windows-x64.zip` 可直接複製至兩台電腦，不必重新建置。
+
 1. 執行 `npm run room:preview:pack`，將 `release/cloud-preview/win-unpacked/` 整個資料夾複製或壓成 ZIP 傳給第二台電腦。解壓後從各自資料夾啟動 `LOL-Random-Tool-Preview.exe`，其餘檔案須和執行檔放在一起。預覽版為 `1.5.0-preview.1`，使用獨立於日常版的 App 識別與資料目錄。
 2. A 開啟「多人同步房間」並選擇「建立房間」。輸入完整 Riot ID，例如 `預覽主持人#TW1`，在「同步服務位址」填入部署後的 `wss://YOUR_WORKER.workers.dev/rooms`，建立後按「複製邀請」。
 3. B 選擇「加入房間」，填入另一個完整 Riot ID，將 A 給的三行邀請貼進「貼上朋友的邀請」，按「套用邀請」後核對網址和房碼，再按「加入並等候核准」。A 應看到 B 待核准，B 此時應無法準備。
@@ -39,4 +47,4 @@ Windows 桌面 App 可透過 Cloudflare Worker 同步房間成員、準備狀態
 
 ## 驗證進度
 
-本機 Cloudflare runtime 的 12 項測試、52 項房間相關測試與隔離 Electron UI 冒煙測試已通過。遠端 WSS 的 CLI 冒煙測試可驗證部署端點與兩個合成用戶端的互動。兩台實體 Windows 電腦的連線、重連和結果同步仍待依上述流程手動驗收。
+本機 Cloudflare runtime 的 12 項測試、52 項房間相關測試與隔離 Electron UI 冒煙測試已通過。2026-11-11 已對私人預覽端點執行遠端 WSS CLI 冒煙測試，兩個合成用戶端的建立、加入、權限、結果一致、原席位重連、準備狀態重置、結果版本遞增與關房皆通過；HTTPS 健康檢查回傳 `ok: true, protocol: 1`。實際端點不收錄於公開文件，上方範例不是可直接使用的服務。此驗證由同一台電腦連到雲端服務；兩台實體 Windows 電腦的連線、重連和結果同步仍待依上述流程手動驗收。
