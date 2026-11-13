@@ -1,4 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
-  <path opacity="0.5" fill="#785a28" fill-rule="evenodd" d="M13,20h7V13H13v7ZM4,4V26.984l3.955-4L8,8,22.986,8l4-4H4Z"/>
-  <polygon class="active" fill="#c8aa6e" points="29.997 5.955 25 11 25 25 11 25 5.955 29.997 30 30 29.997 5.955"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .primary { fill: #454950; }
+    .accent { fill: #9b8e7d; }
+    @media (prefers-color-scheme: dark) {
+      .primary { fill: #e0e2e6; }
+      .accent { fill: #b9aa96; }
+    }
+  </style>
+  <path class="accent" d="M3 23.2V7.1A4.1 4.1 0 0 1 7.1 3h16.2l-4.5 4.6h-8.7a2.5 2.5 0 0 0-2.5 2.5v8.5Z"/>
+  <path class="primary" d="M29 6v18.9a4.1 4.1 0 0 1-4.1 4.1H5.7l5.5-5.4h10a2.4 2.4 0 0 0 2.4-2.4v-9.9Z"/>
+  <path class="primary" d="m16 12.8 2.8 2.8-2.8 2.8-2.8-2.8Z"/>
 </svg>

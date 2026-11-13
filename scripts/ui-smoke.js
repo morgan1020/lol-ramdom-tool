@@ -35,6 +35,14 @@ app.whenReady().then(async()=>{
     const prepare=async()=>{await wait(settled);document.querySelector('.finish-setup').click();await wait(()=>document.querySelector('.draw-workspace'))};
     const draw=async()=>{document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.primary-draw')?.textContent==='重新抽籤')};
     const back=async()=>{clickText('返回設定');await wait(()=>document.querySelector('.role-setup'))};
+    const checkRoleIcons=async(theme,count)=>{
+      if(document.documentElement.dataset.theme!==theme)document.querySelector('[aria-label="切換深淺色模式"]').click();
+      await wait(()=>settled()&&document.documentElement.dataset.theme===theme);
+      const icons=[...document.querySelectorAll('.draw-workspace img.role-glyph')];
+      if(icons.length!==count)throw Error('Unexpected result icon count for '+theme);
+      await Promise.all(icons.map(icon=>icon.decode()));
+      if(icons.some(icon=>getComputedStyle(icon).colorScheme!==theme||getComputedStyle(icon).maskImage!=='none'))throw Error('Result icon appearance is incorrect for '+theme);
+    };
   `;
   try{
     const window=BrowserWindow.getAllWindows()[0],errors=[];
@@ -59,22 +67,20 @@ app.whenReady().then(async()=>{
     `);
     await capture('ready.png');
     await run(`await draw();if(document.querySelectorAll('.table-role').length!==5)throw Error('Five-player role count incorrect');if(document.querySelector('.primary-draw').getBoundingClientRect().bottom>innerHeight)throw Error('Action below fold');`);
-    await run(`if(document.documentElement.dataset.theme!=='dark')document.querySelector('[aria-label="切換深淺色模式"]').click();await wait(()=>settled()&&document.documentElement.dataset.theme==='dark');`);
+    await run(`await checkRoleIcons('dark',5)`);
     await capture('desktop-dark.png');
-    await run(`if(document.documentElement.dataset.theme!=='light')document.querySelector('[aria-label="切換深淺色模式"]').click();await wait(()=>settled()&&document.documentElement.dataset.theme==='light');`);
+    await run(`await checkRoleIcons('light',5)`);
     await capture('desktop-light.png');
     const desktopLayout=await run(`
       if(document.querySelector('.workspace-sidebar'))throw Error('Removed sidebar is still present');
       const canvas=document.querySelector('main.container').getBoundingClientRect();
       if(Math.abs((canvas.left+canvas.right)/2-innerWidth/2)>1)throw Error('Desktop workspace is not centered');
       if(!document.querySelector('.compact-header .app-brand').getClientRects().length)throw Error('Top brand navigation missing');
-      const icons=[...document.querySelectorAll('.draw-workspace img.role-glyph')];
       if(document.querySelector('.assignment-marker'))throw Error('Random result marked as assigned');
       if(document.querySelector('.discord-availability')?.textContent!=='尚未設定')throw Error('Unconfigured Discord destination unclear');
-      if(icons.length!==5||icons.some(img=>!img.complete||!img.naturalWidth||getComputedStyle(img).maskImage!=='none'))throw Error('Original gold icons not rendered as images');
       const positions=[...document.querySelectorAll('.roster-player-card')].map(card=>card.getBoundingClientRect());
       if(Math.max(...positions.map(p=>p.top))-Math.min(...positions.map(p=>p.top))>1)throw Error('Desktop results not on one row');
-      return {topNavigation:true,centeredWorkspace:true,originalGoldImages:true,fiveColumns:true};
+      return {topNavigation:true,centeredWorkspace:true,roleIconsInBothThemes:true,fiveColumns:true};
     `);
     const originalSize=window.getContentSize();
     const originalMinimum=window.getMinimumSize();
@@ -222,7 +228,7 @@ app.whenReady().then(async()=>{
       if(!document.querySelector('.settings-dialog').open||document.querySelector('.settings-dialog .app-select-menu'))throw Error('Escape closed settings instead of menu');
       document.querySelector('[aria-label="關閉設定"]').click();await sleep();
     `);
-    const website=await webRun(`
+    await webRun(`
       await wait(()=>document.querySelector('.role-setup'));if(window.lolDesktop||document.querySelector('.source-switch,.auto-apply-control'))throw Error('Desktop controls leaked into website');
       const history=document.querySelector('.recent-player-picker');history.querySelector('summary').click();await sleep();const chips=[...history.querySelectorAll('.known-chip')];if(chips.length!==3)throw Error('History players missing');
       chips[0].click();await wait(settled);chips[1].click();await wait(settled);if(!history.open||document.querySelectorAll('.preparation-player-row').length!==2)throw Error('History continuous selection broken');
@@ -236,7 +242,14 @@ app.whenReady().then(async()=>{
       if(document.querySelector('.discord-availability').textContent!=='傳送已關閉')throw Error('Discord sending availability not visible');
       const assigned=document.querySelector('.table-role.is-assigned .table-role-icon');
       if(!assigned||parseFloat(getComputedStyle(assigned,'::before').borderTopWidth)<1||!assigned.querySelector('.assignment-marker svg'))throw Error('Assigned role frame or lock missing');
-      await back();if(document.querySelectorAll('.preparation-player-row').length!==3||document.querySelector('#draw-mode').dataset.value!=='custom')throw Error('Return lost settings');await prepare();return {manualDraw:true,secondaryRoles:true,continuousHistory:true,preservesParameters:true};
+    `);
+    web.show();
+    for(const theme of ['dark','light']){
+      await webRun(`await checkRoleIcons('${theme}',6)`);
+      await writeFile(path.join(output,`website-results-${theme}.png`),(await web.webContents.capturePage()).toPNG());
+    }
+    const website=await webRun(`
+      await back();if(document.querySelectorAll('.preparation-player-row').length!==3||document.querySelector('#draw-mode').dataset.value!=='custom')throw Error('Return lost settings');await prepare();return {manualDraw:true,secondaryRoles:true,continuousHistory:true,preservesParameters:true,roleIconsInBothThemes:true};
     `);
     web.show();await writeFile(path.join(output,'secondary-results.png'),(await web.webContents.capturePage()).toPNG());
     web.setContentSize(390,844);await new Promise(r=>setTimeout(r,150));

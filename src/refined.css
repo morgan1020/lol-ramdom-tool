@@ -129,7 +129,8 @@ body { min-height: 0; overflow: hidden; background: var(--bg); font-family: 'Seg
 .refined-app .draw-card-result { padding-top: 0; gap: 12px; }
 .refined-app .draw-workspace .table-role { font-size: 23px; font-weight: 500; gap: 14px; }
 .refined-app .draw-workspace .table-role-icon, .refined-app .draw-workspace .table-role-icon > .role-glyph { width: 52px; height: 52px; background: none; }
-.refined-app .role-glyph { display: inline-block; object-fit: contain; background: none; mask: none; -webkit-mask: none; filter: none; }
+.refined-app .role-glyph { display: inline-block; object-fit: contain; background: none; mask: none; -webkit-mask: none; filter: none; color-scheme: light; }
+:root[data-theme='dark'] .refined-app .role-glyph { color-scheme: dark; }
 .refined-app .draw-workspace .draw-secondary { gap: 6px; font-size: 12px; }
 .refined-app .draw-workspace .table-role.is-secondary { display: inline-flex; flex-direction: row; gap: 6px; font-size: 13px; }
 .refined-app .draw-workspace .table-role.is-secondary .table-role-icon, .refined-app .draw-workspace .table-role.is-secondary .role-glyph { width: 18px; height: 18px; background: none; }

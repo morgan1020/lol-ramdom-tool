@@ -1,3 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
-  <path class="active" fill="#c8aa6e" fill-rule="evenodd" d="M26,13c3.535,0,8-4,8-4H23l-3,3,2,7,5-2-3-4h2ZM22,5L20.827,3H13.062L12,5l5,6Zm-5,9-1-1L13,28l4,3,4-3L18,13ZM11,9H0s4.465,4,8,4h2L7,17l5,2,2-7Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .primary { fill: #454950; }
+    .accent { fill: #9b8e7d; }
+    @media (prefers-color-scheme: dark) {
+      .primary { fill: #e0e2e6; }
+      .accent { fill: #b9aa96; }
+    }
+  </style>
+  <path class="primary" d="M13.5 4.8h5a1.4 1.4 0 0 1 1.1.5l1.2 1.6a.9.9 0 0 1-.1 1.2L16 12.8l-4.7-4.7a.9.9 0 0 1-.1-1.2l1.2-1.6a1.4 1.4 0 0 1 1.1-.5ZM.5 10.3l10.4.9 2.2 2.5-2 4.6-3.7-1.2 2.4-2.6c-3.8.3-6.3-1.9-9.3-4.2Zm31 0-10.4.9-2.2 2.5 2 4.6 3.7-1.2-2.4-2.6c3.8.3 6.3-1.9 9.3-4.2ZM15 15.2l1 .5 1-.5 2.2 10.8a1.1 1.1 0 0 1-.4 1.1L16 29.5l-2.8-2.4a1.1 1.1 0 0 1-.4-1.1Z"/>
 </svg>

@@ -1,11 +1,3 @@
 # 五路圖示
 
-來源：[CommunityDragon LoL 靜態 SVG 資源](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/)，擷取日期：2026-10-25。
-
-保留原始圖形與透明度，移除指向外部 `glow.css` 的 XML stylesheet 宣告。`position-utility.svg` 對應輔助。
-
-隨網站與桌面 App 一同建置，不在執行時向 CommunityDragon 下載。直接以圖片呈現 SVG 的原始金色填色與透明度，深淺色主題皆保留素材本身的金色層次。
-
-圖像屬 Riot Games；CommunityDragon 整理提供，Riot Games 未贊助或認可本專案。
-
-這些圖示不在本專案 MIT 授權範圍內；完整素材、資料及套件權利說明見 [第三方聲明](../../../THIRD_PARTY_NOTICES.md)。
+網頁與桌面共用的五路圖示。上路與下路以對角粗細和配色區分，中路使用斜線，打野使用草葉，輔助使用展翼輪廓（`position-utility.svg`）。圖示底色透明，顏色隨介面深淺色切換。

@@ -8,8 +8,6 @@ League of Legends、英雄名稱、英雄圖片、遊戲分路圖示及相關遊
 
 | 檔案／資源 | 來源與處理方式 | 本專案使用情形 |
 | --- | --- | --- |
-| `assets/roles/svg/position-*.svg` | [CommunityDragon 靜態 SVG](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/)，2026-10-25 擷取；移除外部 `glow.css` 的 XML stylesheet 宣告 | 網站與 App 的五路圖示；保留原圖形、透明度及金色，詳見 [來源紀錄](assets/roles/svg/README.md) |
-| `assets/roles/Top_icon.png`、`Jungle_icon.png`、`Middle_icon.png`、`Bottom_icon.png`、`Support_icon.png` | 舊版沿用的 LoL 分路圖示；2026-04-27 提交 `286f486` 加入，歷史未記錄原始下載網址，不臆測特定下載來源 | 保留於原始碼；目前 `RoleIcon.jsx` 使用上述 SVG，這五個 PNG 不由目前介面匯入。仍按第三方遊戲素材處理，未納入 MIT |
 | `src/data/champions.json` | [Riot Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon)，由 `scripts/update-champions.mjs` 取得並整理 `zh_TW` 英雄資料；版本及更新時間保留於 JSON | 英雄資料快照隨網站與 App 打包 |
 | 英雄圖片（`https://ddragon.leagueoflegends.com/cdn/<版本>/img/champion/<ID>.png`） | Riot Data Dragon CDN；網址由英雄資料快照指定 | 執行時由 CDN 載入；圖片本身未下載至此儲存庫 |
 | `src/data/champion-positions.json` | [CommunityDragon 英雄統計來源](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-champion-statistics/global/default/rcp-fe-lol-champion-statistics.js)，由 `scripts/update-champion-positions.mjs` 整理；來源 URL、SHA-256 及對應 Data Dragon 版本保留於 JSON | 英雄分路快照隨網站與 App 打包 |
