@@ -28,6 +28,8 @@ LOL Random Tool is not endorsed by Riot Games and does not reflect the views or 
 
 `src/components/UiIcon.jsx` 的 Discord SVG path 取自 [Simple Icons 的 discord.svg](https://github.com/simple-icons/simple-icons/blob/develop/icons/discord.svg)，以 JSX 內嵌並使用目前文字色呈現。Simple Icons 依 [CC0 1.0 Universal](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md) 提供；此部分保留 CC0，不因所在程式檔案採 MIT 而改變原條款。Discord 品牌與商標權利仍屬原權利人；CC0 不授予商標權。
 
+CSS 使用裝置上已安裝的字型與系統替代字型。Segoe UI、Microsoft JhengHei、Inter、Noto Sans TC 等名稱出現在字型清單，建置未隨附這些字型檔，也沒有從外部字型服務載入。
+
 ## 第三方軟體
 
 以下為此版本 lockfile／本機安裝所記錄的主要套件，版本更新時應同步檢查。完整相依關係見 `package-lock.json`；此表不是完整的遞迴相依套件清單。

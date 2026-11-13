@@ -6,13 +6,22 @@ export function SelectMenu({ value, options, onChange, disabled, label, id, clas
   const root = useRef(null);
   const trigger = useRef(null);
   const menu = useRef(null);
+  const restoreTriggerFocus = useRef(false);
   const menuId = useId();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const setError = message => { if (message) notify(message, { id: 'select-error', type: 'error' }); else dismissNotice('select-error'); };
   const active = options.find(option => option.value === value);
   const selectedLabel = active?.label || placeholder;
-  const close = (restoreFocus = false) => { setOpen(false); if (restoreFocus) requestAnimationFrame(() => trigger.current?.focus()); };
+  const close = (restoreFocus = false) => {
+    restoreTriggerFocus.current = restoreFocus;
+    setOpen(false);
+  };
+  useLayoutEffect(() => {
+    if (open || pending || disabled || !restoreTriggerFocus.current) return;
+    restoreTriggerFocus.current = false;
+    trigger.current?.focus({ preventScroll: true });
+  }, [open, pending, disabled]);
   useEffect(() => {
     if (!open) return;
     const outside = event => { if (!root.current?.contains(event.target)) close(); };

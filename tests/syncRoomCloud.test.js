@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { Miniflare, Log, LogLevel, convertV4MiniflareOptions } from 'miniflare';
 import { WebSocket } from 'ws';
 import { runCloudSmoke } from '../scripts/sync-room-cloud-smoke.mjs';
-import { SyncRoomClient } from '../src/desktop/syncRoomClient.js';
+import { discoverSyncRoom, SyncRoomClient } from '../src/desktop/syncRoomClient.js';
+import { TeamIndexDurableObject } from '../server/cloudflare/worker.js';
 import { dropFirstHandshakeAck } from './helpers/dropFirstHandshakeAck.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,12 +30,15 @@ async function runtime(t, bindings = {}, { connectionLimit = 60 } = {}) {
   const persistence = await mkdtemp(path.join(artifactRoot, 'run-'));
   const options = convertV4MiniflareOptions({
     name: 'sync-room-test',
-    modules: ['server/cloudflare/worker.js', 'src/domain/syncRoom.js', 'src/domain/draw.js']
+    modules: ['server/cloudflare/worker.js', 'src/domain/syncRoom.js', 'src/domain/draw.js', 'src/domain/roomDiscovery.js']
       .map(file => ({ type: 'ESModule', path: path.join(root, file) })),
     modulesRoot: root,
     compatibilityDate: '2026-11-11',
     host: '127.0.0.1', port: 0,
-    durableObjects: { SYNC_ROOMS: { className: 'SyncRoomDurableObject', useSQLite: true } },
+    durableObjects: {
+      SYNC_ROOMS: { className: 'SyncRoomDurableObject', useSQLite: true },
+      TEAM_INDEX: { className: 'TeamIndexDurableObject', useSQLite: true }
+    },
     resourcePersistencePath: persistence,
     ratelimits: connectionLimit === false ? {} : { ROOM_CONNECTION_LIMITER: { namespace_id: '2026111101', simple: { limit: connectionLimit, period: 60 } } },
     bindings,
@@ -87,6 +91,55 @@ test('Cloudflare workerd runtime：正式客戶端完成雙人同步、權限、
   assert.equal(report.checks.sameSessionReconnect, true);
   assert.equal(report.checks.identicalResults, true);
   assert.equal(report.realLcuWrites, 0);
+});
+
+test('Cloudflare 同隊索引在主持人斷線、重連和到期時維持正確結果', { timeout: 30000 }, async t => {
+  const { base } = await runtime(t, { TEAM_INDEX_TTL_MS: '2200' });
+  const host = new SyncRoomClient({ reconnectDelayMs: 300 });
+  const guest = new SyncRoomClient();
+  t.after(() => { host.destroy(); guest.destroy(); });
+  const names = ['主持人#TW1', '朋友#TW2', '甲#TW3', '乙#TW4', '丙#TW5'];
+  const url = base;
+  await host.connect({ url, action: 'create', name: names[0] });
+  await host.command({ type: 'sync-lobby', names });
+  const match = await discoverSyncRoom(url, names);
+  assert.equal(match.roomId, host.getState().room.roomId);
+  host.socket.close();
+  await waitFor(() => host.getState().connection === 'reconnecting');
+  await waitFor(() => host.getState().connection === 'connected');
+  assert.deepEqual(await discoverSyncRoom(url, names), match);
+  await pause(2250);
+  assert.deepEqual(await discoverSyncRoom(url, names), { status: 'missing' });
+  await assert.rejects(guest.connect({ url, action: 'join', name: names[1], ...match }), /隊伍房間已變更/);
+  await guest.connect({ url, action: 'join', name: names[1], roomId: match.roomId });
+  assert.equal(guest.getState().room.members.find(member => member.name === names[1]).approved, false);
+  await host.command({ type: 'close' });
+});
+
+test('量測五人房短效索引每次查找與清理的儲存呼叫', async t => {
+  const values = new Map();
+  const operations = { reads: 0, puts: 0, deletes: 0, setAlarms: 0, deleteAlarms: 0 };
+  const storage = {
+    async get(key) { operations.reads++; return values.get(key); },
+    async put(key, value) { operations.puts++; values.set(key, value); },
+    async delete(key) { operations.deletes++; return values.delete(key); },
+    async setAlarm() { operations.setAlarms++; },
+    async deleteAlarm() { operations.deleteAlarms++; },
+    async transaction(callback) { return callback(this); }
+  };
+  const index = new TeamIndexDurableObject({ storage });
+  const roomId = 'ABCDE12345';
+  const update = expiresAt => index.fetch(new Request('https://team-index/update', {
+    method: 'POST', body: JSON.stringify({ roomId, expiresAt })
+  }));
+  await update(Date.now() + 600000);
+  for (let guest = 0; guest < 4; guest++) {
+    const match = await index.fetch(new Request('https://team-index/lookup', { method: 'POST' }));
+    assert.deepEqual(await match.json(), { status: 'found', roomId });
+  }
+  await update(0);
+  assert.deepEqual(operations, { reads: 6, puts: 1, deletes: 1, setAlarms: 1, deleteAlarms: 1 });
+  t.diagnostic(JSON.stringify({ guestLookups: 4, indexCalls: 6, ...operations }));
 });
 
 test('Cloudflare workerd 加入 ACK 遺失後重試同一席位，拒絕錯誤身分及房間重播', { timeout: 30000 }, async t => {
@@ -158,7 +211,7 @@ test('SQLite DO 持久化：重建真 runtime 後恢復 session、版本及去�
   const resumedReply = await resumed.send({ type: 'resume', requestId: 10, token: created.token });
   assert.equal(resumedReply.ok, true);
   assert.equal(resumedReply.memberId, created.memberId);
-  assert.equal(resumedReply.room.result, null);
+  assert.equal(resumedReply.room.result.archived, true);
   assert.equal(resumedReply.room.resultVersion, 1);
   assert.equal(resumedReply.room.members[0].ready, false);
   const replay = await resumed.send({ type: 'draw', requestId: 3 });

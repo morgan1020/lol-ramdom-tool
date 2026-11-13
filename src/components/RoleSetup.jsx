@@ -10,7 +10,7 @@ import { DrawModeControl, AutoApplySwitch } from './RoleWorkspace.jsx';
 import { DiscordDestinationPicker } from './DiscordDestinationPicker.jsx';
 import { DiscordSyncPanel } from './DiscordSyncPanel.jsx';
 
-export function RoleSetup({ isDesktop, source, onSourceChange, lobby, players, busy, loading, error, drawMode, onDrawModeChange, preferredRoles, onPreferredRoleChange, autoApplyRoles, onAutoApplyRolesChange, onRefresh, onPrepare, onRemove, inputValue, onInputChange, onAdd, knownNames, onToggleKnown, discordSync, onManageWebhook }) {
+export function RoleSetup({ isDesktop, source, onSourceChange, lobby, players, busy, loading, error, drawMode, onDrawModeChange, preferredRoles, onPreferredRoleChange, autoApplyRoles, onAutoApplyRolesChange, onRefresh, onPrepare, onOpenRoom, onRemove, inputValue, onInputChange, onAdd, knownNames, onToggleKnown, discordSync, onManageWebhook }) {
   const picker = useRef(null);
   const names = players.map((player) => player.name);
   const labels = createPlayerLabels(names);
@@ -36,7 +36,10 @@ export function RoleSetup({ isDesktop, source, onSourceChange, lobby, players, b
   };
   return <section className="role-setup" aria-label="準備設定" aria-busy={busy}>
     <div className="workspace-scroll">
-    <div className="preparation-heading"><h1>準備抽籤</h1></div>
+    <header className="preparation-heading role-setup-heading">
+      <h1>準備抽籤</h1>
+      {onOpenRoom && <button id="open-sync-room" className="btn btn-secondary" type="button" disabled={busy} onClick={onOpenRoom}><UiIcon name="users" />多人房間</button>}
+    </header>
     <div className="preparation-grid">
       <section className="preparation-panel roster-preparation"><header className="preparation-panel-title"><h3><UiIcon name="users" />參加玩家</h3><span>{players.length} / 5</span></header>
         {isDesktop ? <div className="source-switch" role="group" aria-label="玩家來源">{[['client', '客戶端隊伍'], ['manual', '手動名單']].map(([value, label]) => <button key={value} type="button" aria-pressed={source === value} className={source === value ? 'is-selected' : ''} disabled={busy} onClick={() => onSourceChange(value)}>{label}</button>)}</div> : <p className="preparation-source">手動名單</p>}
@@ -56,6 +59,9 @@ export function RoleSetup({ isDesktop, source, onSourceChange, lobby, players, b
       </div>
     </div>
     </div>
-    <footer className="preparation-actions"><p className="action-summary visual-summary" aria-label={`${players.length} 位玩家`}><UiIcon name="users" /><span>{players.length} / 5</span></p><button className="btn btn-primary finish-setup" type="button" disabled={busy || !players.length} onClick={onPrepare}>進入抽籤 <UiIcon name="arrow" /></button></footer>
+    <footer className="preparation-actions">
+      <p className="action-summary visual-summary" aria-label={`${players.length} 位玩家`}><UiIcon name="users" /><span>{players.length} / 5</span></p>
+      <button className="btn btn-primary finish-setup" type="button" disabled={busy || !players.length} onClick={onPrepare}>進入抽籤 <UiIcon name="arrow" /></button>
+    </footer>
   </section>;
 }

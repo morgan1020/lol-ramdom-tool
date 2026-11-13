@@ -47,15 +47,29 @@ body { min-height: 0; overflow: hidden; background: var(--bg); font-family: 'Seg
 .refined-app .compact-header-actions > button > svg { width: 20px; height: 20px; }
 .refined-app .theme-toggle { display: grid; place-items: center; }
 .refined-app .theme-toggle svg { width: 18px; height: 18px; }
-.refined-app .compact-navigation { display: flex; flex: none; margin: 0 0 22px; padding: 0; }
-.refined-app .compact-tabs { align-self: auto; border: 0; border-radius: 6px; padding: 3px; background: var(--surface-muted); }
-.refined-app .compact-tabs button { min-height: 36px; border-radius: 5px; padding: 6px 18px; color: var(--text-muted); font-size: 13px; }
-.refined-app .compact-tabs button[aria-selected='true'] { color: var(--text); border-color: var(--border); background: var(--surface-strong); box-shadow: none; }
+.refined-app .compact-navigation { display: flex; flex: none; height: auto; margin: 0 0 16px; padding: 0; }
+.refined-app .compact-tabs { display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-self: auto; gap: 4px; border: 0; border-radius: 6px; padding: 3px; background: var(--surface-muted); }
+.refined-app .compact-tabs button {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 4px 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.refined-app .compact-tabs button::after { content: none; }
 .tool-content { flex: 1; min-height: 0; min-width: 0; }
 .refined-app .role-setup, .refined-app .draw-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; height: auto; max-height: 100%; min-height: 0; padding: 0; margin: 0; border: 0; background: none; box-shadow: none; }
 .workspace-scroll { min-height: 0; min-width: 0; overflow: auto; padding: 0 2px 20px; scrollbar-width: thin; scrollbar-gutter: stable; }
 .refined-app h1 { margin: 0; font-size: 28px; line-height: 1.35; font-weight: 600; letter-spacing: -.025em; }
 .refined-app .preparation-heading { margin: 0 0 24px; }
+.role-setup-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.role-setup-heading h1 { margin: 0; }
 .refined-app .preparation-heading p, .draw-heading p { margin: 8px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
 .refined-app .preparation-grid { grid-template-columns: minmax(0, 1.55fr) minmax(240px, 1fr); gap: 18px; align-items: start; }
 .refined-app .preparation-panel { min-width: 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-strong); box-shadow: none; }
@@ -162,8 +176,8 @@ body { min-height: 0; overflow: hidden; background: var(--bg); font-family: 'Seg
   .refined-app .container { padding-top: clamp(28px, 3vh, 44px); }
   .refined-app .compact-header { min-height: 60px; margin-bottom: 20px; }
   .refined-app .compact-header .app-brand { font-size: 18px; }
-  .refined-app .compact-navigation { margin-bottom: 30px; }
-  .refined-app .compact-tabs button { min-height: 44px; padding-inline: 24px; font-size: 15px; }
+  .refined-app .compact-navigation { margin-bottom: 20px; }
+  .refined-app .compact-tabs button { min-height: 40px; padding-inline: 16px; font-size: 15px; }
   .refined-app h1 { font-size: 32px; }
   .refined-app .preparation-heading, .refined-app .draw-heading { margin-bottom: 30px; }
   .refined-app .preparation-heading p, .refined-app .draw-heading p,
@@ -240,10 +254,8 @@ body { min-height: 0; overflow: hidden; background: var(--bg); font-family: 'Seg
   .refined-app .app-brand img { width: 22px; height: 22px; }
   .refined-app .compact-header-actions { gap: 0; }
   .refined-app .toolbar-button, .refined-app .toolbar-icon, .refined-app .theme-toggle { min-width: 36px; width: auto; min-height: 44px; height: 44px; padding: 5px; font-size: 12px; }
-  .refined-app .compact-navigation { display: block; flex: none; margin: 0; padding: 12px 16px 4px; }
-  .refined-app .compact-tabs { border: 0; padding: 3px; background: var(--surface-muted); border-radius: 6px; }
-  .refined-app .compact-tabs button { min-height: 36px; padding: 6px 16px; font-size: 13px; }
-  .refined-app .compact-tabs button[aria-selected='true'] { color: var(--text); border-color: var(--border); box-shadow: none; }
+  .refined-app .compact-navigation { flex-wrap: wrap; margin: 0; padding: 8px 16px 4px; }
+  .refined-app .compact-tabs button { min-height: 44px; }
   .workspace-scroll { padding: 18px 16px 20px; scrollbar-gutter: auto; }
   .refined-app h1 { font-size: 24px; }
   .refined-app .preparation-heading { margin: 0 0 18px; }
@@ -516,5 +528,105 @@ body { min-height: 0; overflow: hidden; background: var(--bg); font-family: 'Seg
 .refined-app .settings-panel .discord-destination-list li { padding: 12px 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; }
 .refined-app .settings-panel .discord-destination-list strong { font-size: 14px; font-weight: 600; }
 
-/* Keep setup actions reachable while a notification is visible. */
-body:has(.role-setup):not(:has(dialog[open])) .toast-wrap[popover] { bottom: 100px; }
+.refined-app :is(.preparation-actions, .draw-screen-actions) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+.preparation-actions > :is(.action-summary, .sync-room-footer-info),
+.draw-screen-actions > .draw-footer-status { grid-column: 1; }
+.preparation-actions > .btn,
+.draw-screen-actions > :is(.primary-draw, .copy-results) { grid-column: 2; grid-row: 1; justify-self: center; }
+.preparation-actions > .room-previous-result,
+.draw-screen-actions:has(.primary-draw) > .copy-results { grid-column: 3; justify-self: start; }
+.refined-app .compact-tabs button:hover:not(:disabled) {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-strong) 65%, var(--surface-muted));
+  border-color: var(--border-strong);
+}
+.refined-app .compact-tabs button[aria-selected='true']:hover:not(:disabled) { background: var(--surface-strong); border-color: var(--text-muted); }
+@media (max-width: 700px) {
+  .refined-app :is(.preparation-actions, .draw-screen-actions) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 205px) minmax(0, 1fr);
+  }
+  .preparation-actions > :is(.action-summary, .sync-room-footer-info),
+  .draw-screen-actions > .draw-footer-status {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+    text-align: center;
+  }
+  .preparation-actions > .btn,
+  .draw-screen-actions > :is(.primary-draw, .copy-results) { grid-row: 2; }
+  .preparation-actions > .room-previous-result { grid-column: 1 / -1; grid-row: 3; justify-self: center; }
+  .draw-screen-actions > .primary-draw { width: 100%; }
+}
+@media (max-width: 420px) {
+  .refined-app :is(.preparation-actions, .draw-screen-actions) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 155px) minmax(0, 1fr);
+  }
+  .refined-app .preparation-actions .finish-setup { min-width: 0; }
+}
+
+/* Keep footer actions reachable while a notification is visible. */
+body:has(.role-setup, .draw-workspace):not(:has(dialog[open])) .toast-wrap[popover] { bottom: 100px; }
+
+.draw-workspace {
+  --own-result-border: #a17931;
+  --own-result-light: #c79434;
+}
+:root[data-theme='dark'] .draw-workspace {
+  --own-result-border: #c49b50;
+  --own-result-light: #edc473;
+}
+.draw-workspace .is-own-result::after,
+.draw-workspace .own-result-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.draw-workspace .is-own-result::after {
+  content: '';
+  box-shadow: inset 0 0 0 1px var(--own-result-border);
+}
+.draw-workspace .own-result-glow { opacity: 0; }
+@property --own-result-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0turn;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .draw-workspace .draw-card-result.is-revealing > .draw-secondary,
+  .draw-workspace .draw-card-result.is-revealing > .table-role > span {
+    animation: role-result-reveal 300ms cubic-bezier(.2, .75, .25, 1) var(--role-reveal-delay) both;
+  }
+  .draw-workspace .draw-card-result.is-revealing > .table-role > .table-role-icon {
+    animation-name: role-icon-reveal;
+  }
+  .draw-workspace .own-result-glow {
+    padding: 3px;
+    background: conic-gradient(from var(--own-result-angle), transparent 73%, var(--own-result-light) 96%, #fff2cc 99%, transparent);
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation:
+      own-result-sweep 700ms cubic-bezier(.5, 0, .2, 1) var(--role-reveal-delay) both,
+      own-result-fade 700ms linear var(--role-reveal-delay) both;
+  }
+}
+@keyframes role-result-reveal {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes role-icon-reveal {
+  0% { opacity: 0; transform: translateY(12px) scale(.78); }
+  64% { opacity: 1; transform: translateY(-2px) scale(1.08); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes own-result-sweep {
+  from { --own-result-angle: 0turn; }
+  to { --own-result-angle: 1turn; }
+}
+@keyframes own-result-fade {
+  0%, 100% { opacity: 0; }
+  12%, 74% { opacity: 1; }
+}

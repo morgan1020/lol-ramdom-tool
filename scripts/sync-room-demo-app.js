@@ -1,5 +1,5 @@
 // Two isolated production windows with synthetic local-client data only.
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, screen } from 'electron';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,17 +20,28 @@ app.setPath('userData', profile);
 app.disableHardwareAcceleration();
 console.log(`啟動隔離視窗 ${role}`);
 
-const names = ['測試主持人#DEMO', '測試朋友#DEMO'];
+const names = ['測試主持人#DEMO', '測試朋友#DEMO', '測試隊友#DEMO1', '測試隊友#DEMO2', '測試隊友丙#DEMO'];
+const firstPositions = ['TOP', 'JUNGLE', 'MIDDLE', 'FILL', 'UNSELECTED'];
 const ownIndex = role === 'host' ? 0 : 1;
 const register = ipcMain.handle.bind(ipcMain);
 // Intercept before importing main.js so even the initial React lobby query is synthetic.
 ipcMain.handle = (channel, handler) => {
   if (channel === 'lol:read-lobby') return register(channel, () => ({ ok: true, lobby: {
-    players: names.map((name, index) => ({ name, id: `demo-${index}`, isLeader: index === 0, firstPosition: 'UNSELECTED', secondPosition: 'UNSELECTED' })),
+    players: names.map((name, index) => ({ name, id: `demo-${index}`, isLeader: index === 0, firstPosition: firstPositions[index], secondPosition: 'UNSELECTED' })),
     localPlayerId: `demo-${ownIndex}`, queueId: 420, isCustom: false, fetchedAt: new Date().toISOString()
   } }));
-  if (channel === 'lol:apply-roles') return register(channel, () => ({ ok: false, message: '本機雙 App 測試禁止寫入真實 LoL 分路' }));
-  if (channel === 'data:discord-send') return register(channel, () => ({ ok: false, message: '本機雙 App 測試禁止傳送 Discord 訊息' }));
+  if (channel === 'lol:apply-roles') return register(channel, (_event, results, expectedName, resultId) => {
+    if (!resultId || expectedName !== names[ownIndex] || !results.some(result => result.name === expectedName)) {
+      return { ok: false, message: '模擬大廳帳號或結果不符' };
+    }
+    console.log(`[${role}] 模擬套用分路 ${resultId}`);
+    return { ok: true, simulated: true };
+  });
+  if (channel === 'data:discord-send') return register(channel, (_event, results) => {
+    if (role !== 'host') return { ok: false, message: '只有主持人傳送結果' };
+    console.log(`[${role}] 模擬 Discord 傳送 ${results.length} 位玩家的分路`);
+    return { ok: true, value: '12345' };
+  });
   return register(channel, handler);
 };
 process.on('message', (message) => { if (message?.type === 'shutdown') app.quit(); });
@@ -43,8 +54,17 @@ await import('../src/desktop/main.js');
 void (async () => {
 try {
   const window = await windowReady;
-  window.setTitle(`多人房間測試 — ${role === 'host' ? '主持人' : '加入者'}`);
-  window.webContents.on('page-title-updated', (event) => event.preventDefault());
+  const title = `多人房間測試 — ${role === 'host' ? '主持人' : '加入者'}`;
+  window.on('page-title-updated', (event) => event.preventDefault());
+  window.setTitle(title);
+  const { x, y, width, height } = screen.getPrimaryDisplay().workArea;
+  const windowWidth = Math.min(1040, Math.max(760, Math.floor(width / 2)));
+  window.setBounds({
+    x: role === 'host' ? x : x + Math.max(0, width - windowWidth),
+    y,
+    width: windowWidth,
+    height: Math.min(760, height)
+  });
   await new Promise((resolve, reject) => {
     window.webContents.once('did-finish-load', resolve);
     window.webContents.once('did-fail-load', (_event, code) => reject(new Error(`介面載入失敗 (${code})`)));
@@ -52,27 +72,42 @@ try {
   await window.webContents.executeJavaScript(`(async () => {
     const pause = () => new Promise(resolve => setTimeout(resolve, 50));
     for (let i = 0; i < 200; i += 1) {
-      const tab = document.querySelector('#tool-tab-room') || [...document.querySelectorAll('[role="tab"]')].find(item => item.textContent.trim() === '多人房間');
-      if (tab && !tab.disabled) { tab.click(); break; }
+      const roomEntry = document.querySelector('#open-sync-room');
+      if (roomEntry && !roomEntry.disabled) { roomEntry.click(); break; }
       await pause();
     }
-    for (let i = 0; i < 200 && !document.querySelector('#sync-player-name'); i += 1) await pause();
+    for (let i = 0; i < 200 && !document.querySelector('#sync-server-url'); i += 1) await pause();
     const setField = (selector, value) => {
       const input = document.querySelector(selector);
       if (!input) throw new Error('找不到多人房間欄位：' + selector);
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
       input.dispatchEvent(new Event('input', { bubbles: true }));
     };
-    setField('#sync-player-name', ${JSON.stringify(names[ownIndex])});
     setField('#sync-server-url', ${JSON.stringify(url.href)});
     if (${JSON.stringify(role)} === 'guest') {
       const join = [...document.querySelectorAll('.sync-connect-form button')].find(item => item.textContent.trim() === '加入房間');
       if (!join) throw new Error('找不到加入房間按鈕');
       join.click();
+    } else {
+      const waitFor = async (check) => {
+        for (let i = 0; i < 200; i += 1) { if (check()) return; await pause(); }
+        throw new Error('測試 Discord 設定未就緒');
+      };
+      document.querySelector('[aria-label="設定"]').click();
+      await waitFor(() => document.querySelector('.settings-nav'));
+      [...document.querySelectorAll('.settings-nav button')].find(button => button.textContent === 'Discord').click();
+      await waitFor(() => document.querySelector('#discord-webhook'));
+      setField('#discord-label', '本機模擬頻道');
+      setField('#discord-webhook', 'https://discord.com/api/webhooks/123456789012345678/synthetic_test_only');
+      await pause();
+      document.querySelector('.discord-settings-content form').requestSubmit();
+      await waitFor(() => document.querySelector('.discord-destination-list')?.textContent.includes('本機模擬頻道'));
+      document.querySelector('[aria-label="關閉設定"]').click();
     }
     await pause();
-    if (document.querySelector('#sync-player-name')?.value !== ${JSON.stringify(names[ownIndex])} || document.querySelector('#sync-server-url')?.value !== ${JSON.stringify(url.href)}) throw new Error('測試欄位預填失敗');
+    if (document.querySelector('#sync-server-url')?.value !== ${JSON.stringify(url.href)}) throw new Error('測試欄位預填失敗');
   })()`);
+  window.show();
   process.send?.({ type: 'ready' });
 } catch (error) {
   process.send?.({ type: 'failed', message: error.message });

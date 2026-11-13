@@ -57,9 +57,13 @@ export async function runCloudSmoke({ url, requestTimeoutMs = 8000 } = {}) {
     await waitFor(() => guest.getState().connection === 'connected' && guest.getState().room?.revision > before &&
       guest.getState().room?.members.find(member => member.id === guestId)?.connected === true);
     expect(guest.getState().memberId === guestId);
-    expect(guest.getState().room.result === null && guest.getState().room.members.every(member => !member.ready));
+    const resumedRoom = guest.getState().room;
+    expect(resumedRoom.members.every(member => !member.ready));
+    expect(resumedRoom.result === null || (resumedRoom.result.archived === true &&
+      resumedRoom.result.id === first.result.id && JSON.stringify(resumedRoom.result.results) === JSON.stringify(first.result.results)));
     report.checks.sameSessionReconnect = true;
-    report.checks.reconnectClearsConsentAndResult = true;
+    report.checks.reconnectClearsConsent = true;
+    report.checks.reconnectPreservesPreviousResult = resumedRoom.result?.archived === true;
     phase = 'redraw';
     await host.command({ type: 'ready', ready: true });
     await guest.command({ type: 'ready', ready: true });

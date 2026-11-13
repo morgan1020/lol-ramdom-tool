@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createSyncRoomServer } from '../server/syncRoomServer.js';
-import { SyncRoomClient } from '../src/desktop/syncRoomClient.js';
+import { discoverSyncRoom, SyncRoomClient } from '../src/desktop/syncRoomClient.js';
 import { dropFirstHandshakeAck } from './helpers/dropFirstHandshakeAck.js';
 
 async function waitFor(check, message = '等待房間狀態逾時') {
@@ -64,7 +64,35 @@ test('兩個本機客戶端完成核准、準備、抽籤及移除；不接觸 L
   await waitFor(() => guest.getState().connection === 'disconnected');
   assert.match(guest.getState().error, /移出/);
   assert.equal(host.getState().room.members.length, 1);
-  assert.equal(host.getState().room.result, null);
+  assert.equal(host.getState().room.result.archived, true);
+});
+
+test('自架隊伍索引會拒絕過時比對、到期後仍可使用邀請', async t => {
+  let time = Date.now();
+  const operations = [];
+  const server = await setup(t, { now: () => time, indexTtlMs: 1000, onDiscovery: operation => operations.push(operation) });
+  const host = client(t), guest = client(t);
+  const url = server.url;
+  const names = ['主持人#TW1', '朋友#TW2', '甲#TW3', '乙#TW4', '丙#TW5'];
+  await host.connect({ url, action: 'create', name: names[0] });
+  await host.command({ type: 'sync-lobby', names });
+  const match = await discoverSyncRoom(url, [...names].reverse());
+  assert.equal(match.roomId, host.getState().room.roomId);
+  const otherService = await setup(t);
+  assert.deepEqual(await discoverSyncRoom(otherService.url, names), { status: 'missing' });
+  const changed = [...names.slice(0, -1), '替補#TW5'];
+  await host.command({ type: 'sync-lobby', names: changed });
+  await assert.rejects(guest.connect({ url, action: 'join', name: names[1], ...match }), /隊伍房間已變更/);
+  assert.deepEqual(await discoverSyncRoom(url, names), { status: 'missing' });
+  const fresh = await discoverSyncRoom(url, changed);
+  assert.equal(fresh.roomId, match.roomId);
+  time += 1001;
+  assert.deepEqual(await discoverSyncRoom(url, changed), { status: 'missing' });
+  await assert.rejects(guest.connect({ url, action: 'join', name: names[1], ...fresh }), /隊伍房間已變更/);
+  await guest.connect({ url, action: 'join', name: names[1], roomId: fresh.roomId });
+  assert.equal(guest.getState().room.members.find(member => member.name === names[1]).approved, false);
+  assert.deepEqual(operations, ['put', 'lookup', 'delete', 'put', 'lookup', 'lookup', 'lookup']);
+  t.diagnostic(JSON.stringify({ lookups: 4, puts: 2, deletes: 1, persistentStorage: 0 }));
 });
 
 test('本機建立 ACK 遺失後重試同一席位，憑證綁定原操作與身分', async t => {
@@ -89,7 +117,7 @@ test('本機建立 ACK 遺失後重試同一席位，憑證綁定原操作與身
   assert.equal(recovered.memberId, state.memberId);
   assert.equal(recovered.room.members[0].connected, true);
   assert.equal(recovered.room.members[0].ready, false);
-  assert.equal(recovered.room.result, null);
+  assert.equal(recovered.room.result.archived, true);
   assert.equal(recovered.room.resultVersion, drawn.resultVersion);
 });
 
@@ -118,7 +146,7 @@ test('服務端以 session 身分授權並對重複抽籤 requestId 去重', asy
   assert.equal(resumed.ok, false);
 });
 
-test('短暫斷線以原 session 重連，清除準備與結果，不重送抽籤', async t => {
+test('短暫斷線以原 session 重連，重設準備並保留上一輪結果，不重送抽籤', async t => {
   const server = await setup(t);
   const host = client(t), guest = client(t);
   await host.connect({ url: server.url, action: 'create', name: '主持人#TW1' });
@@ -133,7 +161,7 @@ test('短暫斷線以原 session 重連，清除準備與結果，不重送抽�
   await waitFor(() => guest.socket !== oldSocket && guest.getState().connection === 'connected');
   assert.equal(guest.getState().memberId, id);
   assert.equal(guest.getState().room.members.length, 2);
-  assert.equal(guest.getState().room.result, null);
+  assert.equal(guest.getState().room.result.archived, true);
   assert.equal(guest.getState().room.resultVersion, 1);
   assert.equal(guest.getState().room.members.every(member => !member.ready), true);
   await assert.rejects(host.command({ type: 'draw' }), /準備/);
@@ -194,7 +222,7 @@ test('resume 取代仍在線的 session 也撤銷準備與結果，舊 socket �
   const replacement = await rawClient(t, server.url);
   const resumed = await replacement.send({ type: 'resume', requestId: 4, token: created.token });
   assert.equal(resumed.ok, true);
-  assert.equal(resumed.room.result, null);
+  assert.equal(resumed.room.result.archived, true);
   assert.equal(resumed.room.resultVersion, 1);
   assert.equal(resumed.room.members[0].ready, false);
   assert.equal(resumed.room.members[0].connected, true);
@@ -255,7 +283,7 @@ test('心跳只回 pong，不改準備狀態、revision 或延長房間閒置期
   await waitFor(() => host.messages.some(message => message.type === 'pong'));
   const states = host.messages.filter(message => message.type === 'state');
   assert.equal(states.at(-1).room.revision, ready.room.revision);
-  assert.equal(states.at(-1).room.members[0].ready, true);
+  assert.equal(states.at(-1).room.members[0].ready, false);
   now += 11;
   await waitFor(() => host.messages.some(message => message.type === 'ended'));
   assert.match(host.messages.find(message => message.type === 'ended').message, /到期/);

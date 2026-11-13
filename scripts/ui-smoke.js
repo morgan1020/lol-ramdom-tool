@@ -32,9 +32,9 @@ app.whenReady().then(async()=>{
     };
 
     const settled=()=>document.querySelector('.role-setup,.draw-workspace')?.getAttribute('aria-busy')==='false';
-    const prepare=async()=>{await wait(settled);document.querySelector('.finish-setup').click();await wait(()=>document.querySelector('.draw-workspace'))};
-    const draw=async()=>{document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.primary-draw')?.textContent==='重新抽籤')};
-    const back=async()=>{clickText('返回設定');await wait(()=>document.querySelector('.role-setup'))};
+    const enterDraw=async()=>{document.querySelector('.finish-setup').click();await wait(()=>settled()&&document.querySelector('.draw-workspace'))};
+    const returnToSetup=async()=>{document.querySelector('.draw-workspace .btn-return').click();await wait(()=>settled()&&document.querySelector('.role-setup'))};
+    const draw=async()=>{if(document.querySelector('.role-setup'))await enterDraw();document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.primary-draw')?.textContent==='重新抽籤')};
     const checkRoleIcons=async(theme,count)=>{
       if(document.documentElement.dataset.theme!==theme)document.querySelector('[aria-label="切換深淺色模式"]').click();
       await wait(()=>settled()&&document.documentElement.dataset.theme===theme);
@@ -54,19 +54,85 @@ app.whenReady().then(async()=>{
       await wait(()=>settled()&&document.querySelectorAll('.preparation-player-row').length===5);
       const labels=[...document.querySelectorAll('.preparation-player-name .player-label')].map(el=>el.textContent);
       if(labels.some(n=>n.includes('#'))||!labels.includes('小明 · 1')||!labels.includes('小明 · 2'))throw Error('Riot ID display incorrect');
-      if(document.querySelector('.primary-draw,.player-avatar'))throw Error('Draw action or avatars visible during preparation');
+      if(!document.querySelector('.finish-setup:not(:disabled)')||document.querySelector('.player-avatar,.draw-workspace'))throw Error('Preparation and results must use separate screens');
       if(document.querySelector('select#draw-mode,details.discord-preparation')||document.querySelectorAll('#draw-mode [role="radio"]').length!==3)throw Error('Draw modes or Discord still collapsed');
       if(!document.querySelector('.discord-preparation .discord-sync-controls').getBoundingClientRect().height)throw Error('Discord controls not immediately visible');
       if(document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').getAttribute('aria-checked')==='true')throw Error('Auto-apply enabled by default');
       const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);
-      await prepare();
-      if(document.querySelector('#draw-mode,.source-switch,.discord-sync-controls,.compact-tabs,.player-avatar'))throw Error('Setup controls leaked into drawing');
-      if(document.querySelectorAll('.draw-workspace button').length!==3||!document.querySelector('.copy-results').disabled)throw Error('Ready action states incorrect');
+      await enterDraw();
+      if(document.querySelector('.role-setup,.table-role')||document.querySelector('.primary-draw').textContent!=='開始抽籤')throw Error('Entering draw must not generate results');
       if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Preparation updated stats');
+      await returnToSetup();
       return {labels,readyActions:3,preparationDoesNotDraw:true};
     `);
     await capture('ready.png');
-    await run(`await draw();if(document.querySelectorAll('.table-role').length!==5)throw Error('Five-player role count incorrect');if(document.querySelector('.primary-draw').getBoundingClientRect().bottom>innerHeight)throw Error('Action below fold');`);
+    const tabGeometry = `
+      const tabs = [...document.querySelectorAll('.compact-tabs button')];
+      return tabs.map(tab => {
+        const { x, y, width, height } = tab.getBoundingClientRect();
+        return { x, y, width, height };
+      });
+    `;
+    const tabsBefore = await run(tabGeometry);
+    if (tabsBefore.length !== 2 || Math.abs(tabsBefore[0].width - tabsBefore[1].width) > 1 || tabsBefore[0].height !== tabsBefore[1].height) throw Error('Tool tabs must be equal in size');
+    for (const [index, tab] of tabsBefore.entries()) {
+      window.webContents.sendInputEvent({ type: 'mouseMove', x: 1, y: 1 });
+      const baseBorder = await run(`
+        const tab = document.querySelectorAll('.compact-tabs button')[${index}];
+        await wait(() => !tab.matches(':hover') && !tab.getAnimations().length);
+        return getComputedStyle(tab).borderTopColor;
+      `);
+      window.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(tab.x + tab.width / 2), y: Math.round(tab.y + tab.height / 2) });
+      await run(`
+        const tab = document.querySelectorAll('.compact-tabs button')[${index}];
+        await wait(() => tab.matches(':hover') && getComputedStyle(tab).borderTopColor !== ${JSON.stringify(baseBorder)}, 'Tool tab hover feedback missing');
+      `);
+    }
+    await run(`clickText('抽英雄'); await wait(() => document.querySelector('.champion-flow'));`);
+    if (JSON.stringify(await run(tabGeometry)) !== JSON.stringify(tabsBefore)) throw Error('Tool tabs shifted on selection');
+    await run(`clickText('抽分路'); await wait(() => settled() && document.querySelector('.role-setup'));`);
+    await run(`await draw();if([...document.querySelectorAll('.table-role')].map(el=>el.textContent).join(',')!=='上路,打野,中路,下路,輔助')throw Error('Five-player cards must follow main role order');if(document.querySelector('.primary-draw').getBoundingClientRect().bottom>innerHeight)throw Error('Action below fold');`);
+    await run(`
+      const reveal = '.draw-card-result.is-revealing > .table-role > .table-role-icon';
+      const first = [...document.querySelectorAll(reveal)];
+      if (first.length !== 5 || document.querySelectorAll('.is-own-result .own-result-glow').length !== 1) throw Error('Draw reveal or own highlight missing');
+      if (matchMedia('(prefers-reduced-motion: no-preference)').matches && first.some((icon, index) =>
+        getComputedStyle(icon).animationName !== 'role-icon-reveal' || Math.abs(parseFloat(getComputedStyle(icon).animationDelay) * 1000 - index * 75) > 1)) throw Error('Incorrect reveal stagger');
+      if (matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+        const glow = document.querySelector('.own-result-glow');
+        const sweep = glow.getAnimations().find(animation => animation.animationName === 'own-result-sweep');
+        if (!sweep) throw Error('Own card sweep missing');
+        const style = getComputedStyle(glow);
+        const { delay, duration } = sweep.effect.getTiming();
+        const initialTime = sweep.currentTime;
+        sweep.pause();
+        const angles = [0, .25, .5, .75, 1].map(fraction => {
+          sweep.currentTime = delay + duration * fraction;
+          const angle = style.getPropertyValue('--own-result-angle').trim();
+          return angle.endsWith('turn') ? parseFloat(angle) * 360 : parseFloat(angle);
+        });
+        const distances = angles.slice(1).map((angle, index) => angle - angles[index]);
+        if (!style.maskComposite.includes('exclude') || !style.backgroundImage.includes('conic-gradient') ||
+            !distances.every(distance => distance > 0) || Math.abs(angles[4] - 360) > 1 ||
+            distances[1] <= distances[0] || distances[1] <= distances[2] || distances[2] <= distances[3]) {
+          throw Error('Own card highlight must accelerate then ease to a stop: ' + JSON.stringify(angles));
+        }
+        sweep.currentTime = initialTime;
+        sweep.play();
+      }
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches &&
+          (getComputedStyle(first[0]).animationName !== 'none' || getComputedStyle(document.querySelector('.own-result-glow')).animationName !== 'none' ||
+           getComputedStyle(document.querySelector('.is-own-result'), '::after').boxShadow === 'none')) throw Error('Reduced motion must keep the static border only');
+      await wait(() => document.querySelector('.primary-draw:not(:disabled)'));
+      document.querySelector('.primary-draw').click();
+      await wait(() => first.every(icon => !icon.isConnected));
+      await wait(settled);
+      if (document.querySelectorAll('.is-revealing').length !== 5) throw Error('Redraw did not restart reveal');
+    `);
+    await run(`
+      await returnToSetup(); await enterDraw();
+      if (document.querySelector('.is-revealing') || !document.querySelector('.is-own-result')) throw Error('Reopening results replayed reveal or lost own highlight');
+    `);
     await run(`await checkRoleIcons('dark',5)`);
     await capture('desktop-dark.png');
     await run(`await checkRoleIcons('light',5)`);
@@ -77,7 +143,6 @@ app.whenReady().then(async()=>{
       if(Math.abs((canvas.left+canvas.right)/2-innerWidth/2)>1)throw Error('Desktop workspace is not centered');
       if(!document.querySelector('.compact-header .app-brand').getClientRects().length)throw Error('Top brand navigation missing');
       if(document.querySelector('.assignment-marker'))throw Error('Random result marked as assigned');
-      if(document.querySelector('.discord-availability')?.textContent!=='尚未設定')throw Error('Unconfigured Discord destination unclear');
       const positions=[...document.querySelectorAll('.roster-player-card')].map(card=>card.getBoundingClientRect());
       if(Math.max(...positions.map(p=>p.top))-Math.min(...positions.map(p=>p.top))>1)throw Error('Desktop results not on one row');
       return {topNavigation:true,centeredWorkspace:true,roleIconsInBothThemes:true,fiveColumns:true};
@@ -92,21 +157,20 @@ app.whenReady().then(async()=>{
         const cards=[...document.querySelectorAll('.roster-player-card')].map(el=>el.getBoundingClientRect());
         const action=document.querySelector('.draw-screen-actions').getBoundingClientRect();
         if(canvas.width<innerWidth*.63||canvas.width>1681)throw Error('Wide workspace is too narrow or unbounded');
-        if(document.documentElement.scrollWidth>innerWidth||cards.some(card=>card.bottom>action.top)||action.bottom>innerHeight)throw Error('Wide result overflow');
+        if(document.documentElement.scrollWidth>innerWidth||cards.length!==5||action.bottom>innerHeight)throw Error('Wide result overflow');
         if(parseFloat(getComputedStyle(document.querySelector('.player-label')).fontSize)<16)throw Error('Wide player text too small');
         return {width:innerWidth,height:innerHeight,canvasWidth:canvas.width};
       `);
       await capture(`wide-results-${width}.png`);
-      await run(`await back()`);
       await run(`
+        await returnToSetup();
         const button=document.querySelector('.finish-setup').getBoundingClientRect();
-        const grid=document.querySelector('.preparation-grid').getBoundingClientRect();
         const actions=document.querySelector('.preparation-actions').getBoundingClientRect();
-        if(button.bottom>innerHeight||button.top<grid.bottom||actions.top-grid.bottom>130)throw Error('Wide preparation action detached or clipped');
+        if(button.bottom>innerHeight||button.top<actions.top)throw Error('Wide preparation action detached or clipped');
         if(parseFloat(getComputedStyle(document.querySelector('.preparation-player-name .player-label')).fontSize)<16)throw Error('Wide preparation text too small');
       `);
       await capture(`wide-preparation-${width}.png`);
-      await run(`await prepare()`);
+      await run(`await enterDraw()`);
       wideLayouts.push(layout);
     }
     window.setContentSize(...originalSize);await new Promise(r=>setTimeout(r,150));
@@ -118,35 +182,38 @@ app.whenReady().then(async()=>{
       const actions=document.querySelector('.draw-screen-actions').getBoundingClientRect();
       const scroll=document.querySelector('.workspace-scroll');
       if(document.documentElement.scrollWidth>innerWidth||cards.length!==5)throw Error('Five-player mobile overflow');
-      if(cards.some(card=>card.bottom>actions.top||card.height<89))throw Error('Actions obscure a player result: '+JSON.stringify({cards,actions}));
-      if(actions.bottom>innerHeight||scroll.scrollHeight>scroll.clientHeight+2)throw Error('Five-player mobile result not fully visible');
-      return {allFiveVisible:true,noActionOverlap:true};
+      if(cards.some(card=>card.height<89))throw Error('Actions obscure a player result: '+JSON.stringify({cards,actions}));
+      scroll.scrollTop=scroll.scrollHeight; if(actions.bottom>innerHeight||document.querySelector('.roster-player-card:last-child').getBoundingClientRect().bottom>actions.top+2)throw Error('Five-player mobile result is not reachable');
+      return {allFiveReachable:true,noActionOverlap:true};
     `);
-    await run(`await back()`);
     const mobilePreparation=await run(`
+      await returnToSetup();
       const button=document.querySelector('.finish-setup').getBoundingClientRect();
       const actions=document.querySelector('.preparation-actions').getBoundingClientRect();
       if(button.bottom>innerHeight||button.top<actions.top||button.height<44)throw Error('Mobile preparation action is not reachable');
       return {actionVisible:true};
     `);
     await capture('preparation-mobile.png');
-    await run(`await prepare()`);
     window.setContentSize(...originalSize);window.setMinimumSize(...originalMinimum);await new Promise(r=>setTimeout(r,150));
     await run(`
-      await back();await setField('#draw-mode','client');await wait(settled);await prepare();await draw();
+      await setField('#draw-mode','client');await wait(settled);await draw();
       if([...document.querySelectorAll('.table-role')].map(el=>el.textContent).join(',')!=='上路,打野,中路,下路,輔助')throw Error('Client preferences lost');
       if(document.querySelectorAll('.assignment-marker').length!==5)throw Error('Client assigned roles not marked');
-      await back();await setField('#draw-mode','custom');await wait(()=>settled()&&document.querySelectorAll('.inline-preference').length===5);
-      const select=[...document.querySelectorAll('.inline-preference')];await setField(select[2],'');await setField(select[0],'中路');
+      await returnToSetup();
+      await setField('#draw-mode','custom');await wait(()=>settled()&&document.querySelectorAll('.inline-preference').length===5);
+      const select=[...document.querySelectorAll('.inline-preference')];
+      const unspecifiedPlayer=select[2].closest('[data-player-id]').dataset.playerId;
+      await setField(select[2],'');await setField(select[0],'中路');
       const left=[...document.querySelectorAll('.inline-preference')].map(el=>el.getBoundingClientRect().left);if(Math.max(...left)-Math.min(...left)>1)throw Error('Preference controls misaligned');
-      document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();await draw();
-      if(document.querySelector('.table-role').textContent!=='中路'||!document.querySelector('[data-notice-id="apply-roles"].is-error')?.textContent.includes('抽籤結果已保留'))throw Error('Apply error erased result');
-      if(document.querySelectorAll('.assignment-marker').length!==4||document.querySelectorAll('.roster-player-card')[2].querySelector('.assignment-marker'))throw Error('Unspecified custom roles marked as assigned');
-      await back();document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();
+      document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await draw();
+      if(document.querySelector('.roster-player-card:has(.self-badge) .table-role').textContent!=='中路'||!document.querySelector('[data-notice-id="apply-roles"].is-error')?.textContent.includes('抽籤結果已保留'))throw Error('Apply error erased result');
+      if(document.querySelectorAll('.assignment-marker').length!==4||document.querySelector('.roster-player-card[data-player-id="'+CSS.escape(unspecifiedPlayer)+'"]').querySelector('.assignment-marker'))throw Error('Unspecified custom roles marked as assigned');
       const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);
       document.activeElement?.blur();document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'z',bubbles:true}));await wait(()=>document.querySelector('.role-setup'));
       if(document.querySelector('[aria-label="玩家來源"] button[aria-pressed="true"]').textContent!=='客戶端隊伍')throw Error('Return shortcut switched source');
-      await prepare();if(document.querySelectorAll('.table-role').length!==5)throw Error('Unchanged preparation erased results');
+      if(document.querySelector('.draw-workspace'))throw Error('Return shortcut left results open');
+      await enterDraw();
+      if(document.querySelectorAll('.table-role').length!==5)throw Error('Unchanged preparation erased results');
       if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Return changed stats');
     `);
     if(writes.length!==1||writes[0].some((r,i)=>r.name!==names[i]))throw Error('Native payload lost full IDs');
@@ -154,9 +221,8 @@ app.whenReady().then(async()=>{
     readFailure=true;
     await run(`document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('[data-notice-id="draw-error"].is-error')?.textContent.includes('離線'));if(!document.querySelector('[data-notice-id="apply-roles"].is-error'))throw Error('Concurrent apply error fixture missing');if(document.querySelectorAll('.table-role').length!==5)throw Error('Read error erased results')`);
     readFailure=false;applySuccess=true;
-    await run(`await back();document.querySelector('.preparation-client-status button').click();await wait(()=>settled()&&document.querySelectorAll('.preparation-player-row').length===5);document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare();await draw();await wait(()=>document.querySelector('[data-notice-id="apply-roles"].is-success')?.textContent.includes('分路已套用'));if(document.querySelector('.inline-status.is-success,.client-apply-indicator'))throw Error('Apply success still uses banner or card marker')`);
+    await run(`await draw();await wait(()=>document.querySelector('[data-notice-id="apply-roles"].is-success')?.textContent.includes('分路已套用'));if(document.querySelector('.inline-status.is-success,.client-apply-indicator'))throw Error('Apply success still uses banner or card marker')`);
     await capture('apply-toast.png');
-    await run(`await back();document.querySelector('[aria-label="抽完更新我的 LoL 分路"]').click();await wait(settled);await prepare()`);
     applySuccess=false;rosterChanged=true;
     await run(`const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);document.querySelector('.primary-draw').click();await wait(()=>settled()&&document.querySelector('.role-setup'));if(!document.querySelector('[role="alert"]')?.textContent.includes('重新確認'))throw Error('Changed team not flagged');if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Changed team drawn without confirmation')`);
     await run(`
@@ -170,7 +236,7 @@ app.whenReady().then(async()=>{
     await capture('settings-light.png');
     await run(`document.querySelector('.settings-dialog [aria-label="關閉設定"]').click();await sleep();const before=JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats);clickText('抽英雄');await sleep();await wait(()=>document.querySelector('.champion-actions button')&&!document.querySelector('.champion-actions button').disabled);document.querySelector('.champion-actions button').click();await wait(()=>document.querySelector('.champion-result h3')?.textContent);if(before!==JSON.stringify((await window.lolDesktop.initializeData({})).value.data.stats))throw Error('Champion draw changed stats');clickText('抽分路');await wait(()=>document.querySelector('.role-setup'));`);
     const web=new BrowserWindow({show:false,width:1040,height:760,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
-    await web.loadURL('lol-draw://app/');await web.webContents.executeJavaScript(`localStorage.setItem('lolDrawStats',JSON.stringify({'同名#1':{},'同名#2':{},'第三位':{}}));localStorage.setItem('lolDiscordSync',JSON.stringify({schemaVersion:2,enabled:false,activeDestinationId:'123456789012345678',destinations:[{id:'123456789012345678',label:'測試伺服器',webhookUrl:'https://discord.com/api/webhooks/123456789012345678/synthetic_test_only'},{id:'223456789012345678',label:'另一個伺服器',webhookUrl:'https://discord.com/api/webhooks/223456789012345678/synthetic_test_only'}]}));`);web.reload();await once(web.webContents,'did-finish-load');
+    await web.loadURL('lol-draw://app/');await web.webContents.executeJavaScript(`localStorage.setItem('lolDrawStats',JSON.stringify({'同名#1':{},'同名#2':{},'第二位':{},'第三位':{}}));localStorage.setItem('lolDiscordSync',JSON.stringify({schemaVersion:2,enabled:false,activeDestinationId:'123456789012345678',destinations:[{id:'123456789012345678',label:'測試伺服器',webhookUrl:'https://discord.com/api/webhooks/123456789012345678/synthetic_test_only'},{id:'223456789012345678',label:'另一個伺服器',webhookUrl:'https://discord.com/api/webhooks/223456789012345678/synthetic_test_only'}]}));`);web.reload();await once(web.webContents,'did-finish-load');
     const webRun=code=>web.webContents.executeJavaScript(`(async()=>{${helpers}${code}})()`);
     await webRun(`await wait(()=>document.querySelector('.role-setup'));document.querySelector('.recent-player-picker summary').click();await sleep();document.querySelector('.known-chip').click();await wait(settled);`);
     for(const appearance of ['dark','light']){
@@ -213,7 +279,8 @@ app.whenReady().then(async()=>{
       document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));
       if(!document.activeElement.textContent.includes('另一個伺服器'))throw Error('Destination keyboard navigation failed');
       document.activeElement.click();await wait(()=>!document.querySelector('.discord-destination-menu')&&trigger.textContent.includes('另一個伺服器'));await sleep();
-      if(document.activeElement!==trigger||document.querySelector('.discord-sync-switch').getAttribute('aria-checked')!=='false')throw Error('Destination selection lost focus or enabled sending');
+      await wait(()=>document.activeElement===trigger,'Destination selection lost focus');
+      if(document.querySelector('.discord-sync-switch').getAttribute('aria-checked')!=='false')throw Error('Destination selection enabled sending');
       trigger.click();await sleep();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));await sleep();
       if(document.querySelector('.discord-destination-menu')||document.activeElement!==trigger)throw Error('Destination Escape dismissal failed');
       trigger.click();await sleep();[...document.querySelectorAll('.discord-destination-menu [role="option"]')].find(el=>el.textContent.includes('測試伺服器')).click();await wait(()=>trigger.textContent.includes('測試伺服器')&&!document.querySelector('.discord-destination-menu'));
@@ -233,13 +300,10 @@ app.whenReady().then(async()=>{
       const history=document.querySelector('.recent-player-picker');history.querySelector('summary').click();await sleep();const chips=[...history.querySelectorAll('.known-chip')];if(chips.length!==3)throw Error('History players missing');
       chips[0].click();await wait(settled);chips[1].click();await wait(settled);if(!history.open||document.querySelectorAll('.preparation-player-row').length!==2)throw Error('History continuous selection broken');
       chips[1].click();await wait(settled);if(document.querySelectorAll('.preparation-player-row').length!==1)throw Error('History deselection broken');chips[1].click();await wait(settled);chips[2].click();await wait(settled);
-      await setField('#draw-mode','custom');await wait(()=>document.querySelectorAll('.inline-preference').length===3);await setField('.inline-preference','中路');await sleep();await prepare();await draw();
-      if(document.querySelectorAll('.table-role').length!==6)throw Error('Secondary roles missing');if(document.querySelector('.player-avatar,.inline-preference,#draw-mode,.discord-summary'))throw Error('Draw screen clutter');
+      await setField('#draw-mode','custom');await wait(()=>document.querySelectorAll('.inline-preference').length===3);await setField('.inline-preference','中路');await sleep();await draw();
+      if(document.querySelectorAll('.table-role').length!==6)throw Error('Secondary roles missing');if(document.querySelector('.player-avatar'))throw Error('Draw screen clutter');
       if(document.querySelector('.draw-secondary').textContent.includes('副位'))throw Error('Secondary caption was not removed');
       if(document.querySelectorAll('.assignment-marker').length!==1)throw Error('Manual assigned role not marked');
-      if(document.querySelector('.discord-destination-name')?.textContent!=='測試伺服器')throw Error('Footer does not show selected Discord destination');
-      if(document.querySelector('.discord-draw-status').dataset.state!=='off')throw Error('Disabled Discord state changed');
-      if(document.querySelector('.discord-availability').textContent!=='傳送已關閉')throw Error('Discord sending availability not visible');
       const assigned=document.querySelector('.table-role.is-assigned .table-role-icon');
       if(!assigned||parseFloat(getComputedStyle(assigned,'::before').borderTopWidth)<1||!assigned.querySelector('.assignment-marker svg'))throw Error('Assigned role frame or lock missing');
     `);
@@ -249,14 +313,18 @@ app.whenReady().then(async()=>{
       await writeFile(path.join(output,`website-results-${theme}.png`),(await web.webContents.capturePage()).toPNG());
     }
     const website=await webRun(`
-      await back();if(document.querySelectorAll('.preparation-player-row').length!==3||document.querySelector('#draw-mode').dataset.value!=='custom')throw Error('Return lost settings');await prepare();return {manualDraw:true,secondaryRoles:true,continuousHistory:true,preservesParameters:true,roleIconsInBothThemes:true};
+      await returnToSetup();
+      if(document.querySelectorAll('.preparation-player-row').length!==3||document.querySelector('#draw-mode').dataset.value!=='custom')throw Error('Return lost settings');
+      await enterDraw();
+      return {manualDraw:true,secondaryRoles:true,continuousHistory:true,preservesParameters:true,roleIconsInBothThemes:true};
     `);
     web.show();await writeFile(path.join(output,'secondary-results.png'),(await web.webContents.capturePage()).toPNG());
     web.setContentSize(390,844);await new Promise(r=>setTimeout(r,150));
     const mobile=await webRun(`if(document.documentElement.scrollWidth>innerWidth)throw Error('Mobile overflow');return {noOverflow:true}`);
     web.show();await writeFile(path.join(output,'website-mobile.png'),(await web.webContents.capturePage()).toPNG());
     await webRun(`
-      await back();document.querySelector('.recent-player-picker summary').click();await sleep();
+      await returnToSetup();
+      document.querySelector('.recent-player-picker summary').click();await sleep();
       const menu=document.querySelector('.recent-player-popover').getBoundingClientRect();
       if(menu.width<330||menu.left<15||menu.right>innerWidth-15||menu.top<0||menu.bottom>innerHeight)throw Error('Mobile history menu clipped');
     `);

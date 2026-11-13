@@ -1,4 +1,16 @@
 import { positions } from './draw.js';
+import { displayPlayerName } from './playerNames.js';
+
+export function groupStatsByPlayerName(stats) {
+  const grouped = new Map();
+  for (const [id, counts] of Object.entries(stats)) {
+    const name = displayPlayerName(id);
+    const totals = grouped.get(name) ?? emptyStats();
+    for (const role of positions) totals[role] += counts[role] ?? 0;
+    grouped.set(name, totals);
+  }
+  return Object.fromEntries(grouped);
+}
 
 export function emptyStats() {
   return Object.fromEntries(positions.map((position) => [position, 0]));

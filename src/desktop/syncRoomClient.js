@@ -1,7 +1,9 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { validateRoomServiceUrl } from '../domain/roomInvitation.js';
+import { isTeamKey, teamKey } from '../domain/roomDiscovery.js';
+import { isRoomPlayerReady } from '../domain/syncRoom.js';
 
-const actions = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove']);
+const actions = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove', 'add-manual', 'sync-lobby', 'draw-settings']);
 const roles = new Set(['上路', '打野', '中路', '下路', '輔助']);
 const isId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 const isCount = value => Number.isSafeInteger(value) && value >= 0;
@@ -12,33 +14,50 @@ const isName = value => typeof value === 'string' && value.length <= 200 && valu
 export function validateRoomSnapshot(room) {
   const invalid = () => { throw new Error('房間狀態格式錯誤'); };
   if (!room || !isId(room.roomId) || !isId(room.hostId) || !isCount(room.revision) || !isCount(room.createdAt) ||
+    (room.lobbySynced !== undefined && room.lobbySynced !== true) ||
     !isCount(room.resultVersion) || typeof room.closed !== 'boolean' || !Array.isArray(room.members) ||
     room.members.length > 5 || (!room.closed && !room.members.length)) invalid();
   const members = room.members.map(member => {
     if (!member || !isId(member.id) || !isName(member.name) ||
       ['approved', 'ready', 'connected'].some(key => typeof member[key] !== 'boolean') ||
-      (member.ready && (!member.approved || !member.connected))) invalid();
-    return { id: member.id, name: member.name, approved: member.approved, ready: member.ready, connected: member.connected };
+      (member.ready && (!member.approved || !member.connected)) ||
+      (member.manual !== undefined && (member.manual !== true || member.connected || !member.approved))) invalid();
+    return { id: member.id, name: member.name, approved: member.approved, ready: member.ready, connected: member.connected, ...(member.manual ? { manual: true } : {}) };
   });
   if (new Set(members.map(member => member.id)).size !== members.length ||
     new Set(members.map(member => member.name.toLowerCase())).size !== members.length ||
-    (!room.closed && !members.some(member => member.id === room.hostId && member.approved))) invalid();
+    (!room.closed && !members.some(member => member.id === room.hostId && member.approved && !member.manual))) invalid();
+  const readPreferences = (value, names) => {
+    if (value === undefined) return {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) invalid();
+    const entries = Object.entries(value);
+    if (entries.some(([name, role]) => !names.includes(name) || !roles.has(role)) || new Set(entries.map(([, role]) => role)).size !== entries.length) invalid();
+    return Object.fromEntries(entries);
+  };
+  const drawMode = room.drawMode === undefined ? 'random' : room.drawMode;
+  if (!['random', 'client', 'custom'].includes(drawMode)) invalid();
+  const preferences = readPreferences(room.preferences, members.map(member => member.name));
+  if (drawMode === 'random' && Object.keys(preferences).length) invalid();
   let result = null;
   if (room.result !== null) {
     const value = room.result;
     if (!value || room.closed || !isCount(value.version) || value.version < 1 || value.version !== room.resultVersion ||
       value.id !== `${room.roomId}:${value.version}` || !isCount(value.createdAt) || !Array.isArray(value.results) ||
-      value.results.length !== members.length || members.some(member => !member.approved || !member.connected || !member.ready)) invalid();
+      value.results.length < 1 || value.results.length > 5 ||
+      (value.archived !== undefined && value.archived !== true) ||
+      (!value.archived && (value.results.length !== members.length || !members.every(member => isRoomPlayerReady(member, room.hostId))))) invalid();
     const results = value.results.map(assignment => {
-      if (!assignment || !members.some(member => member.name === assignment.name) || !roles.has(assignment.main) ||
+      if (!assignment || !isName(assignment.name) || (!value.archived && !members.some(member => member.name === assignment.name)) || !roles.has(assignment.main) ||
         !(assignment.secondary === '' || (roles.has(assignment.secondary) && assignment.secondary !== assignment.main))) invalid();
       return { name: assignment.name, main: assignment.main, secondary: assignment.secondary };
     });
     if (new Set(results.map(item => item.name)).size !== results.length || new Set(results.map(item => item.main)).size !== results.length) invalid();
-    result = { id: value.id, version: value.version, createdAt: value.createdAt, results };
+    const resultPreferences = readPreferences(value.preferences, results.map(item => item.name));
+    if (Object.entries(resultPreferences).some(([name, role]) => results.find(item => item.name === name).main !== role)) invalid();
+    result = { id: value.id, version: value.version, createdAt: value.createdAt, results, preferences: resultPreferences, ...(value.archived ? { archived: true } : {}) };
   }
   return { roomId: room.roomId, hostId: room.hostId, revision: room.revision, createdAt: room.createdAt,
-    resultVersion: room.resultVersion, closed: room.closed, members, result };
+    resultVersion: room.resultVersion, closed: room.closed, members, result, drawMode, preferences, ...(room.lobbySynced ? { lobbySynced: true } : {}) };
 }
 
 function publicError(value) {
@@ -47,6 +66,22 @@ function publicError(value) {
 
 export function validateSyncRoomUrl(value) {
   return validateRoomServiceUrl(value);
+}
+
+export async function discoverSyncRoom(url, names, { fetchImpl = fetch } = {}) {
+  const key = teamKey(names, value => createHash('sha256').update(value).digest('hex'));
+  if (!key) return { status: 'missing' };
+  const endpoint = new URL(validateSyncRoomUrl(url));
+  endpoint.protocol = endpoint.protocol === 'wss:' ? 'https:' : 'http:';
+  endpoint.pathname = endpoint.pathname.replace(/\/$/u, '') + '/lookup';
+  const response = await fetchImpl(endpoint, {
+    method: 'POST', body: key, redirect: 'error', signal: AbortSignal.timeout(5000)
+  });
+  if (!response.ok) throw new Error('無法查詢目前隊伍');
+  const match = await response.json();
+  if (match?.status === 'found' && /^[A-F0-9]{10}$/.test(match.roomId)) return { status: 'found', roomId: match.roomId, teamKey: key };
+  if (match?.status === 'missing' || match?.status === 'ambiguous') return { status: match.status };
+  throw new Error('找房回應格式錯誤');
 }
 
 export class SyncRoomClient {
@@ -119,13 +154,14 @@ export class SyncRoomClient {
     return this.getState();
   }
   destroy() { this.disconnect(); this.onState = () => {}; }
-  async connect({ url, action, roomId, name } = {}) {
+  async connect({ url, action, roomId, name, teamKey } = {}) {
     let target;
     let requestedRoomId;
     let socketUrl;
     try {
       target = validateSyncRoomUrl(url);
       if (!['create', 'join'].includes(action)) throw new Error('請選擇建立或加入房間');
+      if (teamKey !== undefined && (action !== 'join' || !isTeamKey(teamKey))) throw new Error('找房資料格式錯誤');
       if (typeof name !== 'string' || !isName(name.trim())) throw new Error('請輸入完整 Riot ID');
       if (action === 'join' && (typeof roomId !== 'string' || !/^[A-Z0-9]{6,16}$/i.test(roomId.trim()))) throw new Error('請輸入有效房間代碼');
       const parsed = new URL(target);
@@ -144,7 +180,7 @@ export class SyncRoomClient {
     this.expectedRoomId = requestedRoomId || null;
     this.attempts = 0;
     this.emit({ connection: 'connecting', serviceUrl: target });
-    const handshake = { type: action, name: name.trim(), roomId: requestedRoomId, handshakeToken: randomBytes(32).toString('hex') };
+    const handshake = { type: action, name: name.trim(), roomId: requestedRoomId, teamKey, handshakeToken: randomBytes(32).toString('hex') };
     try {
       if (operation !== this.connectOperation) throw new Error('房間連線已取代');
       try {
@@ -280,7 +316,9 @@ export class SyncRoomClient {
     try {
       if (!command || !actions.has(command.type)) throw new Error('不支援的房間操作');
       if (this.state.connection !== 'connected') throw new Error('房間尚未連線，請稍後再試');
-      const reply = await this.request({ type: command.type, memberId: command.memberId, ready: command.ready });
+      const reply = await this.request(command.type === 'add-manual'
+        ? { type: command.type, name: command.name }
+        : { type: command.type, memberId: command.memberId, ready: command.ready, names: command.names, revision: command.revision, drawMode: command.drawMode, preferences: command.preferences });
       if (generation === this.generation) {
         if (command.type === 'leave' || command.type === 'close') this.disconnect();
         else this.emit({ error: '' });

@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('lolDesktop', {
   syncRoom: {
+    discover: (options) => ipcRenderer.invoke('sync-room:discover', options),
     connect: (options) => ipcRenderer.invoke('sync-room:connect', options),
     command: (command) => ipcRenderer.invoke('sync-room:command', command),
     disconnect: () => ipcRenderer.invoke('sync-room:disconnect'),
@@ -13,7 +14,7 @@ contextBridge.exposeInMainWorld('lolDesktop', {
     }
   },
   readLobby: () => ipcRenderer.invoke('lol:read-lobby'),
-  applyRoles: (results) => ipcRenderer.invoke('lol:apply-roles', results),
+  applyRoles: (results, expectedName, roomResultId) => ipcRenderer.invoke('lol:apply-roles', results, expectedName, roomResultId),
   initializeData: (legacy) => ipcRenderer.invoke('data:initialize', legacy),
   saveDataStats: (stats) => ipcRenderer.invoke('data:save-stats', stats),
   saveDataPreferences: (patch) => ipcRenderer.invoke('data:save-preferences', patch),

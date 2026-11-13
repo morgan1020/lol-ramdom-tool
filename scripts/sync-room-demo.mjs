@@ -51,7 +51,7 @@ deadline = setTimeout(() => {
 }, 45000);
 
 console.log(`多人同步雙視窗測試：${serviceUrl}`);
-console.log('正在開啟兩個隔離 App；主持人建立房間，再將代碼填入另一個視窗加入。');
+console.log('正在開啟兩個隔離 App；主持人建立房間，加入者按「加入目前隊伍」。');
 console.log('使用合成 Riot ID，禁止真實 LoL 讀寫與 Discord 傳送；關閉兩個視窗或按 Ctrl+C 結束。');
 
 try {
@@ -59,7 +59,7 @@ try {
     const profile = path.join(output, `profile-${runId}-${role}`);
     const child = spawn(electron, [path.join(root, 'scripts', 'sync-room-demo-app.js')], {
       cwd: root,
-      env: { ...childEnvironment, SYNC_ROOM_DEMO_ROLE: role, SYNC_ROOM_DEMO_URL: serviceUrl, SYNC_ROOM_DEMO_PROFILE: profile },
+      env: { ...childEnvironment, LOL_ROOM_SERVICE_URL: serviceUrl, SYNC_ROOM_DEMO_ROLE: role, SYNC_ROOM_DEMO_URL: serviceUrl, SYNC_ROOM_DEMO_PROFILE: profile },
       stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
       windowsHide: true
     });

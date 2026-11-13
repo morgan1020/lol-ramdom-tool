@@ -42,7 +42,7 @@ export function useDiscordSync() {
   const toggle = () => mutate('toggle', null, () => saveDiscordSync({ ...settingsRef.current, enabled: !settingsRef.current.enabled }));
   const clear = () => mutate('clear', null, clearDiscordSync);
 
-  const syncDraw = useCallback(async (results) => {
+  const syncDraw = useCallback(async (results, { allowRetry = true, showNotice = true } = {}) => {
     if (mutationInProgress.current || isSending.current) return false;
     const currentSettings = settingsRef.current;
     const destination = getActiveDiscordDestination(currentSettings);
@@ -50,18 +50,25 @@ export function useDiscordSync() {
     const label = getDiscordDestinationLabel(destination);
     const currentRequest = ++requestId.current;
     isSending.current = true;
-    lastDraw.current = { results };
+    lastDraw.current = allowRetry ? { results } : null;
     setStatus({ state: 'sending', message: `正在傳送本次結果到 ${label}…` });
     try {
       if (hasDesktopData()) await desktopRequest('sendDataDiscord', results);
       else await sendActiveDiscordDraw(currentSettings, results);
-      if (currentRequest === requestId.current) { setStatus({ state: 'sent', message: `本次分路結果已傳送到 ${label}` }); notify(`已傳送到 ${label}`, { id: 'discord-delivery' }); }
+      if (currentRequest === requestId.current) {
+        setStatus({ state: 'sent', message: `本次分路結果已傳送到 ${label}` });
+        if (showNotice) notify(`已傳送到 ${label}`, { id: 'discord-delivery' });
+      }
     } catch (error) {
-      if (currentRequest === requestId.current) { setStatus({ state: 'error', message: error.message }); notify(error.message || 'Discord 傳送失敗', { id: 'discord-delivery', type: 'error', action: { label: '重送', onClick: () => lastDraw.current ? syncDraw(lastDraw.current.results) : undefined } }); }
+      if (currentRequest === requestId.current) {
+        setStatus({ state: 'error', message: error.message });
+        if (showNotice) notify(error.message || 'Discord 傳送失敗', { id: 'discord-delivery', type: 'error', ...(allowRetry ? { action: { label: '重送', onClick: () => lastDraw.current ? syncDraw(lastDraw.current.results) : undefined } } : {}) });
+      }
       return false;
     } finally {
       if (currentRequest === requestId.current) isSending.current = false;
     }
+    return true;
   }, []);
 
   const retry = () => {

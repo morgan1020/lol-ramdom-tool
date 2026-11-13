@@ -1,15 +1,11 @@
 .sync-room-panel { width: 100%; height: 100%; min-height: 0; padding: 0 0 26px; overflow-y: auto; }
-.sync-room-heading, .sync-room-toolbar, .sync-section-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.sync-room-heading { align-items: flex-start; }
-.sync-room-heading h1 { margin: 5px 0 8px; font-size: clamp(24px, 3vw, 32px); }
-.sync-room-heading p, .sync-room-scope, .sync-room-help, .sync-field small, .sync-room-actions p { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
-.sync-room-heading p { margin: 0; }
-.sync-room-scope { margin: 20px 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-muted); }
-.sync-connection { flex: 0 0 auto; padding: 7px 11px; border: 1px solid var(--border); border-radius: 30px; font-size: 12px; color: var(--text-muted); }
-.sync-connection-connected, .sync-ready, .sync-room-notice { color: var(--accent); }
+.sync-room-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; }
+.sync-room-heading h1 { margin: 0; font-size: clamp(24px, 3vw, 32px); }
+.sync-room-help, .sync-field small { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.sync-ready, .sync-room-notice { color: var(--accent); }
 .sync-room-error { color: var(--danger); border: 1px solid currentColor; border-radius: 10px; padding: 12px; overflow-wrap: anywhere; }
-.sync-room-notice, .sync-room-closed, .sync-room-waiting { font-size: 14px; line-height: 1.5; }
-.sync-connect-form { display: grid; gap: 22px; max-width: 640px; }
+.sync-room-notice, .sync-room-closed { font-size: 14px; line-height: 1.5; }
+.sync-connect-form { display: grid; gap: 12px; max-width: 640px; margin-inline: auto; }
 .sync-connect-form .source-switch { max-width: 360px; }
 .sync-field { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
 .sync-field small { font-weight: 400; }
@@ -17,48 +13,130 @@
 .sync-field textarea { resize: vertical; line-height: 1.6; }
 .sync-field input:focus-visible, .sync-field textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .sync-field input:disabled, .sync-field textarea:disabled { opacity: .65; }
-.sync-identity-input { display: flex; gap: 10px; }
-.sync-identity-input .btn { flex-shrink: 0; }
-.sync-connect-form > .btn { justify-self: start; }
+.sync-connect-form > .btn { justify-self: center; }
 .sync-room-help { margin: 0; }
-.sync-room-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
-.sync-member-section, .sync-result-section { min-width: 0; border: 1px solid var(--border); border-radius: 14px; padding: 20px; background: var(--surface-strong); }
 .sync-room-toolbar { margin-bottom: 24px; }
-.sync-room-invite { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -8px 0 24px; }
-.sync-room-invite .btn { flex-shrink: 0; }
-.sync-room-service { margin: 0; color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
-.sync-invitation-entry { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
-.sync-invitation-entry summary { color: var(--text-muted); cursor: pointer; font-size: 14px; }
-.sync-invitation-entry[open] summary { margin-bottom: 16px; }
-.sync-invitation-entry .btn { margin: 12px 0; }
-.sync-room-code { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.sync-room-code strong { font-size: 25px; letter-spacing: .08em; overflow-wrap: anywhere; }
-.sync-room-code .text-button { display: inline-flex; padding: 7px; }
-.sync-section-title h2 { margin: 0; font-size: 17px; }
-.sync-section-title > span { color: var(--text-muted); font-size: 13px; }
-.sync-member-list, .sync-result-list { list-style: none; margin: 14px 0; padding: 0; }
-.sync-member-list > li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.sync-member-name { min-width: 0; }
-.sync-member-name strong, .sync-result-list strong { overflow-wrap: anywhere; font-size: 14px; }
-.sync-member-name > div { display: flex; gap: 6px; margin-top: 6px; }
-.sync-member-state { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; font-size: 12px; color: var(--text-muted); }
-.sync-member-state .btn { padding: 7px 10px; font-size: 12px; }
-.sync-remove-member { color: var(--danger); font-size: 12px; }
-.sync-room-actions { margin: 16px 0; }
-.sync-room-actions > div { display: flex; gap: 10px; flex-wrap: wrap; }
-.sync-result-list > li { display: grid; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.sync-result-list > li > span { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; }
-.sync-result-list .role-glyph { width: 22px; height: 22px; }
-.sync-result-list small { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--text-muted); }
-.sync-result-empty { padding: 45px 12px; text-align: center; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
-.sync-result-empty > svg { width: 28px; height: 28px; }
+.sync-service-settings summary { color: var(--text-muted); cursor: pointer; font-size: 14px; }
+.sync-service-settings[open] summary { margin-bottom: 12px; }
+.refined-app .sync-room-panel:has(.sync-room-workspace) { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.refined-app .sync-room-workspace { flex: 1; }
+.sync-room-summary, .sync-toolbar-actions, .sync-room-footer-info {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+}
+.sync-room-summary { margin-bottom: 14px; color: var(--text-muted); font-size: 13px; }
+.sync-room-code strong { color: var(--text); letter-spacing: .03em; }
+.sync-member-state, .sync-member-actions {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 4px 8px; color: var(--text-muted); font-size: 12px;
+}
+.sync-member-state > span { display: inline-flex; align-items: center; gap: 4px; }
+.sync-member-state svg { width: 14px; height: 14px; }
+.sync-member-actions .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
+.refined-app .sync-room-workspace .roster-player-card:has(.sync-member-state) {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+}
+.refined-app .sync-room-workspace .sync-remove-player {
+  position: absolute; top: 6px; right: 6px; min-width: 32px; min-height: 32px;
+  width: 32px; height: 32px; padding: 0; color: var(--text-muted);
+}
+.sync-remove-player svg { width: 15px; height: 15px; }
+@media (min-width: 901px) {
+  .refined-app .sync-room-workspace .roster-card-grid:has(.has-player-actions) { margin-bottom: 46px; }
+  .sync-member-actions { position: absolute; top: calc(100% + 8px); inset-inline: 0; }
+}
+.sync-room-footer-info, .sync-room-feedback { font-size: 13px; color: var(--text-muted); }
+.sync-room-feedback p { margin: 8px 0 0; }
+.refined-app .sync-room-workspace .roster-player-card:not(.has-result) { min-height: 120px; }
+.refined-app .sync-room-workspace .roster-player-card:not(.has-result) .draw-card-result { display: none; }
+.refined-app .sync-room-footer .draw-action-buttons { flex-wrap: wrap; }
 @media (max-width: 900px) {
-  .sync-room-panel { padding: 20px; }
-  .sync-room-body { grid-template-columns: minmax(0, 1fr); }
+  .sync-member-actions { grid-column: 2 / -1; margin-top: 6px; justify-content: start; }
+  .refined-app .sync-room-workspace .roster-player-card:has(.sync-remove-player) { padding-right: 44px; }
+  .refined-app .sync-room-workspace .roster-player-header { flex-wrap: wrap; }
+  .refined-app .sync-room-workspace .roster-player-card:not(.has-result) { min-height: 72px; }
 }
 @media (max-width: 600px) {
-  .sync-room-heading { flex-direction: column; gap: 12px; }
-  .sync-identity-input { flex-direction: column; }
-  .sync-room-toolbar .btn, .sync-member-state .btn { width: auto; }
-  .sync-member-section, .sync-result-section { padding: 16px; }
+  .sync-room-toolbar { flex-wrap: wrap; }
+}
+
+.refined-app .sync-room-panel:has(.role-setup, .draw-workspace) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.sync-room-panel > :is(.role-setup, .draw-workspace) { flex: 1; }
+.sync-room-panel .sync-preparation-member .sync-member-actions {
+  position: static;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+.sync-member-identity { min-width: 0; }
+.sync-member-identity .sync-member-state { justify-content: flex-start; }
+.sync-preparation-member:has(.sync-member-state) {
+  box-shadow: inset 2px 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  padding-inline-start: 8px;
+}
+.refined-app .role-setup.sync-guest-preparation {
+  --guest-content-inset: 2px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.sync-guest-preparation > :is(.sync-guest-header, .workspace-scroll) {
+  padding-inline: var(--guest-content-inset);
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+.sync-guest-header { overflow: hidden; }
+.sync-guest-header .sync-room-toolbar {
+  align-items: center;
+  margin: 0 0 20px;
+  padding-block: 4px;
+}
+.sync-room-heading-details { min-width: 0; }
+.sync-guest-header .sync-room-summary { margin: 6px 0 0; }
+.sync-guest-header .sync-room-toolbar .sync-guest-status {
+  margin: 6px 0 0;
+}
+.sync-guest-header .sync-toolbar-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(112px, 1fr);
+  gap: 10px;
+}
+.refined-app .sync-guest-header .sync-toolbar-actions > .btn {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+.refined-app .sync-guest-header .sync-guest-ready.is-ready {
+  background: var(--surface-muted);
+}
+.refined-app .sync-guest-preparation .preparation-grid { grid-template-columns: minmax(0, 1fr); }
+.refined-app .sync-guest-preparation .preparation-grid > .roster-preparation { border: 0; }
+.sync-roster-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.sync-roster-title .visual-summary {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.sync-guest-preparation .preparation-panel-title { flex-wrap: wrap; }
+.sync-guest-preparation .preparation-player-row:has(.client-preference-label) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.sync-guest-preparation .client-preference-label { justify-self: end; }
+body:has(.sync-guest-preparation):not(:has(dialog[open])) .toast-wrap[popover] {
+  bottom: 16px;
+  max-height: 25dvh;
+}
+@media (max-width: 700px) {
+  .refined-app .role-setup.sync-guest-preparation { --guest-content-inset: 16px; }
+  .sync-guest-preparation > .workspace-scroll { padding-top: 0; }
+}
+@media (max-width: 520px) {
+  .sync-guest-header .sync-room-toolbar { display: grid; }
 }

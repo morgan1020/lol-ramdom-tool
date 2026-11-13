@@ -4,9 +4,15 @@
   "main": "worker.js",
   "compatibility_date": "2026-11-11",
   "durable_objects": {
-    "bindings": [{ "name": "SYNC_ROOMS", "class_name": "SyncRoomDurableObject" }]
+    "bindings": [
+      { "name": "SYNC_ROOMS", "class_name": "SyncRoomDurableObject" },
+      { "name": "TEAM_INDEX", "class_name": "TeamIndexDurableObject" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SyncRoomDurableObject"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["SyncRoomDurableObject"] },
+    { "tag": "v2", "new_sqlite_classes": ["TeamIndexDurableObject"] }
+  ],
   "ratelimits": [{ "name": "ROOM_CONNECTION_LIMITER", "namespace_id": "2026111101", "simple": { "limit": 60, "period": 60 } }],
   "observability": { "enabled": false },
   "vars": {

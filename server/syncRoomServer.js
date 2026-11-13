@@ -1,17 +1,47 @@
 import { createServer } from 'node:http';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { createRoom, reduceRoom } from '../src/domain/syncRoom.js';
+import { discoveryTtlMs, isTeamKey, selectRoom, teamKey } from '../src/domain/roomDiscovery.js';
 
-const commands = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove']);
+const commands = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove', 'add-manual', 'sync-lobby', 'draw-settings']);
 const roomCode = () => randomBytes(5).toString('hex').toUpperCase();
 const validId = (id) => Number.isSafeInteger(id) && id > 0;
+const hashTeam = value => createHash('sha256').update(value).digest('hex');
 
 export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRooms = 100, maxConnections = 100,
-  roomTtlMs = 2 * 60 * 60 * 1000, hostDisconnectGraceMs = 60000, handshakeTimeoutMs = 10000, heartbeatMs = 30000, now = Date.now } = {}) {
+  roomTtlMs = 2 * 60 * 60 * 1000, hostDisconnectGraceMs = 60000, handshakeTimeoutMs = 10000, heartbeatMs = 30000,
+  indexTtlMs = discoveryTtlMs, now = Date.now, onDiscovery = () => {} } = {}) {
   const rooms = new Map();
   const sessions = new Map();
-  const http = createServer((_request, response) => { response.writeHead(404); response.end(); });
+  const teamRooms = new Map();
+  const lookupRates = new Map();
+  const http = createServer(async (request, response) => {
+    const reply = (status, data) => {
+      response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      response.end(JSON.stringify(data));
+    };
+    if (request.url !== '/sync/lookup' || request.method !== 'POST') return reply(404, {});
+    if (stopping || request.headers.origin || request.headers['content-length'] !== '64') return reply(400, {});
+    const time = now();
+    const ip = request.socket.remoteAddress;
+    const rate = lookupRates.get(ip) || { start: time, count: 0 };
+    if (time - rate.start >= 60000) Object.assign(rate, { start: time, count: 0 });
+    if (!lookupRates.has(ip) && lookupRates.size >= 1024) return reply(429, {});
+    lookupRates.set(ip, rate);
+    if (++rate.count > 60) return reply(429, {});
+    try {
+      let key = '';
+      for await (const chunk of request) key += chunk.toString('utf8');
+      if (!isTeamKey(key)) return reply(400, {});
+      onDiscovery('lookup');
+      const candidates = Object.fromEntries([...(teamRooms.get(key) || [])].filter(([id]) => {
+        const entry = rooms.get(id);
+        return entry && entry.hostDisconnectedAt == null && time - entry.lastActive < roomTtlMs;
+      }));
+      reply(200, selectRoom(candidates, time));
+    } catch { if (!response.destroyed) reply(400, {}); }
+  });
   const wss = new WebSocketServer({ noServer: true, maxPayload: 8192, perMessageDeflate: false });
   let stopping = false;
   const send = (socket, value) => {
@@ -27,12 +57,26 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
   function removeRoom(roomId, message) {
     const entry = rooms.get(roomId);
     if (!entry) return;
+    removeFromIndex(entry);
     for (const [token, session] of sessions) if (session.roomId === roomId) {
       send(session.socket, { type: 'ended', message });
       session.socket?.close(1000, 'Room ended');
       sessions.delete(token);
     }
     rooms.delete(roomId);
+  }
+  function removeFromIndex(entry) {
+    const indexed = teamRooms.get(entry.teamKey);
+    if (indexed?.delete(entry.state.roomId)) onDiscovery('delete');
+    if (indexed && !indexed.size) teamRooms.delete(entry.teamKey);
+  }
+  function indexLobby(entry, key) {
+    if (entry.teamKey !== key) removeFromIndex(entry);
+    entry.teamKey = key;
+    if (!key) return;
+    if (!teamRooms.has(key)) teamRooms.set(key, new Map());
+    teamRooms.get(key).set(entry.state.roomId, now() + indexTtlMs);
+    onDiscovery('put');
   }
   function bind(socket, session) {
     const previous = session.socket;
@@ -99,6 +143,9 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
             } else {
               entry = typeof request.roomId === 'string' ? rooms.get(request.roomId.toUpperCase()) : null;
               if (!entry) throw new Error('找不到房間，請確認房間代碼');
+              if (request.teamKey !== undefined && (!isTeamKey(request.teamKey) || entry.teamKey !== request.teamKey ||
+                !(teamRooms.get(entry.teamKey)?.get(entry.state.roomId) > now()) || entry.hostDisconnectedAt != null ||
+                now() - entry.lastActive >= roomTtlMs)) throw new Error('隊伍房間已變更，請使用邀請加入');
               entry.state = reduceRoom(entry.state, memberId, { type: 'join', memberId, name: request.name });
               entry.lastActive = now();
             }
@@ -123,8 +170,15 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
           if (!entry || entry.state.closed) throw new Error('房間已關閉');
           if (!commands.has(type)) throw new Error('不支援的房間操作');
           // Actor identity and connection commands can never be supplied by clients.
-          const command = { type, memberId: request.memberId, ready: request.ready };
-          entry.state = reduceRoom(entry.state, session.memberId, command, { now: now() });
+          const command = type === 'add-manual'
+            ? { type, memberId: randomUUID(), name: request.name }
+            : { type, memberId: request.memberId, ready: request.ready, names: request.names, revision: request.revision, drawMode: request.drawMode, preferences: request.preferences };
+          const next = reduceRoom(entry.state, session.memberId, command, { now: now(), createMemberId: randomUUID });
+          if (type === 'sync-lobby') {
+            // Node's hash is synchronous so room mutation and index updates share one turn.
+            indexLobby(entry, teamKey(next.members.map(member => member.name), hashTeam));
+          }
+          entry.state = next;
           entry.lastActive = now();
           reply = { type: 'ack', requestId, ok: true, room: entry.state };
         } catch (error) { reply = { type: 'ack', requestId, ok: false, message: error.message }; }
@@ -164,6 +218,11 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
     });
   });
   const sweep = setInterval(() => {
+    for (const [ip, rate] of lookupRates) if (now() - rate.start >= 60000) lookupRates.delete(ip);
+    for (const [key, entries] of teamRooms) {
+      for (const [id, expiresAt] of entries) if (expiresAt <= now()) { entries.delete(id); onDiscovery('delete'); }
+      if (!entries.size) teamRooms.delete(key);
+    }
     for (const [id, entry] of rooms) {
       if (entry.hostDisconnectedAt != null && now() - entry.hostDisconnectedAt >= hostDisconnectGraceMs) {
         removeRoom(id, '主持人離線超過期限，房間已關閉');

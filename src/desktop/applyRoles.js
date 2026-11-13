@@ -26,7 +26,7 @@ function matchesTeam(snapshot, lobby) {
     lobby.gameConfig?.queueId === snapshot.queueId && !lobby.gameConfig?.isCustom;
 }
 
-export async function applyCurrentPlayerRoles(results, { discover = discoverConnection, request = requestClient } = {}) {
+export async function applyCurrentPlayerRoles(results, { discover = discoverConnection, request = requestClient, expectedName, isCurrent = () => true } = {}) {
   validateResults(results);
   const connection = await discover();
   const read = (endpoint) => request(connection, endpoint);
@@ -37,6 +37,7 @@ export async function applyCurrentPlayerRoles(results, { discover = discoverConn
   const ownName = current?.gameName && current?.tagLine ? `${current.gameName.trim()}#${current.tagLine.trim()}` : '';
   const ownPlayer = snapshot.players.find((player) => player.id === ownId && player.name === ownName);
   if (!ownPlayer || ownId !== snapshot.localPlayerId) throw new ClientError('無法確認目前登入帳號，未更改客戶端');
+  if (expectedName !== undefined && ownName !== expectedName) throw new ClientError('房間中的 Riot ID 與目前登入帳號不同，未更改客戶端');
   if (results.length !== snapshot.players.length || results.some((result) => !snapshot.players.some((player) => player.name === result.name))) {
     throw new ClientError('目前隊伍與抽籤名單不同，未更改客戶端；請重新讀取隊伍並抽籤');
   }
@@ -51,6 +52,7 @@ export async function applyCurrentPlayerRoles(results, { discover = discoverConn
     throw new ClientError('本次沒有副位，既有第二偏好無法沿用，請手動調整客戶端；未更改客戶端');
   }
   if (await read('/lol-gameflow/v1/gameflow-phase') !== 'Lobby') throw new ClientError('已離開組隊大廳，未更改客戶端');
+  if (!isCurrent()) throw new ClientError('房間結果已更新或連線已中斷，未更改客戶端');
   const preferences = { firstPreference, secondPreference };
   const unchanged = lobby.localMember.firstPositionPreference === firstPreference && lobby.localMember.secondPositionPreference === secondPreference;
   if (!unchanged) await request(connection, preferenceEndpoint, { method: 'PUT', body: preferences });

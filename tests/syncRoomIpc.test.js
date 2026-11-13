@@ -38,8 +38,8 @@ test('room IPC never forwards actor identities or transport-only commands', asyn
   for (const type of ['connection', 'join', 'resume', '__proto__']) {
     assert.equal((await fixture.invoke('command', { type, memberId: 'other', connected: false })).ok, false);
   }
-  assert.equal((await fixture.invoke('command', { type: 'draw', actorId: 'host', results: [] })).ok, true);
-  assert.deepEqual(fixture.calls, [['command', { type: 'draw' }]]);
+  assert.equal((await fixture.invoke('command', { type: 'draw', revision: 4, actorId: 'host', results: [] })).ok, true);
+  assert.deepEqual(fixture.calls, [['command', { type: 'draw', revision: 4 }]]);
 });
 
 test('room IPC exposes public state and narrowly selects connection fields', async () => {

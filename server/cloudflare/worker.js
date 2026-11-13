@@ -1,6 +1,7 @@
 import { createRoom, reduceRoom } from '../../src/domain/syncRoom.js';
+import { discoveryTtlMs, isTeamKey, selectRoom, teamKey } from '../../src/domain/roomDiscovery.js';
 
-const allowedCommands = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove']);
+const allowedCommands = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove', 'add-manual', 'sync-lobby', 'draw-settings']);
 const validRequestId = value => Number.isSafeInteger(value) && value > 0;
 const roomPath = /^\/rooms\/([A-Fa-f0-9]{10})$/;
 const encoder = new TextEncoder();
@@ -12,6 +13,23 @@ const option = (env, key, fallback) => {
   const value = Number(env[key]);
   return Number.isSafeInteger(value) && value > 0 ? value : fallback;
 };
+const indexStub = (env, key) => env.TEAM_INDEX.get(env.TEAM_INDEX.idFromName(key));
+
+async function readTeamKey(request) {
+  if (!request.body) return null;
+  const reader = request.body.getReader();
+  const buffer = new Uint8Array(64);
+  let size = 0;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (size + value.length > buffer.length) { await reader.cancel(); return null; }
+    buffer.set(value, size);
+    size += value.length;
+  }
+  const key = new TextDecoder().decode(buffer);
+  return size === 64 && isTeamKey(key) ? key : null;
+}
 
 export default {
   async fetch(request, env) {
@@ -19,19 +37,66 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health' && !url.search) {
       return Response.json({ ok: true, protocol: 1 }, { headers: { 'Cache-Control': 'no-store' } });
     }
+    const lookup = url.pathname === '/rooms/lookup' && request.method === 'POST' && !url.search;
     const match = roomPath.exec(url.pathname);
-    if (!match || url.search || request.method !== 'GET') return new Response('Not found', { status: 404 });
+    if (!lookup && (!match || url.search || request.method !== 'GET')) return new Response('Not found', { status: 404 });
     if (request.headers.has('Origin')) return new Response('Native clients only', { status: 403 });
-    if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('WebSocket required', { status: 426 });
+    if (!lookup && request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('WebSocket required', { status: 426 });
     if (!env.ROOM_CONNECTION_LIMITER?.limit) return new Response('Connection limiter unavailable', { status: 503 });
     try {
       const { success } = await env.ROOM_CONNECTION_LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') || 'local' });
       if (!success) return new Response('Too many connection attempts', { status: 429, headers: { 'Retry-After': '60' } });
     } catch { return new Response('Connection limiter unavailable', { status: 503 }); }
+    if (lookup) {
+      if (!env.TEAM_INDEX) return new Response('Lookup unavailable', { status: 503 });
+      const key = await readTeamKey(request);
+      if (!key) return new Response('Invalid lookup', { status: 400 });
+      return indexStub(env, key).fetch('https://team-index/lookup', { method: 'POST' });
+    }
     const roomId = match[1].toUpperCase();
     return env.SYNC_ROOMS.get(env.SYNC_ROOMS.idFromName(roomId)).fetch(request);
   }
 };
+
+export class TeamIndexDurableObject {
+  constructor(ctx) { this.storage = ctx.storage; }
+
+  async fetch(request) {
+    const operation = new URL(request.url).pathname;
+    if (operation === '/lookup') {
+      const entries = await this.storage.get('rooms') || {};
+      return Response.json(selectRoom(entries, Date.now()), { headers: { 'Cache-Control': 'no-store' } });
+    }
+    const { roomId, expiresAt } = await request.json();
+    await this.storage.transaction(async txn => {
+      const now = Date.now();
+      const entries = Object.fromEntries(Object.entries(await txn.get('rooms') || {}).filter(([, until]) => until > now));
+      if (expiresAt > now) entries[roomId] = expiresAt;
+      else delete entries[roomId];
+      await this.store(txn, entries);
+    });
+    return new Response(null, { status: 204 });
+  }
+
+  async store(txn, entries) {
+    const expires = Object.values(entries);
+    if (expires.length) {
+      await txn.put('rooms', entries);
+      await txn.setAlarm(Math.min(...expires));
+    } else {
+      await txn.delete('rooms');
+      await txn.deleteAlarm();
+    }
+  }
+
+  async alarm() {
+    await this.storage.transaction(async txn => {
+      const now = Date.now();
+      const entries = Object.fromEntries(Object.entries(await txn.get('rooms') || {}).filter(([, until]) => until > now));
+      await this.store(txn, entries);
+    });
+  }
+}
 
 // Plain Durable Object class is intentional: this module also runs in workerd /
 // Miniflare. Sessions survive hibernation; only SHA-256 token hashes are stored.
@@ -66,7 +131,10 @@ export class SyncRoomDurableObject {
           changed = true;
         }
       }
-      if (changed) await this.save(next);
+      if (changed) {
+        await this.save(next);
+        if (next.hostDisconnectedAt != null) await this.updateIndex(next, 0);
+      }
     });
   }
   serial(operation) {
@@ -118,6 +186,14 @@ export class SyncRoomDurableObject {
     this.data = next;
     await this.schedule();
   }
+  async updateIndex(data, expiresAt = data?.indexedUntil) {
+    if (!this.env.TEAM_INDEX || !data?.teamKey) return;
+    try {
+      await indexStub(this.env, data.teamKey).fetch('https://team-index/update', {
+        method: 'POST', body: JSON.stringify({ roomId: data.state.roomId, expiresAt })
+      });
+    } catch { /* Room operation and invitation remain available if the index fails. */ }
+  }
   async end(message, replySocket, reply) {
     const closedUntil = Date.now() + this.ttl;
     // Revoke every session and acknowledgement atomically while retaining only
@@ -127,6 +203,7 @@ export class SyncRoomDurableObject {
       for (let index = 0; index < keys.length; index += 128) await txn.delete(keys.slice(index, index + 128));
       await txn.put('closedUntil', closedUntil);
     });
+    const closedRoom = this.data;
     this.data = null;
     this.closedUntil = closedUntil;
     await this.schedule();
@@ -135,6 +212,7 @@ export class SyncRoomDurableObject {
       this.send(socket, { type: 'ended', message });
       this.close(socket);
     }
+    if (closedRoom?.hostDisconnectedAt == null && closedRoom?.indexedUntil > Date.now()) await this.updateIndex(closedRoom, 0);
   }
   async expire(now = Date.now()) {
     if (this.closedUntil != null && now >= this.closedUntil) {
@@ -208,6 +286,7 @@ export class SyncRoomDurableObject {
     }
     const hash = await hashToken(token);
     let session = next?.sessions[hash];
+    const restoringHost = Boolean(session && next.hostDisconnectedAt != null && session.memberId === next.state.hostId);
     if (resuming || session) {
       if (!session) throw new Error('房間連線已失效，請重新加入');
       if (!resuming && (session.handshakeType !== type || session.handshakeName !== request.name)) throw new Error('房間憑證與原始操作不符');
@@ -224,6 +303,8 @@ export class SyncRoomDurableObject {
           hostDisconnectedAt: null, sessions: {} };
       } else {
         if (!next) throw new Error('找不到房間，請確認房間代碼');
+        if (request.teamKey !== undefined && (!isTeamKey(request.teamKey) || next.teamKey !== request.teamKey ||
+          !(next.indexedUntil > now) || next.hostDisconnectedAt != null)) throw new Error('隊伍房間已變更，請使用邀請加入');
         next.state = reduceRoom(next.state, memberId, { type: 'join', memberId, name: request.name });
       }
       session = { memberId, connectionId: attached.connectionId, lastRequestId: requestId, replyIds: [],
@@ -232,6 +313,7 @@ export class SyncRoomDurableObject {
     }
     next.lastActive = now;
     await this.save(next);
+    if (restoringHost && next.indexedUntil > now) await this.updateIndex(next);
     socket.serializeAttachment({ ...attached, sessionHash: hash });
     // Replacement is committed before closing the previous socket, so its close
     // handler cannot mark the newly resumed member as disconnected.
@@ -256,7 +338,10 @@ export class SyncRoomDurableObject {
     let reply;
     try {
       if (!allowedCommands.has(type)) throw new Error('不支援的房間操作');
-      next.state = reduceRoom(next.state, session.memberId, { type, memberId: request.memberId, ready: request.ready }, { now });
+      const command = type === 'add-manual'
+        ? { type, memberId: crypto.randomUUID(), name: request.name }
+        : { type, memberId: request.memberId, ready: request.ready, names: request.names, revision: request.revision, drawMode: request.drawMode, preferences: request.preferences };
+      next.state = reduceRoom(next.state, session.memberId, command, { now, createMemberId: () => crypto.randomUUID() });
       next.lastActive = now;
       reply = { type: 'ack', requestId, ok: true, room: next.state };
     } catch (error) { reply = { type: 'ack', requestId, ok: false, message: error.message }; }
@@ -279,7 +364,16 @@ export class SyncRoomDurableObject {
       if (session.replyIds.length > 128) deletes.push(ackKey(attached.sessionHash, session.replyIds.shift()));
       writes.push([ackKey(attached.sessionHash, requestId), reply]);
     }
+    const previous = this.data;
+    if (reply.ok && type === 'sync-lobby' && this.env.TEAM_INDEX) {
+      next.teamKey = await teamKey(next.state.members.map(member => member.name), hashToken);
+      next.indexedUntil = next.teamKey ? now + option(this.env, 'TEAM_INDEX_TTL_MS', discoveryTtlMs) : null;
+    }
     await this.save(next, { writes, deletes });
+    if (reply.ok && type === 'sync-lobby') {
+      if (previous.teamKey !== next.teamKey && previous.indexedUntil > now) await this.updateIndex(previous, 0);
+      if (next.teamKey) await this.updateIndex(next);
+    }
     this.send(socket, reply);
     for (const other of this.ctx.getWebSockets()) if (removedHashes.includes(other.deserializeAttachment()?.sessionHash)) {
       this.send(other, { type: 'ended', message: type === 'leave' ? '已離開房間' : '主持人已將你移出房間' });
@@ -296,6 +390,7 @@ export class SyncRoomDurableObject {
       next.state = reduceRoom(next.state, session.memberId, { type: 'connection', connected: false });
       if (session.memberId === next.state.hostId) next.hostDisconnectedAt = Date.now();
       await this.save(next);
+      if (session.memberId === next.state.hostId && next.indexedUntil > Date.now()) await this.updateIndex(next, 0);
       this.broadcast();
     });
   }
