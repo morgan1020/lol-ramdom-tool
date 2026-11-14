@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('lolDesktop', {
+  getVersion: () => ipcRenderer.invoke('app:version'),
   syncRoom: {
     discover: (options) => ipcRenderer.invoke('sync-room:discover', options),
     connect: (options) => ipcRenderer.invoke('sync-room:connect', options),

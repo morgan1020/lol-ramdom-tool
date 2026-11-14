@@ -2,7 +2,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import { normalizeDiscordSettings, DEFAULT_DISCORD_SYNC } from '../domain/discordSettings.js';
-import { getActiveDiscordDestination, upsertDiscordDestination, selectDiscordDestination, removeDiscordDestination } from '../domain/discordDestinations.js';
+import { setDiscordDelivery, getActiveDiscordDestination, upsertDiscordDestination, selectDiscordDestination, removeDiscordDestination } from '../domain/discordDestinations.js';
 import { sendDiscordDraw } from '../domain/discordSync.js';
 import { validateStats, parseStatsBackup, importStats, createStatsBackup } from '../domain/statsBackup.js';
 
@@ -169,6 +169,7 @@ export class DesktopDataStore {
         const previous = discord.destinations.find((item) => item.id === payload?.previousId);
         discord = upsertDiscordDestination(discord, { ...payload, webhookUrl: payload?.webhookUrl?.trim() || previous?.webhookUrl || '' });
       } else if (action === 'select') discord = selectDiscordDestination(discord, payload);
+      else if (action === 'set-delivery') discord = setDiscordDelivery(discord, payload);
       else if (action === 'remove') discord = removeDiscordDestination(discord, payload);
       else if (action === 'toggle') discord = { ...discord, enabled: !discord.enabled };
       else if (action === 'clear') discord = emptyDiscord();

@@ -42,6 +42,11 @@ export function selectDiscordDestination(settings, id) {
   return { ...settings, activeDestinationId: id };
 }
 
+export function setDiscordDelivery(settings, id) {
+  if (id === null) return { ...settings, enabled: false };
+  return { ...selectDiscordDestination(settings, id), enabled: true };
+}
+
 export function removeDiscordDestination(settings, id) {
   const destinations = settings.destinations.filter((destination) => destination.id !== id);
   const removedActive = settings.activeDestinationId === id;

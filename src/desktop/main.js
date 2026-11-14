@@ -61,6 +61,7 @@ if (!app.requestSingleInstanceLock()) {
     syncRoomClient = registerSyncRoomIpc({ ipcMain, isSender: isAppSender, getWindow: () => mainWindow });
     session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => callback(permission === 'clipboard-sanitized-write'));
     session.defaultSession.setPermissionCheckHandler((_webContents, permission) => permission === 'clipboard-sanitized-write');
+    ipcMain.handle('app:version', (event) => isAppSender(event) ? app.getVersion() : null);
     protocol.handle('lol-draw', async (request) => {
       try {
         const asset = resolveAsset(assetRoot, request.url);

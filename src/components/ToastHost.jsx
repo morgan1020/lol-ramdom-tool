@@ -11,12 +11,12 @@ export function ToastHost() {
     const locate = () => setTarget([...document.querySelectorAll('dialog[open]')].at(-1) || document.body);
     locate();
     const observer = new MutationObserver(locate);
-    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] });
     return () => observer.disconnect();
   }, []);
   const front = toasts.map(toast => `${toast.id}:${toast.version}`).join('|');
   useLayoutEffect(() => {
-    if (!layer.current?.showPopover) return;
+    if (!layer.current?.isConnected || !layer.current.showPopover) return;
     if (layer.current.matches(':popover-open')) layer.current.hidePopover();
     layer.current.showPopover();
   }, [front, target]);

@@ -1,10 +1,15 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { discoverSyncRoom, SyncRoomClient, validateSyncRoomUrl } from './syncRoomClient.js';
 
-// A future public default belongs here only after a project-owned URL exists.
-const publicServiceUrl = '';
-
 function defaultServiceUrl() {
-  try { return validateSyncRoomUrl(process.env.LOL_ROOM_SERVICE_URL || publicServiceUrl); }
+  try {
+    const override = process.env.LOL_ROOM_SERVICE_URL;
+    if (override) return validateSyncRoomUrl(override);
+    if (!process.resourcesPath) return '';
+    const config = JSON.parse(readFileSync(path.join(process.resourcesPath, 'room-service.json'), 'utf8'));
+    return validateSyncRoomUrl(config.url);
+  }
   catch { return ''; }
 }
 

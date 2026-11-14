@@ -76,6 +76,11 @@ try {
       if (roomEntry && !roomEntry.disabled) { roomEntry.click(); break; }
       await pause();
     }
+    const optionSelector = 'dialog[open] .sync-dialog-actions button:not(:disabled)';
+    for (let i = 0; i < 200 && !document.querySelector(optionSelector); i += 1) await pause();
+    const roomOption = [...document.querySelectorAll(optionSelector)].find(item => item.textContent.trim() === (${JSON.stringify(role)} === 'guest' ? '加入房間' : '建立房間'));
+    if (!roomOption) throw new Error('找不到多人房間選項');
+    roomOption.click();
     for (let i = 0; i < 200 && !document.querySelector('#sync-server-url'); i += 1) await pause();
     const setField = (selector, value) => {
       const input = document.querySelector(selector);
@@ -84,11 +89,7 @@ try {
       input.dispatchEvent(new Event('input', { bubbles: true }));
     };
     setField('#sync-server-url', ${JSON.stringify(url.href)});
-    if (${JSON.stringify(role)} === 'guest') {
-      const join = [...document.querySelectorAll('.sync-connect-form button')].find(item => item.textContent.trim() === '加入房間');
-      if (!join) throw new Error('找不到加入房間按鈕');
-      join.click();
-    } else {
+    if (${JSON.stringify(role)} !== 'guest') {
       const waitFor = async (check) => {
         for (let i = 0; i < 200; i += 1) { if (check()) return; await pause(); }
         throw new Error('測試 Discord 設定未就緒');
