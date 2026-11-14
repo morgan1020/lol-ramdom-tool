@@ -8,6 +8,7 @@ import {
   removeDiscordDestination,
   sendActiveDiscordDraw,
   selectDiscordDestination,
+  setDiscordDelivery,
   upsertDiscordDestination
 } from '../domain/discordDestinations.js';
 
@@ -33,16 +34,17 @@ export function useDiscordSync() {
   const mutate = async (action, payload, webAction) => {
     if (mutationInProgress.current || isSending.current) throw new Error('正在處理 Discord 設定，請稍候');
     mutationInProgress.current = true; setPending(true);
-    try { applySettings(hasDesktopData() ? await changeDesktopDiscord(action, payload) : webAction()); if (action === 'toggle' || action === 'select') notify('Discord 設定已儲存', { id: 'discord-settings' }); }
+    try { applySettings(hasDesktopData() ? await changeDesktopDiscord(action, payload) : webAction()); if (['toggle', 'select', 'set-delivery'].includes(action)) notify('Discord 設定已儲存', { id: 'discord-settings' }); }
     finally { mutationInProgress.current = false; setPending(false); }
   };
   const configure = (destination) => mutate('configure', destination, () => saveDiscordSync(upsertDiscordDestination(settingsRef.current, destination)));
   const select = (id) => mutate('select', id, () => saveDiscordSync(selectDiscordDestination(settingsRef.current, id)));
+  const setDelivery = (id) => mutate('set-delivery', id, () => saveDiscordSync(setDiscordDelivery(settingsRef.current, id)));
   const remove = (id) => mutate('remove', id, () => saveDiscordSync(removeDiscordDestination(settingsRef.current, id)));
   const toggle = () => mutate('toggle', null, () => saveDiscordSync({ ...settingsRef.current, enabled: !settingsRef.current.enabled }));
   const clear = () => mutate('clear', null, clearDiscordSync);
 
-  const syncDraw = useCallback(async (results) => {
+  const syncDraw = useCallback(async (results, { allowRetry = true } = {}) => {
     if (mutationInProgress.current || isSending.current) return false;
     const currentSettings = settingsRef.current;
     const destination = getActiveDiscordDestination(currentSettings);
@@ -50,25 +52,27 @@ export function useDiscordSync() {
     const label = getDiscordDestinationLabel(destination);
     const currentRequest = ++requestId.current;
     isSending.current = true;
-    lastDraw.current = { results };
+    lastDraw.current = allowRetry ? { results } : null;
     setStatus({ state: 'sending', message: `正在傳送本次結果到 ${label}…` });
     try {
       if (hasDesktopData()) await desktopRequest('sendDataDiscord', results);
       else await sendActiveDiscordDraw(currentSettings, results);
-      if (currentRequest === requestId.current) { setStatus({ state: 'sent', message: `本次分路結果已傳送到 ${label}` }); notify(`已傳送到 ${label}`, { id: 'discord-delivery' }); }
+      if (currentRequest === requestId.current) {
+        setStatus({ state: 'sent', message: `本次分路結果已傳送到 ${label}` });
+        notify(`已傳送到 ${label}`, { id: 'discord-delivery' });
+      }
     } catch (error) {
-      if (currentRequest === requestId.current) { setStatus({ state: 'error', message: error.message }); notify(error.message || 'Discord 傳送失敗', { id: 'discord-delivery', type: 'error', action: { label: '重送', onClick: () => lastDraw.current ? syncDraw(lastDraw.current.results) : undefined } }); }
+      if (currentRequest === requestId.current) {
+        setStatus({ state: 'error', message: error.message });
+        notify(error.message || 'Discord 傳送失敗', { id: 'discord-delivery', type: 'error', ...(allowRetry ? { action: { label: '重送', onClick: () => lastDraw.current ? syncDraw(lastDraw.current.results) : undefined } } : {}) });
+      }
       return false;
     } finally {
       if (currentRequest === requestId.current) isSending.current = false;
     }
+    return true;
   }, []);
 
-  const retry = () => {
-    if (status.state === 'error' && !isSending.current && lastDraw.current) {
-      void syncDraw(lastDraw.current.results);
-    }
-  };
 
-  return { settings, status, pending, configure, select, remove, toggle, clear, syncDraw, retry };
+  return { settings, status, pending, configure, select, setDelivery, remove, toggle, clear, syncDraw };
 }

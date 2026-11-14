@@ -1,11 +1,11 @@
 import { notify, dismissNotice } from '../notifications.js';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { getActiveDiscordDestination, getDiscordDestinationLabel } from '../domain/discordDestinations.js';
 import { UiIcon } from './UiIcon.jsx';
-import { DiscordDestinationPicker } from './DiscordDestinationPicker.jsx';
 import { ToggleSwitch } from './ToggleSwitch.jsx';
+import { SelectMenu } from './SelectMenu.jsx';
 
-export function DiscordSyncPanel({ settings, status, onSelect, onToggle, disabled = false, label = 'Discord 同步', showDestination = true }) {
+export function DiscordSyncPanel({ settings, status, onToggle, disabled = false, label = 'Discord 同步' }) {
   const setError = message => { if (message) notify(message, { id: 'discord-controls', type: 'error' }); else dismissNotice('discord-controls'); };
   const [pending, setPending] = useState(false);
   const active = getActiveDiscordDestination(settings);
@@ -19,11 +19,26 @@ export function DiscordSyncPanel({ settings, status, onSelect, onToggle, disable
   return <section className="discord-sync-controls" aria-label="Discord 同步">
     <span className="discord-sync-label"><UiIcon name="send" />{label}</span>
     <ToggleSwitch enabled={settings.enabled} disabled={sending} unavailable={!active} label="Discord 自動同步" onToggle={() => runAction(onToggle)} />
-    {showDestination && <div className="discord-panel-destination"><DiscordDestinationPicker settings={settings} disabled={sending} onSelect={id => runAction(() => onSelect(id))} /></div>}
   </section>;
 }
 
-export function DiscordSyncStatus({ status, onRetry }) {
-  useEffect(() => { if (status.message) notify(status.message, { id: 'discord-status', type: status.state === 'error' ? 'error' : 'success', ...(status.state === 'error' ? { action: { label: '重送', onClick: onRetry } } : {}) }); }, [status.message, status.state, onRetry]);
-  return null;
+export function DrawDiscordControls({ discordSync, disabled, onManage }) {
+  const { settings, status } = discordSync;
+  const locked = disabled || discordSync.pending || status.state === 'sending';
+
+  const active = getActiveDiscordDestination(settings);
+  const selected = active && settings.enabled ? active.id : 'off';
+  const summary = !active ? '未設定' : settings.enabled ? getDiscordDestinationLabel(active) : '不自動傳送';
+  const options = [
+    { value: 'off', label: '不自動傳送' },
+    ...settings.destinations.map(destination => ({
+      value: destination.id, label: `自動傳送到 ${getDiscordDestinationLabel(destination)}`
+    })),
+    { value: 'manage', label: '管理 Webhook', icon: <UiIcon name="settings" /> }
+  ];
+
+  return <SelectMenu className="draw-discord-menu" triggerClassName="discord-destination-trigger"
+    menuClassName="discord-destination-menu" label="Discord" displayLabel={summary} triggerIcon={<UiIcon name="discord" />}
+    value={selected} options={options} disabled={locked}
+    onChange={id => id === 'manage' ? onManage() : discordSync.setDelivery(id === 'off' ? null : id)} />;
 }

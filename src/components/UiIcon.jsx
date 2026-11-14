@@ -18,6 +18,7 @@ const symbols = {
   message: <path d="M21 11a8 8 0 0 1-8 8H7l-4 3V11a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8ZM8 10h8m-8 4h5" />,
   users: <><circle cx="9" cy="8" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m3 10v-3a6 6 0 0 0-2-4" /></>,
   history: <><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7M12 7v5l3 2" /></>,
+  refresh: <path d="M20 4v5h-5m4.65 0a8 8 0 1 0 .15 5" />,
   plus: <path d="M12 5v14M5 12h14" />,
   close: <path d="m6 6 12 12M6 18 18 6" />,
   arrow: <path d="M4 12h16m-6-6 6 6-6 6" />,

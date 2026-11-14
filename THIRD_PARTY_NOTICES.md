@@ -8,8 +8,6 @@ League of Legends、英雄名稱、英雄圖片、遊戲分路圖示及相關遊
 
 | 檔案／資源 | 來源與處理方式 | 本專案使用情形 |
 | --- | --- | --- |
-| `assets/roles/svg/position-*.svg` | [CommunityDragon 靜態 SVG](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/)，2026-10-25 擷取；移除外部 `glow.css` 的 XML stylesheet 宣告 | 網站與 App 的五路圖示；保留原圖形、透明度及金色，詳見 [來源紀錄](assets/roles/svg/README.md) |
-| `assets/roles/Top_icon.png`、`Jungle_icon.png`、`Middle_icon.png`、`Bottom_icon.png`、`Support_icon.png` | 舊版沿用的 LoL 分路圖示；2026-04-27 提交 `286f486` 加入，歷史未記錄原始下載網址，不臆測特定下載來源 | 保留於原始碼；目前 `RoleIcon.jsx` 使用上述 SVG，這五個 PNG 不由目前介面匯入。仍按第三方遊戲素材處理，未納入 MIT |
 | `src/data/champions.json` | [Riot Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon)，由 `scripts/update-champions.mjs` 取得並整理 `zh_TW` 英雄資料；版本及更新時間保留於 JSON | 英雄資料快照隨網站與 App 打包 |
 | 英雄圖片（`https://ddragon.leagueoflegends.com/cdn/<版本>/img/champion/<ID>.png`） | Riot Data Dragon CDN；網址由英雄資料快照指定 | 執行時由 CDN 載入；圖片本身未下載至此儲存庫 |
 | `src/data/champion-positions.json` | [CommunityDragon 英雄統計來源](https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-champion-statistics/global/default/rcp-fe-lol-champion-statistics.js)，由 `scripts/update-champion-positions.mjs` 整理；來源 URL、SHA-256 及對應 Data Dragon 版本保留於 JSON | 英雄分路快照隨網站與 App 打包 |
@@ -30,6 +28,8 @@ LOL Random Tool is not endorsed by Riot Games and does not reflect the views or 
 
 `src/components/UiIcon.jsx` 的 Discord SVG path 取自 [Simple Icons 的 discord.svg](https://github.com/simple-icons/simple-icons/blob/develop/icons/discord.svg)，以 JSX 內嵌並使用目前文字色呈現。Simple Icons 依 [CC0 1.0 Universal](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md) 提供；此部分保留 CC0，不因所在程式檔案採 MIT 而改變原條款。Discord 品牌與商標權利仍屬原權利人；CC0 不授予商標權。
 
+CSS 使用裝置上已安裝的字型與系統替代字型。Segoe UI、Microsoft JhengHei、Inter、Noto Sans TC 等名稱出現在字型清單，建置未隨附這些字型檔，也沒有從外部字型服務載入。
+
 ## 第三方軟體
 
 以下為此版本 lockfile／本機安裝所記錄的主要套件，版本更新時應同步檢查。完整相依關係見 `package-lock.json`；此表不是完整的遞迴相依套件清單。
@@ -43,6 +43,10 @@ LOL Random Tool is not endorsed by Riot Games and does not reflect the views or 
 | Vite | 7.3.7 | MIT；[Vite](https://github.com/vitejs/vite)；建置工具 |
 | @vitejs/plugin-react | 5.2.0 | MIT；[Vite React plugin](https://github.com/vitejs/vite-plugin-react)；建置工具 |
 | electron-builder | 26.18.0 | MIT；[electron-builder](https://github.com/electron-userland/electron-builder)；打包工具，其 NSIS 等工具及其他相依元件各有自己的條款 |
+| ws | 8.22.2 | MIT；[ws](https://github.com/websockets/ws)；本機多人房間原型服務與整合測試使用，不隨桌面 App 打包；完整授權見安裝套件的 `LICENSE` |
+| Wrangler | 4.160.0 | MIT 或 Apache-2.0；[Cloudflare Workers SDK](https://github.com/cloudflare/workers-sdk)；雲端服務建置與部署工具，不隨桌面 App 打包 |
+| Miniflare | 5.20261110.0-beta | MIT；[Cloudflare Miniflare](https://github.com/cloudflare/workers-sdk/tree/main/packages/miniflare)；與本次 Wrangler 相容的本機測試 runtime，不隨桌面 App 打包 |
+| workerd | 1.20261110.1 | Apache-2.0；[Cloudflare workerd](https://github.com/cloudflare/workerd)；Miniflare 使用的 Workers runtime，不隨桌面 App 打包 |
 
 Windows 產物的執行檔旁提供本聲明與 `LICENSE`。React、React DOM、scheduler 原授權保留於 `resources/app.asar` 的對應 `node_modules/<套件>/LICENSE`；Electron 原授權保留為執行檔旁的 `LICENSE.electron.txt`，內含元件聲明保留為 `LICENSES.chromium.html`。以下另附前端 bundle 使用的 React／React DOM／scheduler 完整 MIT 聲明，方便網站與 App 再散布時一併保留。
 

@@ -56,6 +56,7 @@ if (!app.requestSingleInstanceLock()) {
     registerDataIpc({ ipcMain, store, isSender: isAppSender, getWindow: () => mainWindow, dialog, shell });
     session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => callback(permission === 'clipboard-sanitized-write'));
     session.defaultSession.setPermissionCheckHandler((_webContents, permission) => permission === 'clipboard-sanitized-write');
+    ipcMain.handle('app:version', (event) => isAppSender(event) ? app.getVersion() : null);
     protocol.handle('lol-draw', async (request) => {
       try {
         const asset = resolveAsset(assetRoot, request.url);
@@ -77,11 +78,11 @@ if (!app.requestSingleInstanceLock()) {
       })).finally(() => { lobbyRead = null; });
       return lobbyRead;
     });
-    ipcMain.handle('lol:apply-roles', async (event, results) => {
+    ipcMain.handle('lol:apply-roles', async (event, results, expectedName) => {
       if (!isAppSender(event)) return { ok: false, message: '不允許的客戶端操作來源' };
       if (applyingRoles || lobbyRead) return { ok: false, message: '正在處理客戶端操作，請稍候再試' };
       applyingRoles = true;
-      try { return { ok: true, applied: await applyCurrentPlayerRoles(results) }; }
+      try { return { ok: true, applied: await applyCurrentPlayerRoles(results, { expectedName }) }; }
       catch (error) { return { ok: false, message: error instanceof ClientError ? error.message : '套用分路失敗，請查看客戶端；不會自動重送' }; }
       finally { applyingRoles = false; }
     });

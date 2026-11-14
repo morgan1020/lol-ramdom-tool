@@ -59,6 +59,14 @@ test('account, team, phase, custom lobby and unsupported map changes block all w
   }
 });
 
+test('application requires the current account to match the expected Riot ID', async () => {
+  const mock = fixture();
+  await assert.rejects(applyCurrentPlayerRoles(mock.results, { ...mock, expectedName: 'Player2#TW' }), /房間中的 Riot ID/);
+  assert.equal(mock.writes.length, 0);
+  await applyCurrentPlayerRoles(mock.results, { ...mock, expectedName: 'Player1#TW' });
+  assert.equal(mock.writes.length, 1);
+});
+
 test('stale or manual names and invalid draw payloads cannot change the client', async () => {
   for (const payload of [[], null, [{ name: 'Other#TW', main: '上路', secondary: '中路' }], [{ name: 'Player1#TW', main: 'INVALID' }], [{ name: 'Player1#TW', main: '上路' }, { name: 'Player2#TW', main: '上路' }]]) {
     const mock = fixture();

@@ -26,7 +26,7 @@ function matchesTeam(snapshot, lobby) {
     lobby.gameConfig?.queueId === snapshot.queueId && !lobby.gameConfig?.isCustom;
 }
 
-export async function applyCurrentPlayerRoles(results, { discover = discoverConnection, request = requestClient } = {}) {
+export async function applyCurrentPlayerRoles(results, { discover = discoverConnection, request = requestClient, expectedName } = {}) {
   validateResults(results);
   const connection = await discover();
   const read = (endpoint) => request(connection, endpoint);
@@ -37,6 +37,7 @@ export async function applyCurrentPlayerRoles(results, { discover = discoverConn
   const ownName = current?.gameName && current?.tagLine ? `${current.gameName.trim()}#${current.tagLine.trim()}` : '';
   const ownPlayer = snapshot.players.find((player) => player.id === ownId && player.name === ownName);
   if (!ownPlayer || ownId !== snapshot.localPlayerId) throw new ClientError('無法確認目前登入帳號，未更改客戶端');
+  if (expectedName !== undefined && ownName !== expectedName) throw new ClientError('房間中的 Riot ID 與目前登入帳號不同，未更改客戶端');
   if (results.length !== snapshot.players.length || results.some((result) => !snapshot.players.some((player) => player.name === result.name))) {
     throw new ClientError('目前隊伍與抽籤名單不同，未更改客戶端；請重新讀取隊伍並抽籤');
   }

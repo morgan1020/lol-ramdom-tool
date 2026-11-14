@@ -1,8 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('lolDesktop', {
+  getVersion: () => ipcRenderer.invoke('app:version'),
   readLobby: () => ipcRenderer.invoke('lol:read-lobby'),
-  applyRoles: (results) => ipcRenderer.invoke('lol:apply-roles', results),
+  applyRoles: (results, expectedName) => ipcRenderer.invoke('lol:apply-roles', results, expectedName),
   initializeData: (legacy) => ipcRenderer.invoke('data:initialize', legacy),
   saveDataStats: (stats) => ipcRenderer.invoke('data:save-stats', stats),
   saveDataPreferences: (patch) => ipcRenderer.invoke('data:save-preferences', patch),
