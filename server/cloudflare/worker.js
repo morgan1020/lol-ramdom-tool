@@ -1,3 +1,4 @@
+import { roomForMember, roomReplyForMember } from '../../src/domain/roomVisibility.js';
 import { createRoom, reduceRoom } from '../../src/domain/syncRoom.js';
 import { discoveryTtlMs, isTeamKey, selectRoom, teamKey } from '../../src/domain/roomDiscovery.js';
 
@@ -157,7 +158,10 @@ export class SyncRoomDurableObject {
   }
   broadcast() {
     if (!this.data) return;
-    for (const socket of this.ctx.getWebSockets()) if (this.currentSession(socket)) this.send(socket, { type: 'state', room: this.data.state });
+    for (const socket of this.ctx.getWebSockets()) {
+      const session = this.currentSession(socket);
+      if (session) this.send(socket, { type: 'state', room: roomForMember(this.data.state, session.memberId) });
+    }
   }
   deadline(data = this.data) {
     const times = [];
@@ -321,7 +325,7 @@ export class SyncRoomDurableObject {
       if (other !== socket && other.deserializeAttachment()?.sessionHash === hash) this.close(other, 4001, 'Session resumed');
     }
     await this.schedule();
-    this.send(socket, { type: 'ack', requestId, ok: true, ...(!resuming ? { token } : {}), memberId: session.memberId, room: next.state });
+    this.send(socket, { type: 'ack', requestId, ok: true, ...(!resuming ? { token } : {}), memberId: session.memberId, room: roomForMember(next.state, session.memberId) });
     this.broadcast();
   }
   async command(socket, attached, request, now) {
@@ -331,19 +335,20 @@ export class SyncRoomDurableObject {
     const { requestId, type } = request;
     if (session.replyIds.includes(requestId)) {
       const saved = await this.ctx.storage.get(ackKey(attached.sessionHash, requestId));
-      if (saved) { this.send(socket, saved); return; }
+      if (saved) { this.send(socket, roomReplyForMember(saved, next.state, session.memberId)); return; }
     }
     if (requestId <= session.lastRequestId) throw new Error('操作已過期，請確認目前房間狀態');
     session.lastRequestId = requestId;
     let reply;
     try {
       if (!allowedCommands.has(type)) throw new Error('不支援的房間操作');
+      if (type !== 'leave' && roomForMember(next.state, session.memberId).pendingApproval) throw new Error('請等待主持人核准加入');
       const command = type === 'add-manual'
         ? { type, memberId: crypto.randomUUID(), name: request.name }
         : { type, memberId: request.memberId, ready: request.ready, names: request.names, revision: request.revision, drawMode: request.drawMode, preferences: request.preferences };
       next.state = reduceRoom(next.state, session.memberId, command, { now, createMemberId: () => crypto.randomUUID() });
       next.lastActive = now;
-      reply = { type: 'ack', requestId, ok: true, room: next.state };
+      reply = { type: 'ack', requestId, ok: true, room: roomForMember(next.state, session.memberId) };
     } catch (error) { reply = { type: 'ack', requestId, ok: false, message: error.message }; }
     if (reply.ok && next.state.closed) {
       await this.end('主持人已關閉房間', socket, reply); return;

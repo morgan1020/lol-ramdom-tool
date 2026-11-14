@@ -32,7 +32,13 @@ export async function runCloudSmoke({ url, requestTimeoutMs = 8000 } = {}) {
     phase = 'join';
     await guest.connect({ url: parsed.href, action: 'join', roomId, name: '同步測試朋友#DEMO' });
     const guestId = guest.getState().memberId;
-    expect(guest.getState().room.members.length === 2);
+    const pendingOnly = room => room?.pendingApproval === true && Object.keys(room).sort().join(',') === 'pendingApproval,revision,roomId';
+    expect(pendingOnly(guest.getState().room));
+    const pendingRevision = guest.getState().room.revision;
+    guest.socket.close();
+    await waitFor(() => guest.getState().connection === 'connected' && guest.getState().room?.revision > pendingRevision);
+    expect(pendingOnly(guest.getState().room));
+    report.checks.pendingRosterHidden = true;
     report.checks.join = true;
     phase = 'permissions';
     for (const command of [{ type: 'draw' }, { type: 'close' }, { type: 'ready', ready: true }]) {
@@ -44,6 +50,9 @@ export async function runCloudSmoke({ url, requestTimeoutMs = 8000 } = {}) {
     report.checks.permissions = true;
     phase = 'draw';
     await host.command({ type: 'approve', memberId: guestId });
+    await waitFor(() => guest.getState().room?.members?.length === 2);
+    expect(guest.getState().room.members.some(member => member.name === '同步測試主持人#DEMO'));
+    report.checks.approvedRosterVisible = true;
     await host.command({ type: 'ready', ready: true });
     await guest.command({ type: 'ready', ready: true });
     const first = await host.command({ type: 'draw' });

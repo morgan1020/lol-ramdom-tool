@@ -13,6 +13,9 @@ const isName = value => typeof value === 'string' && value.length <= 200 && valu
 
 export function validateRoomSnapshot(room) {
   const invalid = () => { throw new Error('房間狀態格式錯誤'); };
+  if (room?.pendingApproval === true && isId(room.roomId) && isCount(room.revision)) {
+    return { roomId: room.roomId, revision: room.revision, pendingApproval: true };
+  }
   if (!room || !isId(room.roomId) || !isId(room.hostId) || !isCount(room.revision) || !isCount(room.createdAt) ||
     (room.lobbySynced !== undefined && room.lobbySynced !== true) ||
     !isCount(room.resultVersion) || typeof room.closed !== 'boolean' || !Array.isArray(room.members) ||
@@ -235,7 +238,7 @@ export class SyncRoomClient {
         try {
           const reply = await this.request(handshake);
           if (!current() || settled) { finish(new Error('房間連線已取代')); return; }
-          if (!isId(reply.memberId) || !reply.room.members.some(member => member.id === reply.memberId)) throw new Error('房間身分格式錯誤');
+          if (!isId(reply.memberId) || (!reply.room?.pendingApproval && !reply.room?.members?.some(member => member.id === reply.memberId))) throw new Error('房間身分格式錯誤');
           if (handshake.type !== 'resume' && (typeof reply.token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(reply.token))) throw new Error('房間憑證格式錯誤');
           const room = validateRoomSnapshot(reply.room);
           this.token = reply.token || this.token;

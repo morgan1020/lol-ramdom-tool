@@ -30,7 +30,7 @@ async function createTestServer() {
   const root = path.resolve('.');
   const mf = new Miniflare(convertV4MiniflareOptions({
     name: 'sync-room-ui-test',
-    modules: ['server/cloudflare/worker.js', 'src/domain/syncRoom.js', 'src/domain/draw.js', 'src/domain/roomDiscovery.js']
+    modules: ['server/cloudflare/worker.js', 'src/domain/syncRoom.js', 'src/domain/draw.js', 'src/domain/roomDiscovery.js', 'src/domain/roomVisibility.js']
       .map(file => ({ type: 'ESModule', path: path.join(root, file) })),
     modulesRoot: root, compatibilityDate: '2026-11-11', host: '127.0.0.1', port: 0,
     durableObjects: {
@@ -141,6 +141,7 @@ app.whenReady().then(async () => {
     await guest.connect({ url: server.url, action: 'join', roomId: hostState.room.roomId, name: '隊友#TW2' });
     await run(`await wait(() => document.querySelector('[aria-label="核准 隊友#TW2"]')); if (!document.querySelector('.primary-draw').disabled) throw Error('Draw enabled before approval');`);
     await run(`if (document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card').length !== 5 || !document.querySelector('.sync-room-card-toolbar').textContent.includes('5 / 5')) throw Error('Room must show one card per player and the team capacity');`);
+    assert.equal(guest.getState().room.pendingApproval, true);
     await capture('pending-approval.png');
     await run(`
       const cards = [...document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card')];
@@ -150,7 +151,7 @@ app.whenReady().then(async () => {
       if (document.querySelector('#tool-tab-roles').getAttribute('aria-selected') !== 'true') throw Error('Room should be within role draw');
     `);
     await run(`click('核准'); await wait(settled); await wait(() => !document.querySelector('[aria-label="核准 隊友#TW2"]'));`);
-    await until(() => guest.getState().room?.members.find((member) => member.name === '隊友#TW2')?.approved, 'Guest did not receive approval');
+    await until(() => guest.getState().room?.members?.find((member) => member.name === '隊友#TW2')?.approved, 'Guest did not receive approval');
     assert.equal(guest.getState().room.members.filter(member => member.manual).length, 3);
     await guest.command({ type: 'ready', ready: true });
     await run(`
@@ -279,7 +280,7 @@ app.whenReady().then(async () => {
     await run(`click('開始抽籤'); await wait(() => settled() && document.querySelector('.sync-room-notice')?.textContent.includes('名單已更新'));`);
     assert.equal(discordSends.length, 2);
     assert.equal(applyCalls.length, 4);
-    await until(() => guest.getState().room?.members.some(member => member.name === '替補#TW3'), 'Guest did not receive refreshed lobby');
+    await until(() => guest.getState().room?.members?.some(member => member.name === '替補#TW3'), 'Guest did not receive refreshed lobby');
     assert.equal(guest.getState().room.result.archived, true);
     await guest.command({ type: 'ready', ready: true });
     guest.socket.close();
@@ -319,6 +320,7 @@ app.whenReady().then(async () => {
     await run(`
       click('加入目前隊伍');
       await wait(() => settled() && document.querySelector('.sync-guest-status')?.textContent.includes('等待主持人核准加入'));
+      if (document.querySelector('.sync-room-workspace .roster-player-card')) throw Error('Pending guest saw a player card');
     `);
     const discoveredGuest = guest.getState().room.members.find(member => member.name === '房主#TW1');
     assert.equal(discoveredGuest.approved, false);

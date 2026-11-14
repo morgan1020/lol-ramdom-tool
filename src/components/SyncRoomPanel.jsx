@@ -56,10 +56,11 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       setNotice('');
     }
   }, [entryRequest]);
-  const self = room?.members.find((member) => member.id === sync.memberId);
-  const activeRoom = Boolean(room && !room.closed && self);
+  const self = room?.members?.find((member) => member.id === sync.memberId);
+  const pendingApproval = room?.pendingApproval === true || self?.approved === false;
+  const activeRoom = Boolean(room && !room.closed && (self || pendingApproval));
   const isHost = activeRoom && room.hostId === sync.memberId;
-  const canShowReady = activeRoom && !isHost && self.approved && room.lobbySynced;
+  const canShowReady = activeRoom && !isHost && self?.approved && room.lobbySynced;
   const busy = sync.initializing || sync.busy || reading || applying || sync.connection === 'connecting';
   useEffect(() => {
     onRoomStatusChange?.({ active: activeRoom, busy });
@@ -69,10 +70,10 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     if (visible && wasInRoom.current && !activeRoom) onBack();
     wasInRoom.current = activeRoom;
   }, [activeRoom, visible, onBack]);
-  const allReady = activeRoom && room.members.every(member => isRoomPlayerReady(member, room.hostId));
+  const allReady = activeRoom && !pendingApproval && room.members.every(member => isRoomPlayerReady(member, room.hostId));
   const preferences = room?.drawMode === 'custom' ? room.preferences : {};
   const canDraw = connected && isHost && room.lobbySynced && allReady && !busy;
-  const result = connected && activeRoom && room.lobbySynced && self.approved && (isHost || self.ready) && !room.result?.archived ? room.result : null;
+  const result = connected && activeRoom && room.lobbySynced && self?.approved && (isHost || self.ready) && !room.result?.archived ? room.result : null;
   const resultId = result?.id;
   useEffect(() => {
     if (!resultId || seenResultId.current === resultId) return;
@@ -218,8 +219,8 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     {connected ? <span className="sync-connection-dot" role="status" title="已連線"><span className="sr-only">已連線</span></span>
       : <span role="status">{connectionLabels[sync.connection]}</span>}
   </div>;
-  const teamCount = activeRoom && `${room.members.length} / 5`;
-  const pendingMembers = activeRoom ? room.members.filter(member => !isRoomPlayerReady(member, room.hostId)) : [];
+  const teamCount = activeRoom && !pendingApproval && `${room.members.length} / 5`;
+  const pendingMembers = activeRoom && !pendingApproval ? room.members.filter(member => !isRoomPlayerReady(member, room.hostId)) : [];
   const waitingNames = members => members.map(member => labels[member.name]).join('、');
   const unapproved = pendingMembers.filter(member => !member.approved);
   const offline = pendingMembers.filter(member => member.approved && !member.connected);
@@ -233,7 +234,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       <h1 id="sync-room-title" className="draw-screen-title">{result ? '本次抽籤結果' : '多人抽分路'}</h1>
       {roomSummary}
       {!isHost &&
-        <p className="sync-guest-status" role="status">{!connected || !room.lobbySynced ? waitingReason : !self.approved ? '等待主持人核准加入' : self.ready ? '已準備，等候主持人抽籤' : '確認名單與分路後，就可以準備。'}</p>
+        <p className="sync-guest-status" role="status">{!connected ? waitingReason : pendingApproval ? '等待主持人核准加入' : !room.lobbySynced ? waitingReason : self.ready ? '已準備，等候主持人抽籤' : '確認名單與分路後，就可以準備。'}</p>
       }
     </div>
   </header>;
@@ -308,7 +309,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     {notice && <p className="sync-room-notice" role="status">{notice}</p>}
     <section className="role-workspace draw-workspace sync-room-workspace">
       {roomHeader}
-      <div className="workspace-scroll">
+      {!pendingApproval && <div className="workspace-scroll">
         <div className="sync-room-card-toolbar">
           <div className="draw-roster-controls">
             <span className="visual-summary"><UiIcon name="users" />{teamCount}</span>
@@ -321,7 +322,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
           localPlayerId={self.id} busy={busy} revealId={revealId === resultId ? revealId : null}
           renderPlayerDetails={renderMemberStatus} renderPlayerActions={isHost ? renderMemberActions : undefined}
           renderRolePicker={isHost ? renderMemberRolePicker : undefined} />
-      </div>
+      </div>}
       {(isHost || canShowReady || result) && <footer className="draw-screen-actions">
         {isHost && <div className="draw-footer-status sync-room-discord">
           <DrawDiscordControls discordSync={discordSync} disabled={busy} onManage={onManageWebhook} />

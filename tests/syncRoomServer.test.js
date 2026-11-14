@@ -90,7 +90,8 @@ test('自架隊伍索引會拒絕過時比對、到期後仍可使用邀請', as
   assert.deepEqual(await discoverSyncRoom(url, changed), { status: 'missing' });
   await assert.rejects(guest.connect({ url, action: 'join', name: names[1], ...fresh }), /隊伍房間已變更/);
   await guest.connect({ url, action: 'join', name: names[1], roomId: fresh.roomId });
-  assert.equal(guest.getState().room.members.find(member => member.name === names[1]).approved, false);
+  assert.deepEqual(Object.keys(guest.getState().room).sort(), ['pendingApproval', 'revision', 'roomId']);
+  assert.equal(guest.getState().room.pendingApproval, true);
   assert.deepEqual(operations, ['put', 'lookup', 'delete', 'put', 'lookup', 'lookup', 'lookup']);
   t.diagnostic(JSON.stringify({ lookups: 4, puts: 2, deletes: 1, persistentStorage: 0 }));
 });
@@ -242,7 +243,8 @@ test('主持人離線超過期限自動關房，避免失去主持人的孤兒�
   const guest = client(t);
   await guest.connect({ url: server.url, action: 'join', roomId: created.room.roomId, name: '朋友#TW1' });
   host.socket.close();
-  await waitFor(() => guest.getState().room.members.find(member => member.id === created.memberId)?.connected === false);
+  await waitFor(() => guest.getState().room.revision > created.room.revision + 1);
+  assert.equal(guest.getState().room.pendingApproval, true);
   now += 51;
   await waitFor(() => guest.getState().connection === 'disconnected');
   assert.match(guest.getState().error, /主持人離線/);

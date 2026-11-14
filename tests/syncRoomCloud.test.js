@@ -30,7 +30,7 @@ async function runtime(t, bindings = {}, { connectionLimit = 60 } = {}) {
   const persistence = await mkdtemp(path.join(artifactRoot, 'run-'));
   const options = convertV4MiniflareOptions({
     name: 'sync-room-test',
-    modules: ['server/cloudflare/worker.js', 'src/domain/syncRoom.js', 'src/domain/draw.js', 'src/domain/roomDiscovery.js']
+    modules: ['server/cloudflare/worker.js', 'src/domain/syncRoom.js', 'src/domain/draw.js', 'src/domain/roomDiscovery.js', 'src/domain/roomVisibility.js']
       .map(file => ({ type: 'ESModule', path: path.join(root, file) })),
     modulesRoot: root,
     compatibilityDate: '2026-11-11',
@@ -112,7 +112,8 @@ test('Cloudflare 同隊索引在主持人斷線、重連和到期時維持正確
   assert.deepEqual(await discoverSyncRoom(url, names), { status: 'missing' });
   await assert.rejects(guest.connect({ url, action: 'join', name: names[1], ...match }), /隊伍房間已變更/);
   await guest.connect({ url, action: 'join', name: names[1], roomId: match.roomId });
-  assert.equal(guest.getState().room.members.find(member => member.name === names[1]).approved, false);
+  assert.deepEqual(Object.keys(guest.getState().room).sort(), ['pendingApproval', 'revision', 'roomId']);
+  assert.equal(guest.getState().room.pendingApproval, true);
   await host.command({ type: 'close' });
 });
 
@@ -154,7 +155,13 @@ test('Cloudflare workerd 加入 ACK 遺失後重試同一席位，拒絕錯誤�
   const [initial, retry] = observed.requests;
   assert.deepEqual(retry, { ...initial, requestId: retry.requestId });
   assert.equal(state.memberId, observed.ack.memberId);
-  assert.equal(state.room.members.length, 2);
+  assert.deepEqual(Object.keys(observed.ack.room).sort(), ['pendingApproval', 'revision', 'roomId']);
+  assert.equal(state.room.pendingApproval, true);
+  const pendingBroadcast = await waitFor(() => host.messages.find(message =>
+    message.type === 'state' && message.room.members.some(member => member.id === state.memberId)));
+  assert.equal(pendingBroadcast.room.members.length, 2);
+  assert.equal((await host.send({ type: 'approve', requestId: 2, memberId: state.memberId })).ok, true);
+  await waitFor(() => guest.getState().room.members?.length === 2);
 
   const other = await rawClient(t, base, roomId);
   assert.equal((await other.send({ ...initial, name: '其他人#TW1' })).ok, false);

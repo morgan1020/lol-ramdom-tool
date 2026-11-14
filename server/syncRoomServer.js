@@ -1,3 +1,4 @@
+import { roomForMember, roomReplyForMember } from '../src/domain/roomVisibility.js';
 import { createServer } from 'node:http';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { WebSocketServer } from 'ws';
@@ -51,7 +52,7 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
   };
   const broadcast = (entry) => {
     for (const session of sessions.values()) if (session.roomId === entry.state.roomId && session.socket) {
-      send(session.socket, { type: 'state', room: entry.state });
+      send(session.socket, { type: 'state', room: roomForMember(entry.state, session.memberId) });
     }
   };
   function removeRoom(roomId, message) {
@@ -129,7 +130,7 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
             entry.state = reduceRoom(entry.state, session.memberId, { type: 'connection', connected: true });
             if (session.memberId === entry.state.hostId) entry.hostDisconnectedAt = null;
             entry.lastActive = now();
-            send(socket, { type: 'ack', requestId, ok: true, ...(handshake ? { token } : {}), memberId: session.memberId, room: entry.state });
+            send(socket, { type: 'ack', requestId, ok: true, ...(handshake ? { token } : {}), memberId: session.memberId, room: roomForMember(entry.state, session.memberId) });
             broadcast(entry);
           } else if (handshake) {
             if (type === 'create' && rooms.size >= maxRooms) throw new Error('房間數量已滿，請稍後再試');
@@ -154,14 +155,14 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
               handshakeType: type, handshakeName: request.name, requestedRoomId };
             sessions.set(sessionToken, session);
             bind(socket, session);
-            send(socket, { type: 'ack', requestId, ok: true, token: sessionToken, memberId, room: entry.state });
+            send(socket, { type: 'ack', requestId, ok: true, token: sessionToken, memberId, room: roomForMember(entry.state, session.memberId) });
             broadcast(entry);
           } else throw new Error('請先建立或加入房間');
           clearTimeout(timer);
           return;
         }
         if (session.socket !== socket || !sessions.has(session.token)) throw new Error('連線已失效');
-        if (session.replies.has(requestId)) { send(socket, session.replies.get(requestId)); return; }
+        if (session.replies.has(requestId)) { send(socket, roomReplyForMember(session.replies.get(requestId), rooms.get(session.roomId).state, session.memberId)); return; }
         if (requestId <= session.lastRequestId) throw new Error('操作已過期，請確認目前房間狀態');
         session.lastRequestId = requestId;
         let reply;
@@ -169,6 +170,7 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
         try {
           if (!entry || entry.state.closed) throw new Error('房間已關閉');
           if (!commands.has(type)) throw new Error('不支援的房間操作');
+          if (type !== 'leave' && roomForMember(entry.state, session.memberId).pendingApproval) throw new Error('請等待主持人核准加入');
           // Actor identity and connection commands can never be supplied by clients.
           const command = type === 'add-manual'
             ? { type, memberId: randomUUID(), name: request.name }
@@ -180,7 +182,7 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
           }
           entry.state = next;
           entry.lastActive = now();
-          reply = { type: 'ack', requestId, ok: true, room: entry.state };
+          reply = { type: 'ack', requestId, ok: true, room: roomForMember(entry.state, session.memberId) };
         } catch (error) { reply = { type: 'ack', requestId, ok: false, message: error.message }; }
         session.replies.set(requestId, reply);
         if (session.replies.size > 128) session.replies.delete(session.replies.keys().next().value);

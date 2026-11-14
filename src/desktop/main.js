@@ -89,7 +89,7 @@ if (!app.requestSingleInstanceLock()) {
       const currentRoom = () => {
         const { connection, room, memberId } = syncRoomClient.getState();
         if (connection !== 'connected' || !room?.lobbySynced || room.closed || room.result?.archived || room.result?.id !== roomResultId) return null;
-        const member = room.members.find(entry => entry.id === memberId);
+        const member = room.members?.find(entry => entry.id === memberId);
         return member?.approved && (member.id === room.hostId || member.ready) && member.name === expectedName ? room.result : null;
       };
       const roomResult = roomResultId === undefined ? null : currentRoom();
