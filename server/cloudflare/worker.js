@@ -17,6 +17,12 @@ const option = (env, key, fallback) => {
 };
 const indexStub = (env, key) => env.TEAM_INDEX.get(env.TEAM_INDEX.idFromName(key));
 
+async function updateAlarm(storage, deadline) {
+  if (await storage.getAlarm() === deadline) return;
+  if (deadline === null) await storage.deleteAlarm();
+  else await storage.setAlarm(deadline);
+}
+
 async function readTeamKey(request) {
   if (!request.body) return null;
   const reader = request.body.getReader();
@@ -84,10 +90,10 @@ export class TeamIndexDurableObject {
     const expires = Object.values(entries);
     if (expires.length) {
       await txn.put('rooms', entries);
-      await txn.setAlarm(Math.min(...expires));
+      await updateAlarm(txn, Math.min(...expires));
     } else {
       await txn.delete('rooms');
-      await txn.deleteAlarm();
+      await updateAlarm(txn, null);
     }
   }
 
@@ -188,9 +194,7 @@ export class SyncRoomDurableObject {
     return times.length ? Math.max(Date.now() + 1, Math.min(...times)) : null;
   }
   async schedule() {
-    const deadline = this.deadline();
-    if (deadline == null) await this.ctx.storage.deleteAlarm();
-    else await this.ctx.storage.setAlarm(deadline);
+    await updateAlarm(this.ctx.storage, this.deadline());
   }
   async save(next, { writes = [], deletes = [] } = {}) {
     await this.ctx.storage.transaction(async txn => {

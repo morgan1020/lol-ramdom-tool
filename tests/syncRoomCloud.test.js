@@ -119,13 +119,15 @@ test('Cloudflare 同隊索引在主持人斷線、重連和到期時維持正確
 
 test('量測五人房短效索引每次查找與清理的儲存呼叫', async t => {
   const values = new Map();
+  let alarm = null;
   const operations = { reads: 0, puts: 0, deletes: 0, setAlarms: 0, deleteAlarms: 0 };
   const storage = {
     async get(key) { operations.reads++; return values.get(key); },
     async put(key, value) { operations.puts++; values.set(key, value); },
     async delete(key) { operations.deletes++; return values.delete(key); },
-    async setAlarm() { operations.setAlarms++; },
-    async deleteAlarm() { operations.deleteAlarms++; },
+    async getAlarm() { return alarm; },
+    async setAlarm(time) { operations.setAlarms++; alarm = time; },
+    async deleteAlarm() { operations.deleteAlarms++; alarm = null; },
     async transaction(callback) { return callback(this); }
   };
   const index = new TeamIndexDurableObject({ storage });
@@ -141,6 +143,18 @@ test('量測五人房短效索引每次查找與清理的儲存呼叫', async t 
   await update(0);
   assert.deepEqual(operations, { reads: 6, puts: 1, deletes: 1, setAlarms: 1, deleteAlarms: 1 });
   t.diagnostic(JSON.stringify({ guestLookups: 4, indexCalls: 6, ...operations }));
+
+  const deadline = Date.now() + 600000;
+  await update(deadline);
+  await update(deadline);
+  assert.equal(operations.setAlarms, 2);
+  for (const changed of [deadline - 1000, deadline + 1000]) {
+    await update(changed);
+    assert.equal(alarm, changed);
+  }
+  await update(0);
+  await update(0);
+  assert.equal(operations.deleteAlarms, 2);
 });
 
 test('Cloudflare workerd 加入 ACK 遺失後重試同一席位，拒絕錯誤身分及房間重播', { timeout: 30000 }, async t => {
