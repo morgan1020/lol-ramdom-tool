@@ -1,10 +1,11 @@
 import { roomForMember, roomReplyForMember } from '../../src/domain/roomVisibility.js';
-import { createRoom, reduceRoom } from '../../src/domain/syncRoom.js';
+import { createRoom, migratePendingRoom, reduceRoom } from '../../src/domain/syncRoom.js';
 import { discoveryTtlMs, isTeamKey, selectRoom, teamKey } from '../../src/domain/roomDiscovery.js';
 
 const allowedCommands = new Set(['approve', 'ready', 'draw', 'leave', 'close', 'remove', 'add-manual', 'sync-lobby', 'draw-settings']);
 const validRequestId = value => Number.isSafeInteger(value) && value > 0;
 const roomPath = /^\/rooms\/([A-Fa-f0-9]{10})$/;
+const sessionTokenPattern = /^[a-f0-9]{64}$/;
 const encoder = new TextEncoder();
 const hex = bytes => Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 const randomToken = () => hex(crypto.getRandomValues(new Uint8Array(32)));
@@ -111,6 +112,7 @@ export class SyncRoomDurableObject {
     this.ttl = option(env, 'ROOM_TTL_MS', 2 * 60 * 60 * 1000);
     this.hostGrace = option(env, 'HOST_DISCONNECT_GRACE_MS', 60000);
     this.handshakeTimeout = option(env, 'HANDSHAKE_TIMEOUT_MS', 10000);
+    this.pendingConnectionLimit = Math.min(option(env, 'ROOM_PENDING_CONNECTION_LIMIT', 5), 5);
     // Static text heartbeat replies do not wake hibernating objects or extend
     // room activity, so idle rooms still expire even while sockets stay healthy.
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"type":"ping"}', '{"type":"pong"}'));
@@ -120,8 +122,16 @@ export class SyncRoomDurableObject {
       if (!this.data) return;
       const next = structuredClone(this.data);
       const sockets = ctx.getWebSockets();
-      let changed = false;
+      const migrated = migratePendingRoom(next.state, () => crypto.randomUUID());
+      const pendingMigrated = migrated !== next.state;
+      next.state = migrated;
+      let changed = pendingMigrated;
+      const deletes = [];
       for (const [hash, session] of Object.entries(next.sessions)) {
+        if (pendingMigrated) {
+          deletes.push(...session.replyIds.map(id => ackKey(hash, id)));
+          session.replyIds = [];
+        }
         if (session.connectionId && !sockets.some(socket => {
           const attached = socket.deserializeAttachment();
           return attached?.connectionId === session.connectionId && attached.sessionHash === hash;
@@ -133,8 +143,9 @@ export class SyncRoomDurableObject {
         }
       }
       if (changed) {
-        await this.save(next);
+        await this.save(next, { deletes });
         if (next.hostDisconnectedAt != null) await this.updateIndex(next, 0);
+        if (pendingMigrated) this.broadcast();
       }
     });
   }
@@ -239,12 +250,27 @@ export class SyncRoomDurableObject {
       if (!match || url.search || request.method !== 'GET' || request.headers.has('Origin')) return new Response('Forbidden', { status: 403 });
       if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('WebSocket required', { status: 426 });
       await this.expire();
-      if (this.ctx.getWebSockets().filter(socket => socket.readyState === 1).length >= 10) return new Response('Too many connections', { status: 429 });
+      const authorization = request.headers.get('Authorization');
+      let resumeHash = null;
+      if (/^RoomResume(?:\s|$)/i.test(authorization ?? '')) {
+        const token = /^RoomResume ([a-f0-9]{64})$/i.exec(authorization)?.[1];
+        if (!token || !sessionTokenPattern.test(token)) return new Response('Invalid room credential', { status: 403 });
+        resumeHash = await hashToken(token);
+        if (!this.data?.sessions[resumeHash]) return new Response('Invalid room credential', { status: 403 });
+      }
+      const pending = this.ctx.getWebSockets().filter(socket => socket.readyState === 1)
+        .map(socket => socket.deserializeAttachment()).filter(attached => attached && !attached.sessionHash);
+      // New connections share a small pool. Existing sessions each get one
+      // reserved upgrade until the normal resume handshake completes.
+      const atCapacity = resumeHash
+        ? pending.some(attached => attached.resumeHash === resumeHash)
+        : pending.filter(attached => !attached.resumeHash).length >= this.pendingConnectionLimit;
+      if (atCapacity) return new Response('Too many connections', { status: 429 });
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
       const now = Date.now();
       this.ctx.acceptWebSocket(server);
-      server.serializeAttachment({ connectionId: crypto.randomUUID(), roomId: match[1].toUpperCase(), sessionHash: null,
+      server.serializeAttachment({ connectionId: crypto.randomUUID(), roomId: match[1].toUpperCase(), sessionHash: null, resumeHash,
         acceptedAt: now, rateStart: now, rateCount: 0 });
       await this.schedule();
       return new Response(null, { status: 101, webSocket: client });
@@ -285,10 +311,14 @@ export class SyncRoomDurableObject {
     let next = this.data ? structuredClone(this.data) : null;
     const resuming = type === 'resume';
     const token = resuming ? request.token : request.handshakeToken === undefined ? randomToken() : request.handshakeToken;
-    if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) {
+    if (typeof token !== 'string' || !sessionTokenPattern.test(token)) {
       throw new Error(resuming ? '房間連線已失效，請重新加入' : '房間憑證格式錯誤');
     }
     const hash = await hashToken(token);
+    if (attached.resumeHash && (!resuming || attached.resumeHash !== hash)) {
+      this.close(socket, 1008, 'Invalid room credential');
+      return;
+    }
     let session = next?.sessions[hash];
     const restoringHost = Boolean(session && next.hostDisconnectedAt != null && session.memberId === next.state.hostId);
     if (resuming || session) {
@@ -318,14 +348,16 @@ export class SyncRoomDurableObject {
     next.lastActive = now;
     await this.save(next);
     if (restoringHost && next.indexedUntil > now) await this.updateIndex(next);
-    socket.serializeAttachment({ ...attached, sessionHash: hash });
+    socket.serializeAttachment({ ...attached, sessionHash: hash, resumeHash: null });
     // Replacement is committed before closing the previous socket, so its close
     // handler cannot mark the newly resumed member as disconnected.
     for (const other of this.ctx.getWebSockets()) {
-      if (other !== socket && other.deserializeAttachment()?.sessionHash === hash) this.close(other, 4001, 'Session resumed');
+      const previous = other.deserializeAttachment();
+      if (other !== socket && (previous?.sessionHash === hash || previous?.resumeHash === hash)) this.close(other, 4001, 'Session resumed');
     }
     await this.schedule();
-    this.send(socket, { type: 'ack', requestId, ok: true, ...(!resuming ? { token } : {}), memberId: session.memberId, room: roomForMember(next.state, session.memberId) });
+    this.send(socket, { type: 'ack', requestId, ok: true, ...(!resuming ? { token } : {}), resumeAdmission: true,
+      memberId: session.memberId, room: roomForMember(next.state, session.memberId) });
     this.broadcast();
   }
   async command(socket, attached, request, now) {
@@ -380,9 +412,12 @@ export class SyncRoomDurableObject {
       if (next.teamKey) await this.updateIndex(next);
     }
     this.send(socket, reply);
-    for (const other of this.ctx.getWebSockets()) if (removedHashes.includes(other.deserializeAttachment()?.sessionHash)) {
-      this.send(other, { type: 'ended', message: type === 'leave' ? '已離開房間' : '主持人已將你移出房間' });
-      this.close(other);
+    for (const other of this.ctx.getWebSockets()) {
+      const attachment = other.deserializeAttachment();
+      if (removedHashes.includes(attachment?.sessionHash) || removedHashes.includes(attachment?.resumeHash)) {
+        this.send(other, { type: 'ended', message: type === 'leave' ? '已離開房間' : '主持人已將你移出房間' });
+        this.close(other);
+      }
     }
     if (reply.ok) this.broadcast();
   }

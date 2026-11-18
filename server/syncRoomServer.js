@@ -213,7 +213,7 @@ export async function createSyncRoomServer({ host = '127.0.0.1', port = 0, maxRo
       if (!session || session.socket !== socket) return;
       session.socket = null;
       const entry = rooms.get(session.roomId);
-      if (!entry || entry.state.closed || !entry.state.members.some(member => member.id === session.memberId)) return;
+      if (!entry || entry.state.closed || ![...entry.state.members, ...entry.state.pendingMembers].some(member => member.id === session.memberId)) return;
       entry.state = reduceRoom(entry.state, session.memberId, { type: 'connection', connected: false });
       if (session.memberId === entry.state.hostId) entry.hostDisconnectedAt = now();
       broadcast(entry);

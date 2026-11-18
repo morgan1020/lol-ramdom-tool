@@ -1,6 +1,9 @@
 export function roomForMember(room, memberId) {
   const member = room.members.find(entry => entry.id === memberId);
-  if (member?.approved && !member.manual) return room;
+  if (member?.approved && !member.manual) {
+    const { pendingMembers, drawRevision, ...snapshot } = room;
+    return memberId === room.hostId && pendingMembers?.length ? { ...snapshot, pendingMembers } : snapshot;
+  }
   return { roomId: room.roomId, revision: room.revision, pendingApproval: true };
 }
 

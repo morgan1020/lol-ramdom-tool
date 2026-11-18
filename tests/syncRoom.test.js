@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRoom, reduceRoom } from '../src/domain/syncRoom.js';
+import { createRoom, migratePendingRoom, reduceRoom } from '../src/domain/syncRoom.js';
 
 const create = () => createRoom({ roomId: 'room_1', hostId: 'host', hostName: '主持人#TW1' }, 100);
 const apply = (state, actor, type, fields = {}) => reduceRoom(state, actor, { type, ...fields }, { now: 200 });
@@ -50,16 +50,18 @@ test('建立房間驗證完整 Riot ID 與識別，主持人可直接抽籤', ()
   assert.throws(() => createRoom({ roomId: 'room', hostId: 'host', hostName: '名稱#TW1' }, NaN), /時間/);
 });
 
-test('加入需要核准，容量包含待核准成員，名稱忽略大小寫不可重複', () => {
+test('待核准申請有獨立上限，名稱忽略大小寫不可重複', () => {
   let state = join(create());
-  assert.equal(state.members[1].approved, false);
+  assert.equal(state.members.length, 1);
+  assert.equal(state.pendingMembers[0].approved, false);
   assert.throws(() => apply(state, 'guest', 'ready', { ready: true }), /核准/);
-  assert.throws(() => join(state, 'other', '朋友#tw2'), /已在房間/);
+  assert.throws(() => join(state, 'other', '朋友#tw2'), /已申請/);
   assert.throws(() => apply(state, 'other', 'join', { memberId: 'impersonated', name: '其他#TW1' }), /識別/);
   assert.throws(() => join(state, 'guest', '其他#TW1'), /已加入/);
   for (let index = 2; index <= 4; index += 1) state = join(state, `guest${index}`, `朋友${index}#TW1`);
-  assert.equal(state.members.length, 5);
-  assert.throws(() => join(state, 'sixth', '第六#TW1'), /5 人上限/);
+  assert.equal(state.pendingMembers.length, 4);
+  assert.equal(apply(state, 'host', 'draw').result.results.length, 1);
+  assert.throws(() => join(state, 'sixth', '第六#TW1'), /申請已滿/);
 });
 
 test('只有主持人可核准、抽籤或關房，陌生人無法操作', () => {
@@ -96,11 +98,25 @@ test('匯入 LoL 五人名單後，App 加入及離開沿用名額，抽籤須�
   let state = dispatch(create(), 'host', { type: 'sync-lobby', names });
   assert.equal(state.members.filter(member => member.manual).length, 4);
   assert.throws(() => join(state, 'other', '外人#TW'), /不在主持人/);
-  state = join(state);
+  const original = apply(state, 'host', 'draw', { revision: state.revision });
+  state = join(original);
   assert.equal(state.members.length, 5);
-  assert.equal(state.members.find(member => member.id === 'guest').approved, false);
+  assert.equal(state.pendingMembers.find(member => member.id === 'guest').approved, false);
+  assert.deepEqual(state.members, original.members);
+  assert.equal(state.result, original.result);
+  const offline = apply(state, 'guest', 'connection', { connected: false });
+  assert.equal(offline.result, original.result);
+  assert.equal(apply(offline, 'host', 'remove', { memberId: 'guest' }).result, original.result);
+  assert.equal(apply(offline, 'guest', 'leave').result, original.result);
+  assert.throws(() => apply(offline, 'host', 'approve', { memberId: 'guest' }), /離線/);
+  state = apply(offline, 'guest', 'connection', { connected: true });
+  assert.equal(apply(state, 'host', 'draw', { revision: original.revision }).result.results.length, 5);
+  const changed = dispatch(state, 'host', { type: 'sync-lobby', names: names.filter(name => name !== '朋友#TW2') });
+  assert.throws(() => apply(changed, 'host', 'approve', { memberId: 'guest' }), /不在主持人/);
   assert.throws(() => dispatch(state, 'guest', { type: 'sync-lobby', names }), /只有主持人/);
   state = apply(state, 'host', 'approve', { memberId: 'guest' });
+  assert.equal(state.result.archived, true);
+  assert.equal(state.pendingMembers.length, 0);
   state = apply(state, 'host', 'ready', { ready: true });
   state = apply(state, 'guest', 'ready', { ready: true });
   assert.equal(dispatch(state, 'host', { type: 'sync-lobby', names: [...names].reverse() }), state);
@@ -113,10 +129,10 @@ test('匯入 LoL 五人名單後，App 加入及離開沿用名額，抽籤須�
   assert.equal(left.members.find(member => member.name === names[1]).manual, true);
 });
 
-test('任何尚未核准、未準備或斷線成員都會阻擋抽籤', () => {
+test('正式成員尚未準備或斷線時才會阻擋抽籤', () => {
   assert.equal(apply(create(), 'host', 'draw').result.results.length, 1);
   let state = join(apply(create(), 'host', 'ready', { ready: true }));
-  assert.throws(() => apply(state, 'host', 'draw'), /所有玩家/);
+  assert.equal(apply(state, 'host', 'draw').result.results.length, 1);
   state = apply(state, 'host', 'approve', { memberId: 'guest' });
   state = apply(state, 'host', 'ready', { ready: true });
   assert.throws(() => apply(state, 'host', 'draw'), /所有玩家/);
@@ -143,7 +159,10 @@ test('1～5 人抽籤保留既有主副位規則及完整 Riot ID', () => {
 
 test('名單與連線變動撤銷準備並保留上一輪結果，重連後需重新準備', () => {
   const drawn = apply(readyRoom(), 'host', 'draw');
-  for (const next of [join(drawn, 'new', '新人#TW1'), apply(drawn, 'guest1', 'leave'), apply(drawn, 'guest1', 'connection', { connected: false })]) {
+  const pending = join(drawn, 'new', '新人#TW1');
+  assert.deepEqual(pending.members, drawn.members);
+  assert.equal(pending.result, drawn.result);
+  for (const next of [apply(pending, 'host', 'approve', { memberId: 'new' }), apply(drawn, 'guest1', 'leave'), apply(drawn, 'guest1', 'connection', { connected: false })]) {
     assert.deepEqual(next.result, { ...drawn.result, archived: true });
     assert.ok(next.members.every((entry) => !entry.ready));
     assert.equal(next.resultVersion, 1);
@@ -152,6 +171,17 @@ test('名單與連線變動撤銷準備並保留上一輪結果，重連後需�
   const connected = apply(disconnected, 'guest1', 'connection', { connected: true });
   assert.ok(connected.members.every((entry) => !entry.ready));
   assert.throws(() => apply(connected, 'host', 'draw'), /所有玩家/);
+});
+
+test('舊版同步房間移轉時還原手動席位並保留待核准連線識別', () => {
+  const { pendingMembers, ...legacy } = create();
+  legacy.lobbySynced = true;
+  legacy.members.push({ id: 'guest', name: '朋友#TW2', approved: false, ready: false, connected: true });
+  const migrated = migratePendingRoom(legacy, () => 'manual');
+  assert.deepEqual(migrated.pendingMembers, [legacy.members[1]]);
+  assert.deepEqual(migrated.members[1], { id: 'manual', name: '朋友#TW2', approved: true, manual: true, ready: false, connected: false });
+  assert.equal(apply(migrated, 'host', 'approve', { memberId: 'guest' }).members[1].id, 'guest');
+  assert.equal(migratePendingRoom(migrated, () => 'unused'), migrated);
 });
 
 test('結果版本不因失效而重用，取消準備會保留上一輪結果', () => {

@@ -31,6 +31,27 @@ function invalidate(state) {
   for (const member of state.members) member.ready = false;
 }
 
+function updatePending(state, pendingMembers) {
+  // Publish queue changes without expiring a draw based on the same roster.
+  return { ...state, pendingMembers, drawRevision: state.drawRevision ?? state.revision, revision: state.revision + 1 };
+}
+
+function matchesDrawRevision(state, revision) {
+  return Number.isSafeInteger(revision) && revision >= (state.drawRevision ?? state.revision) && revision <= state.revision;
+}
+
+export function migratePendingRoom(state, createMemberId) {
+  if (state.pendingMembers) return state;
+  const pendingMembers = state.members.filter(member => !member.approved);
+  if (!pendingMembers.length) return state;
+  const members = state.members.flatMap(member => {
+    if (member.approved) return [member];
+    return state.lobbySynced ? [{ ...member, id: createMemberId(), approved: true, manual: true, connected: false, ready: false }] : [];
+  });
+  const preferences = Object.fromEntries(Object.entries(state.preferences ?? {}).filter(([name]) => members.some(member => member.name === name)));
+  return { ...updatePending(state, pendingMembers), members, preferences, drawRevision: state.revision + 1 };
+}
+
 export function createRoom({ roomId, hostId, hostName }, now = Date.now()) {
   return {
     roomId: validateId(roomId, '房間代碼'),
@@ -38,6 +59,7 @@ export function createRoom({ roomId, hostId, hostName }, now = Date.now()) {
     revision: 0,
     createdAt: timestamp(now),
     members: [{ id: hostId, name: validateRiotId(hostName), approved: true, ready: false, connected: true }],
+    pendingMembers: [],
     resultVersion: 0,
     drawMode: 'random',
     preferences: {},
@@ -52,10 +74,11 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
   if (state.closed) throw new Error('房間已關閉，請重新建立或加入房間');
   validateId(actorId, '成員識別');
   if (!command || typeof command !== 'object' || Array.isArray(command)) throw new Error('房間指令格式錯誤');
-  const member = state.members.find((entry) => entry.id === actorId);
+  const pendingMembers = state.pendingMembers ?? [];
+  const member = state.members.find((entry) => entry.id === actorId) ?? pendingMembers.find((entry) => entry.id === actorId);
   if (command.type !== 'join' && !member) throw new Error('你不在這個房間內');
   if (!['join', 'connection', 'leave'].includes(command.type) && !member.connected) throw new Error('連線中斷，請重新連線');
-  const next = { ...state, members: state.members.map((entry) => ({ ...entry })) };
+  const next = { ...state, members: state.members.map((entry) => ({ ...entry })), pendingMembers: [...pendingMembers] };
   const own = next.members.find((entry) => entry.id === actorId);
   const requireHost = () => {
     if (actorId !== state.hostId) throw new Error('只有主持人可以執行此操作');
@@ -84,7 +107,7 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
     }
     case 'draw-settings': {
       requireHost();
-      if (command.revision !== state.revision) throw new Error('房間狀態已變更，請確認後再設定');
+      if (!matchesDrawRevision(state, command.revision)) throw new Error('房間狀態已變更，請確認後再設定');
       if (!['random', 'client', 'custom'].includes(command.drawMode) || !command.preferences || typeof command.preferences !== 'object' || Array.isArray(command.preferences)) throw new Error('抽籤設定格式錯誤');
       const names = next.members.map((entry) => entry.name);
       const entries = Object.entries(command.preferences);
@@ -103,31 +126,43 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
       if (manual) requireHost();
       if (manual && state.lobbySynced) throw new Error('請從 LoL 大廳更新名單');
       validateId(command.memberId, '成員識別');
-      if ((!manual && actorId !== command.memberId) || next.members.some((entry) => entry.id === command.memberId)) throw new Error('成員識別不符或已加入房間');
+      if ((!manual && actorId !== command.memberId) || [...next.members, ...pendingMembers].some((entry) => entry.id === command.memberId)) throw new Error('成員識別不符或已加入房間');
       const name = validateRiotId(command.name);
       const existing = next.members.find(entry => entry.name.toLowerCase() === name.toLowerCase());
       if (state.lobbySynced && !existing) throw new Error('此 Riot ID 不在主持人讀取的 LoL 大廳名單內');
       if (existing && (!state.lobbySynced || !existing.manual || manual)) throw new Error('此 Riot ID 已在房間內');
-      if (!existing && state.members.length >= 5) throw new Error('房間已達 5 人上限（包含等待核准的玩家）');
-      const joining = { id: command.memberId, name: existing?.name ?? name, approved: manual, ready: false, connected: !manual, ...(manual ? { manual: true } : {}) };
-      if (existing) next.members[next.members.indexOf(existing)] = joining;
-      else next.members.push(joining);
+      if (!existing && state.members.length >= 5) throw new Error('房間已達 5 人上限');
+      const joining = { id: command.memberId, name: existing?.name ?? name, approved: manual, ready: false, connected: !manual };
+      if (!manual) {
+        if (pendingMembers.some(entry => entry.name.toLowerCase() === name.toLowerCase())) throw new Error('此 Riot ID 已申請加入');
+        if (pendingMembers.length >= 4) throw new Error('等待核准的申請已滿');
+        return updatePending(state, [...pendingMembers, joining]);
+      }
+      next.members.push({ ...joining, manual: true });
       invalidate(next);
       break;
     }
     case 'approve': {
       requireHost();
-      const target = next.members.find((entry) => entry.id === command.memberId);
+      if (next.members.some(entry => entry.id === command.memberId && entry.approved)) return state;
+      const target = pendingMembers.find(entry => entry.id === command.memberId);
       if (!target) throw new Error('找不到要核准的玩家');
-      if (target.approved) return state;
-      target.approved = true;
+      if (!target.connected) throw new Error('申請者已離線，請等候重新連線');
+      const seat = next.members.findIndex(entry => entry.name.toLowerCase() === target.name.toLowerCase());
+      if (state.lobbySynced && seat === -1) throw new Error('此 Riot ID 不在主持人讀取的 LoL 大廳名單內');
+      if (seat !== -1 && (!state.lobbySynced || !next.members[seat].manual)) throw new Error('此 Riot ID 已在房間內');
+      if (seat === -1 && next.members.length >= 5) throw new Error('房間已達 5 人上限');
+      const approved = { ...target, name: next.members[seat]?.name ?? target.name, approved: true };
+      if (seat === -1) next.members.push(approved);
+      else next.members[seat] = approved;
+      next.pendingMembers = pendingMembers.filter(entry => entry.id !== target.id);
       invalidate(next);
       break;
     }
     case 'ready': {
       if (typeof command.ready !== 'boolean') throw new Error('準備狀態格式錯誤');
       if (actorId === state.hostId) return state;
-      if (!own.approved) throw new Error('請等待主持人核准加入');
+      if (!own?.approved) throw new Error('請等待主持人核准加入');
       if (own.ready === command.ready) return state;
       own.ready = command.ready;
       // Withdrawing consent makes a previous result unsuitable for application.
@@ -136,6 +171,10 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
     }
     case 'connection': {
       if (typeof command.connected !== 'boolean') throw new Error('連線狀態格式錯誤');
+      if (!own) {
+        if (member.connected === command.connected) return state;
+        return updatePending(state, pendingMembers.map(entry => entry.id === actorId ? { ...entry, connected: command.connected } : entry));
+      }
       if (own.connected === command.connected) return state;
       own.connected = command.connected;
       invalidate(next);
@@ -143,7 +182,7 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
     }
     case 'draw': {
       requireHost();
-      if (state.lobbySynced && command.revision !== state.revision) throw new Error('房間狀態已變更，請確認後再抽籤');
+      if (state.lobbySynced && !matchesDrawRevision(state, command.revision)) throw new Error('房間狀態已變更，請確認後再抽籤');
       if (!next.members.every(member => isRoomPlayerReady(member, state.hostId))) {
         throw new Error('所有玩家中，使用 App 加入者都需通過核准、保持連線並準備完成才能抽籤');
       }
@@ -159,6 +198,7 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
       break;
     }
     case 'leave': {
+      if (!own) return updatePending(state, pendingMembers.filter(entry => entry.id !== actorId));
       if (actorId === state.hostId) next.closed = true;
       if (state.lobbySynced && !next.closed) Object.assign(own, { id: createMemberId(), manual: true, approved: true, connected: false });
       else next.members = next.members.filter((entry) => entry.id !== actorId);
@@ -170,6 +210,9 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
       requireHost();
       if (command.memberId === state.hostId) throw new Error('主持人不能移除自己，請使用離開或關閉房間');
       const target = next.members.find(entry => entry.id === command.memberId);
+      if (pendingMembers.some(entry => entry.id === command.memberId)) {
+        return updatePending(state, pendingMembers.filter(entry => entry.id !== command.memberId));
+      }
       if (!target) throw new Error('找不到要移除的玩家');
       if (state.lobbySynced) {
         if (target.manual) throw new Error('請從 LoL 大廳更新名單');
@@ -190,5 +233,6 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
   }
   if (next.closed) next.result = null;
   next.revision = state.revision + 1;
+  next.drawRevision = next.revision;
   return next;
 }

@@ -30,6 +30,14 @@ export function validateRoomSnapshot(room) {
   if (new Set(members.map(member => member.id)).size !== members.length ||
     new Set(members.map(member => member.name.toLowerCase())).size !== members.length ||
     (!room.closed && !members.some(member => member.id === room.hostId && member.approved && !member.manual))) invalid();
+  const pending = room.pendingMembers === undefined ? [] : room.pendingMembers;
+  if (!Array.isArray(pending) || pending.length > 4) invalid();
+  const pendingMembers = pending.map(member => {
+    if (!isId(member?.id) || !isName(member?.name) || typeof member.connected !== 'boolean' || members.some(entry => entry.id === member.id)) invalid();
+    return { id: member.id, name: member.name, approved: false, ready: false, connected: member.connected };
+  });
+  if (new Set(pendingMembers.map(member => member.id)).size !== pendingMembers.length ||
+    new Set(pendingMembers.map(member => member.name.toLowerCase())).size !== pendingMembers.length) invalid();
   const readPreferences = (value, names) => {
     if (value === undefined) return {};
     if (!value || typeof value !== 'object' || Array.isArray(value)) invalid();
@@ -60,7 +68,8 @@ export function validateRoomSnapshot(room) {
     result = { id: value.id, version: value.version, createdAt: value.createdAt, results, preferences: resultPreferences, ...(value.archived ? { archived: true } : {}) };
   }
   return { roomId: room.roomId, hostId: room.hostId, revision: room.revision, createdAt: room.createdAt,
-    resultVersion: room.resultVersion, closed: room.closed, members, result, drawMode, preferences, ...(room.lobbySynced ? { lobbySynced: true } : {}) };
+    resultVersion: room.resultVersion, closed: room.closed, members, result, drawMode, preferences,
+    ...(pendingMembers.length ? { pendingMembers } : {}), ...(room.lobbySynced ? { lobbySynced: true } : {}) };
 }
 
 function publicError(value) {
@@ -104,6 +113,7 @@ export class SyncRoomClient {
     this.sequence = 0;
     this.generation = 0;
     this.token = null;
+    this.resumeAdmission = false;
     this.socket = null;
     this.reconnectTimer = null;
     this.attempts = 0;
@@ -149,6 +159,7 @@ export class SyncRoomClient {
     clearTimeout(this.reconnectTimer); this.reconnectTimer = null;
     this.clearHeartbeat();
     this.token = null; this.url = null;
+    this.resumeAdmission = false;
     this.expectedRoomId = null;
     this.rejectPending('已中斷房間連線');
     const socket = this.socket; this.socket = null;
@@ -221,7 +232,15 @@ export class SyncRoomClient {
     this.clearHeartbeat();
     const generation = ++this.generation;
     let socket;
-    try { socket = new this.WebSocketImpl(this.url); } catch { return Promise.reject(new RoomTransportError('無法建立同步服務連線')); }
+    try {
+      // Only cloud resumes use the native WebSocket header extension. The
+      // original message handshake remains compatible with older services.
+      const options = handshake.type === 'resume' && this.resumeAdmission && /^\/rooms\/[A-F0-9]{10}$/.test(new URL(this.url).pathname) &&
+        /^[a-f0-9]{64}$/.test(handshake.token)
+        ? { headers: { Authorization: `RoomResume ${handshake.token}` } }
+        : undefined;
+      socket = options ? new this.WebSocketImpl(this.url, options) : new this.WebSocketImpl(this.url);
+    } catch { return Promise.reject(new RoomTransportError('無法建立同步服務連線')); }
     this.socket = socket;
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -242,6 +261,7 @@ export class SyncRoomClient {
           if (handshake.type !== 'resume' && (typeof reply.token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(reply.token))) throw new Error('房間憑證格式錯誤');
           const room = validateRoomSnapshot(reply.room);
           this.token = reply.token || this.token;
+          this.resumeAdmission = reply.resumeAdmission === true;
           this.attempts = 0;
           this.emit({ connection: 'connected', memberId: reply.memberId, room, error: '' });
           this.startHeartbeat(socket, generation);

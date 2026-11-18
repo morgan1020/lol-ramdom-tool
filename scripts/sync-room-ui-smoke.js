@@ -139,7 +139,7 @@ app.whenReady().then(async () => {
     `);
     assert.deepEqual(parseRoomInvitation(copiedInvitation), { url: server.url, roomId: hostState.room.roomId });
     await guest.connect({ url: server.url, action: 'join', roomId: hostState.room.roomId, name: '隊友#TW2' });
-    await run(`await wait(() => document.querySelector('[aria-label="核准 隊友#TW2"]')); if (!document.querySelector('.primary-draw').disabled) throw Error('Draw enabled before approval');`);
+    await run(`await wait(() => document.querySelector('[aria-label="核准 隊友#TW2"]') && !document.querySelector('.primary-draw').disabled);`);
     await run(`if (document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card').length !== 5 || !document.querySelector('.sync-room-card-toolbar').textContent.includes('5 / 5')) throw Error('Room must show one card per player and the team capacity');`);
     assert.equal(guest.getState().room.pendingApproval, true);
     await capture('pending-approval.png');
@@ -147,7 +147,7 @@ app.whenReady().then(async () => {
       const cards = [...document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card')];
       if (cards.length !== 5) throw Error('Expected five room cards');
       const approve = document.querySelector('.sync-member-actions .btn-primary');
-      if (!approve?.closest('.roster-player-card') || approve.getBoundingClientRect().top < approve.closest('.roster-player-card').querySelector('.roster-player-header').getBoundingClientRect().bottom) throw Error('Approve action must sit below the player header');
+      if (!approve?.closest('[aria-label="待核准申請"]') || approve.closest('.roster-player-card')) throw Error('Approval must be outside the draw roster');
       if (document.querySelector('#tool-tab-roles').getAttribute('aria-selected') !== 'true') throw Error('Room should be within role draw');
     `);
     await run(`click('核准'); await wait(settled); await wait(() => !document.querySelector('[aria-label="核准 隊友#TW2"]'));`);
@@ -322,7 +322,8 @@ app.whenReady().then(async () => {
       await wait(() => settled() && document.querySelector('.sync-guest-status')?.textContent.includes('等待主持人核准加入'));
       if (document.querySelector('.sync-room-workspace .roster-player-card')) throw Error('Pending guest saw a player card');
     `);
-    const discoveredGuest = guest.getState().room.members.find(member => member.name === '房主#TW1');
+    await until(() => guest.getState().room.pendingMembers?.some(member => member.name === '房主#TW1'), 'Discovered request not shown to host');
+    const discoveredGuest = guest.getState().room.pendingMembers.find(member => member.name === '房主#TW1');
     assert.equal(discoveredGuest.approved, false);
     await guest.command({ type: 'approve', memberId: discoveredGuest.id });
     await run(`await wait(() => document.querySelector('.sync-guest-ready:not(:disabled)')); click('我準備好了');`);
@@ -345,7 +346,8 @@ app.whenReady().then(async () => {
       await wait(() => document.querySelector('.sync-guest-status')?.textContent.includes('等待主持人核准加入'));
       if (document.querySelector('.sync-guest-ready')) throw Error('Ready offered before approval');
     `);
-    const joiningMember = guest.getState().room.members.find(member => member.name === '房主#TW1');
+    await until(() => guest.getState().room.pendingMembers?.some(member => member.name === '房主#TW1'), 'Invitation request not shown to host');
+    const joiningMember = guest.getState().room.pendingMembers.find(member => member.name === '房主#TW1');
     await guest.command({ type: 'approve', memberId: joiningMember.id });
     await run(`await wait(() => document.querySelector('.sync-guest-ready:not(:disabled)'));
       const cardTitle = document.querySelector('.sync-room-card-toolbar');
@@ -363,6 +365,11 @@ app.whenReady().then(async () => {
           const action = document.querySelector('.sync-room-workspace .draw-screen-actions');
           const frame = document.querySelector('.sync-room-toolbar');
           const button = action.querySelector('.sync-guest-ready');
+          await wait(() => {
+            const rect = button.getBoundingClientRect();
+            return rect.bottom <= innerHeight &&
+              document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.closest('.sync-guest-ready');
+          });
           const title = document.querySelector('#sync-room-title').getBoundingClientRect();
           const card = document.querySelector('.sync-room-workspace .roster-card-grid').getBoundingClientRect();
           const contentStyle = getComputedStyle(scroll);

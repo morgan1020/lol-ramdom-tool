@@ -30,7 +30,9 @@ wss://YOUR_WORKER.workers.dev/rooms
 ## 有些隊友沒裝 App
 
 - 全隊從 LoL 大廳加入抽籤名單，只有使用 App 加入的非房主玩家需要按準備。其他人從群組訊息看結果，再到 LoL 手動調整。
+- 房主在獨立的待核准清單處理加入申請。核准前，房主仍可依正式名單抽籤，既有結果與準備狀態照常保留。房主 App 須與支援待核准清單的同步服務搭配使用。
 - 房主與已準備玩家的 App 核對目前登入帳號與完整隊伍，通過後才套用自己的分路。遇到不支援的模式或套用失敗，畫面會提示手動調整。
+- 加入者以自己 App 的「我準備好了」授權套用。取消準備、斷線或房間名單與設定變更後，須重新確認。房主每次從自己的 App 發起抽籤時，只授權該輪結果。
 - 房主每次抽籤前會重新讀取大廳。隊伍變動時，先更新名單並要求已加入的非房主玩家重新準備。若有 App 成員已離開 LoL 大廳，房主先將該成員移出同步連線，再重新讀取。
 - Webhook 傳送失敗時，請先查看 Discord 頻道。App 保留抽籤結果，可按「複製結果」分享。
 
@@ -59,6 +61,7 @@ wss://YOUR_WORKER.workers.dev/rooms
 - 桌面 App 輸入的服務位址以 `/rooms` 結尾。主程序在連線時附上 10 位十六進位房碼，Worker 依 `/rooms/<房碼>` 將 WebSocket 導向該房間專屬的 SQLite Durable Object。
 - Durable Object 使用 WebSocket Hibernation API 維持連線，將房間狀態、工作階段與命令回覆寫入耐久儲存。工作階段憑證只儲存 SHA-256 雜湊，重送命令可使用已儲存的回覆。Electron 主程序每 25 秒送心跳，等待回覆上限為 10 秒。[Cloudflare WebSocket Hibernation](https://developers.cloudflare.com/durable-objects/best-practices/websockets/)
 - 第一次建立或加入前，主程序會生成高熵握手憑證；只有傳輸失敗或逾時時，會以同一憑證重試一次，避免回覆遺失造成重複席位。抽籤等房間操作不會自動重送。憑證不進入邀請或 renderer。
+- 雲端房間最多同時接受 5 條未驗證的一般握手。新版桌面 App 重連時會先提供現有憑證，每個有效工作階段各有一個待完成的重連名額。新加入與舊版 App 的重連仍使用一般名額，所有連線仍受服務入口的 IP 限流。
 - 主持人意外斷線後保留 60 秒重連寬限。房間閒置達 2 小時會清理，心跳不延長期限。關房會清除房間、工作階段和命令回覆，另保留 2 小時的關房標記，避免舊邀請復用。標記只包含到期時間。
 - Worker 對每個 IP 在各 Cloudflare 位置分別套用每 60 秒 60 次的近似連線速率限制。此設定沒有全域總房間數上限。[Cloudflare Rate Limiting binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
 

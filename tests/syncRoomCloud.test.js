@@ -158,8 +158,8 @@ test('Cloudflare workerd 加入 ACK 遺失後重試同一席位，拒絕錯誤�
   assert.deepEqual(Object.keys(observed.ack.room).sort(), ['pendingApproval', 'revision', 'roomId']);
   assert.equal(state.room.pendingApproval, true);
   const pendingBroadcast = await waitFor(() => host.messages.find(message =>
-    message.type === 'state' && message.room.members.some(member => member.id === state.memberId)));
-  assert.equal(pendingBroadcast.room.members.length, 2);
+    message.type === 'state' && message.room.pendingMembers?.some(member => member.id === state.memberId)));
+  assert.equal(pendingBroadcast.room.members.length, 1);
   assert.equal((await host.send({ type: 'approve', requestId: 2, memberId: state.memberId })).ok, true);
   await waitFor(() => guest.getState().room.members?.length === 2);
 
@@ -294,6 +294,37 @@ test('Cloudflare 連線限流在 DO 建立前生效，缺少 binding 時拒絕�
   const third = new WebSocket(`${unconfigured.base}/33333ABCDE`);
   t.after(() => third.terminate());
   await assert.rejects(new Promise((resolve, reject) => { third.once('open', resolve); third.once('error', reject); }), /503/);
+});
+
+test('一般握手名額使用中時，既有桌面工作階段仍可使用獨立重連名額', { timeout: 30000 }, async t => {
+  const { base } = await runtime(t, { ROOM_PENDING_CONNECTION_LIMIT: '1' });
+  const host = new SyncRoomClient({ reconnectDelayMs: 50 });
+  t.after(() => host.destroy());
+  const { room, memberId } = await host.connect({ url: base, action: 'create', name: '重連主持人#DEMO' });
+  const previous = host.socket;
+  const pending = await rawClient(t, base, room.roomId);
+  const open = options => new Promise((resolve, reject) => {
+    const socket = new WebSocket(`${base}/${room.roomId}`, options);
+    t.after(() => socket.terminate());
+    socket.once('open', resolve);
+    socket.once('error', reject);
+  });
+  await assert.rejects(open(), /429/);
+  await assert.rejects(open({ headers: { Authorization: `RoomResume ${'0'.repeat(64)}` } }), /403/);
+
+  const headers = { Authorization: `RoomResume ${host.token}` };
+  const reserved = await rawClient(t, base, room.roomId, { headers });
+  await assert.rejects(open({ headers }), /429/);
+  await reserved.close();
+
+  previous.close();
+  const recovered = await waitFor(() => host.socket !== previous && host.getState().connection === 'connected' && host.getState());
+  assert.equal(recovered.memberId, memberId);
+  assert.equal(recovered.room.roomId, room.roomId);
+  assert.equal(pending.socket.readyState, WebSocket.OPEN);
+  assert.equal((await host.command({ type: 'draw' })).result.results.length, 1);
+  await pending.close();
+  await host.command({ type: 'close' });
 });
 
 test('DO 關閉超過 128 筆回覆快取的房間時，分批清理且不留下可恢復 session', { timeout: 30000 }, async t => {

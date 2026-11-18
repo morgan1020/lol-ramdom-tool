@@ -180,7 +180,7 @@ test('離開與關房會撤銷 session，房間滿員與找不到房間有明確
     const guest = client(t); guests.push(guest);
     await guest.connect({ url: server.url, action: 'join', roomId: host.getState().room.roomId, name: `朋友${index}#TW1` });
   }
-  await assert.rejects(extra.connect({ url: server.url, action: 'join', roomId: host.getState().room.roomId, name: '其他#TW1' }), /5/);
+  await assert.rejects(extra.connect({ url: server.url, action: 'join', roomId: host.getState().room.roomId, name: '其他#TW1' }), /申請已滿/);
   await guests[0].command({ type: 'leave' });
   assert.equal(guests[0].getState().room, null);
   await host.command({ type: 'close' });

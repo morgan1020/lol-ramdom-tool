@@ -16,7 +16,7 @@ const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inl
 let mainWindow;
 let lobbyRead;
 let applyingRoles = false;
-let syncRoomClient;
+let syncRoom;
 
 function isAppSender(event) {
   return mainWindow && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame && event.senderFrame.url === appUrl;
@@ -31,7 +31,8 @@ function createWindow() {
     icon: path.join(assetRoot, 'favicon-dice.png'),
     webPreferences: { preload: path.join(directory, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
-  bindSyncRoomWindowLifecycle(mainWindow, syncRoomClient);
+  mainWindow.on('close', syncRoom.revokeConsent);
+  bindSyncRoomWindowLifecycle(mainWindow, syncRoom.client);
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -58,7 +59,7 @@ if (!app.requestSingleInstanceLock()) {
     const encryption = await createSystemEncryption(safeStorage);
     const store = new DesktopDataStore({ directory: path.join(app.getPath('userData'), 'data'), encryption });
     registerDataIpc({ ipcMain, store, isSender: isAppSender, getWindow: () => mainWindow, dialog, shell });
-    syncRoomClient = registerSyncRoomIpc({ ipcMain, isSender: isAppSender, getWindow: () => mainWindow });
+    syncRoom = registerSyncRoomIpc({ ipcMain, isSender: isAppSender, getWindow: () => mainWindow });
     session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => callback(permission === 'clipboard-sanitized-write'));
     session.defaultSession.setPermissionCheckHandler((_webContents, permission) => permission === 'clipboard-sanitized-write');
     ipcMain.handle('app:version', (event) => isAppSender(event) ? app.getVersion() : null);
@@ -86,19 +87,15 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle('lol:apply-roles', async (event, results, expectedName, roomResultId) => {
       if (!isAppSender(event)) return { ok: false, message: '不允許的客戶端操作來源' };
       if (applyingRoles || lobbyRead) return { ok: false, message: '正在處理客戶端操作，請稍候再試' };
-      const currentRoom = () => {
-        const { connection, room, memberId } = syncRoomClient.getState();
-        if (connection !== 'connected' || !room?.lobbySynced || room.closed || room.result?.archived || room.result?.id !== roomResultId) return null;
-        const member = room.members?.find(entry => entry.id === memberId);
-        return member?.approved && (member.id === room.hostId || member.ready) && member.name === expectedName ? room.result : null;
-      };
-      const roomResult = roomResultId === undefined ? null : currentRoom();
-      if (roomResultId !== undefined && !roomResult) return { ok: false, message: '房間結果已更新或連線已中斷，未更改客戶端' };
+      const roomResult = roomResultId === undefined ? null : syncRoom.getAuthorizedResult(roomResultId, expectedName);
+      if (roomResultId !== undefined && !roomResult) return { ok: false, message: '本機未授權套用這次房間結果，未更改客戶端' };
+      const authorizedResult = roomResult && JSON.stringify(roomResult);
       applyingRoles = true;
       try {
         return { ok: true, applied: await applyCurrentPlayerRoles(roomResult?.results ?? results, {
           expectedName,
-          isCurrent: () => roomResultId === undefined || Boolean(currentRoom())
+          isCurrent: () => roomResultId === undefined ||
+            JSON.stringify(syncRoom.getAuthorizedResult(roomResultId, expectedName)) === authorizedResult
         }) };
       }
       catch (error) { return { ok: false, message: error instanceof ClientError ? error.message : '套用分路失敗，請查看客戶端；不會自動重送' }; }

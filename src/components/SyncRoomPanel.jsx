@@ -59,7 +59,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   const self = room?.members?.find((member) => member.id === sync.memberId);
   const pendingApproval = room?.pendingApproval === true || self?.approved === false;
   const activeRoom = Boolean(room && !room.closed && (self || pendingApproval));
-  const isHost = activeRoom && room.hostId === sync.memberId;
+  const isHost = activeRoom && sync.localIsHost === true && room.hostId === sync.memberId;
   const canShowReady = activeRoom && !isHost && self?.approved && room.lobbySynced;
   const busy = sync.initializing || sync.busy || reading || applying || sync.connection === 'connecting';
   useEffect(() => {
@@ -102,7 +102,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     }).catch(() => notify('Discord 傳送未完成，可複製結果手動分享。', { id: 'discord-delivery', type: 'error' }));
   }, [isHost, result, syncDraw, onRecordDraw]);
   useEffect(() => {
-    if (!result || !ownName || autoAttempt.current === result.id || applying) return;
+    if (!result || sync.authorizedResultId !== result.id || !ownName || autoAttempt.current === result.id || applying) return;
     autoAttempt.current = result.id;
     setApplying(true);
     void window.lolDesktop.applyRoles(result.results, ownName, result.id).then(reply => {
@@ -111,7 +111,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     }).catch(error => {
       notify(`${error.message || '無法套用分路'}。請在 LoL 手動確認分路。`, { id: 'apply-roles', type: 'error' });
     }).finally(() => setApplying(false));
-  }, [result, ownName, applying]);
+  }, [result, ownName, applying, sync.authorizedResultId]);
   const withLobby = async (operation) => {
     setReading(true);
     setLocalError(''); setNotice('');
@@ -203,7 +203,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       }
       const resultId = `${room.roomId}:${room.resultVersion + 1}`;
       pendingDraw.current = { id: resultId, discord: discordSettings };
-      if (!await sync.command({ type: 'draw', revision: room.revision }) && pendingDraw.current?.id === resultId) {
+      if (!await sync.command({ type: 'draw', revision: room.revision, consentContext: sync.consentContext }) && pendingDraw.current?.id === resultId) {
         pendingDraw.current = null;
       }
     });
@@ -222,19 +222,18 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   const teamCount = activeRoom && !pendingApproval && `${room.members.length} / 5`;
   const pendingMembers = activeRoom && !pendingApproval ? room.members.filter(member => !isRoomPlayerReady(member, room.hostId)) : [];
   const waitingNames = members => members.map(member => labels[member.name]).join('、');
-  const unapproved = pendingMembers.filter(member => !member.approved);
+  const unapproved = room?.pendingMembers ?? [];
   const offline = pendingMembers.filter(member => member.approved && !member.connected);
   const waitingReason = !connected ? '恢復連線後才能操作。'
     : !room?.lobbySynced ? '等待主持人讀取 LoL 大廳。'
-      : unapproved.length ? `等待核准：${waitingNames(unapproved)}`
-        : offline.length ? `等待重新連線：${waitingNames(offline)}`
+      : offline.length ? `等待重新連線：${waitingNames(offline)}`
           : !allReady ? `等待準備：${waitingNames(pendingMembers)}` : '';
   const roomHeader = activeRoom && <header className="draw-heading sync-room-toolbar">
     <div className="sync-room-heading-details">
       <h1 id="sync-room-title" className="draw-screen-title">{result ? '本次抽籤結果' : '多人抽分路'}</h1>
       {roomSummary}
       {!isHost &&
-        <p className="sync-guest-status" role="status">{!connected ? waitingReason : pendingApproval ? '等待主持人核准加入' : !room.lobbySynced ? waitingReason : self.ready ? '已準備，等候主持人抽籤' : '確認名單與分路後，就可以準備。'}</p>
+        <p className="sync-guest-status" role="status">{!connected ? waitingReason : pendingApproval ? '等待主持人核准加入' : !room.lobbySynced ? waitingReason : sync.localReady ? '已準備，等候主持人抽籤' : '確認名單與分路後，就可以準備。'}</p>
       }
     </div>
   </header>;
@@ -318,6 +317,14 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
           {isHost && <span>點玩家卡片指定主位</span>}
         </div>
         {isHost && waitingReason && <p className="sync-room-waiting" role="status">{waitingReason}</p>}
+        {isHost && unapproved.length > 0 && <section className="sync-room-waiting" aria-label="待核准申請">
+          <ul>
+            {unapproved.map(member => <li key={member.id}>
+              <span>{member.name}{member.connected ? '' : '（離線）'}</span>
+              {renderMemberActions(member)}
+            </li>)}
+          </ul>
+        </section>}
         <RoleResultCards players={room.members} results={result?.results ?? []} preferences={preferences} assignedPreferences={result?.preferences}
           localPlayerId={self.id} busy={busy} revealId={revealId === resultId ? revealId : null}
           renderPlayerDetails={renderMemberStatus} renderPlayerActions={isHost ? renderMemberActions : undefined}
@@ -328,7 +335,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
           <DrawDiscordControls discordSync={discordSync} disabled={busy} onManage={onManageWebhook} />
         </div>}
         {isHost && <button className="btn btn-primary primary-draw" type="button" disabled={!canDraw} onClick={() => updateLobby(true)}><UiIcon name="shuffle" />{result ? '重新抽籤' : '開始抽籤'}</button>}
-        {canShowReady && <button className={`btn primary-draw sync-guest-ready ${self.ready ? 'btn-secondary is-ready' : 'btn-primary'}`} type="button" disabled={busy || !connected} onClick={() => command({ type: 'ready', ready: !self.ready })}>{self.ready ? '取消準備' : '我準備好了'}</button>}
+        {canShowReady && <button className={`btn primary-draw sync-guest-ready ${sync.localReady ? 'btn-secondary is-ready' : 'btn-primary'}`} type="button" disabled={busy || !connected} onClick={() => command({ type: 'ready', ready: !sync.localReady, consentContext: sync.consentContext })}>{sync.localReady ? '取消準備' : '我準備好了'}</button>}
         {result && <CopyResultButton onCopy={copyResults} resetKey={result.id} />}
       </footer>}
     </section>
