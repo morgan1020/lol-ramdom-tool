@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createSyncRoomServer } from '../server/syncRoomServer.js';
 import { discoverSyncRoom, SyncRoomClient } from '../src/desktop/syncRoomClient.js';
+import { registerSyncRoomIpc } from '../src/desktop/syncRoomIpc.js';
 import { dropFirstHandshakeAck } from './helpers/dropFirstHandshakeAck.js';
 
 async function waitFor(check, message = '等待房間狀態逾時') {
@@ -147,25 +148,38 @@ test('服務端以 session 身分授權並對重複抽籤 requestId 去重', asy
   assert.equal(resumed.ok, false);
 });
 
-test('短暫斷線以原 session 重連，重設準備並保留上一輪結果，不重送抽籤', async t => {
+test('同房重連保留本機開關，重新開啟只套用下一輪', async t => {
   const server = await setup(t);
-  const host = client(t), guest = client(t);
+  const host = client(t);
+  const handlers = new Map();
+  const controls = registerSyncRoomIpc({
+    ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+    isSender: () => true, getWindow: () => null,
+    createClient: options => client(t, options)
+  });
+  const guest = controls.client;
+  const name = '朋友#TW1';
+  const invoke = (channel, payload) => handlers.get('sync-room:' + channel)(null, payload);
   await host.connect({ url: server.url, action: 'create', name: '主持人#TW1' });
-  await guest.connect({ url: server.url, action: 'join', roomId: host.getState().room.roomId, name: '朋友#TW1' });
-  const id = guest.getState().memberId;
-  await host.command({ type: 'approve', memberId: id });
-  await host.command({ type: 'ready', ready: true });
-  await guest.command({ type: 'ready', ready: true });
-  await host.command({ type: 'draw' });
-  const oldSocket = guest.socket;
-  oldSocket.close();
-  await waitFor(() => guest.socket !== oldSocket && guest.getState().connection === 'connected');
-  assert.equal(guest.getState().memberId, id);
-  assert.equal(guest.getState().room.members.length, 2);
-  assert.equal(guest.getState().room.result.archived, true);
-  assert.equal(guest.getState().room.resultVersion, 1);
-  assert.equal(guest.getState().room.members.every(member => !member.ready), true);
-  await assert.rejects(host.command({ type: 'draw' }), /準備/);
+  await host.command({ type: 'sync-lobby', names: ['主持人#TW1', name] });
+  const { state } = await invoke('connect', { action: 'join', name, url: server.url, roomId: host.getState().room.roomId });
+  assert.equal(state.autoApply, true);
+  await host.command({ type: 'approve', memberId: state.memberId });
+  await waitFor(() => guest.getState().room.members?.some(member => member.id === state.memberId));
+  const toggle = enabled => invoke('command', { type: 'auto-apply', localSession: state.localSession, enabled });
+  for (const enabled of [false, true]) {
+    assert.equal((await toggle(enabled)).ok, true);
+    const oldSocket = guest.socket;
+    oldSocket.close();
+    await waitFor(() => guest.socket !== oldSocket && guest.getState().connection === 'connected');
+    const resumed = (await invoke('get-state')).state;
+    assert.equal(resumed.memberId, state.memberId);
+    assert.equal(resumed.autoApply, enabled);
+    assert.equal(resumed.authorizedResultId, undefined);
+    const { result } = await host.command({ type: 'draw', revision: resumed.room.revision });
+    await waitFor(() => guest.getState().room.result?.id === result.id);
+    assert.deepEqual(controls.getAuthorizedResult(result.id, name), enabled ? result : null);
+  }
 });
 
 test('離開與關房會撤銷 session，房間滿員與找不到房間有明確錯誤', async t => {

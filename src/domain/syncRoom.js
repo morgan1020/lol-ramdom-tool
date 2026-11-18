@@ -22,8 +22,8 @@ function timestamp(value) {
   return value;
 }
 
-export function isRoomPlayerReady(member, hostId) {
-  return member.approved && (member.manual === true || (member.connected && (member.id === hostId || member.ready)));
+export function isRoomPlayerReady(member) {
+  return member.approved && (member.manual === true || member.connected);
 }
 
 function invalidate(state) {
@@ -183,8 +183,8 @@ export function reduceRoom(state, actorId, command, { now = Date.now(), createMe
     case 'draw': {
       requireHost();
       if (state.lobbySynced && !matchesDrawRevision(state, command.revision)) throw new Error('房間狀態已變更，請確認後再抽籤');
-      if (!next.members.every(member => isRoomPlayerReady(member, state.hostId))) {
-        throw new Error('所有玩家中，使用 App 加入者都需通過核准、保持連線並準備完成才能抽籤');
+      if (!next.members.every(member => isRoomPlayerReady(member))) {
+        throw new Error('所有玩家中，使用 App 加入者都需通過核准並保持連線才能抽籤');
       }
       const version = state.resultVersion + 1;
       next.result = {

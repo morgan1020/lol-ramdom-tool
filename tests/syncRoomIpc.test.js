@@ -63,63 +63,49 @@ async function confirm(fixture, command) {
   return fixture.invoke('command', { ...command, consentContext: state.consentContext });
 }
 
-test('加入者只在本機準備成功後授權新結果，取消或重連撤銷授權', async () => {
-  const fixture = setup({ command: ({ ready }) => {
-    fixture.state.room.members[0].ready = ready;
-    fixture.publish(fixture.state);
-    return fixture.state.room;
-  } });
-  await connectFixture(fixture);
-  const { room } = fixture.state;
-  room.members[0].ready = true;
-  const prior = setResult(fixture, 1);
-  const allowed = result => fixture.controls.getAuthorizedResult(result.id, roomOptions.name);
-  assert.equal(allowed(prior), null);
-
-  await confirm(fixture, { type: 'ready', ready: true });
-  assert.equal((await fixture.invoke('get-state')).state.localReady, true);
-  assert.equal(allowed(prior), null);
-  const first = setResult(fixture, 2);
-  assert.deepEqual(allowed(first), first);
-  const second = setResult(fixture, 3);
-  assert.deepEqual(allowed(second), second);
-  const cancel = fixture.invoke('command', { type: 'ready', ready: false });
-  assert.equal(allowed(second), null);
-  await cancel;
-
-  await confirm(fixture, { type: 'ready', ready: true });
+test('本機開關只授權後續結果，同房重連保留選擇，新的連線獨立設定', async () => {
+  const fixture = setup();
+  const { state } = await connectFixture(fixture);
+  assert.equal(state.autoApply, true);
+  const allowed = version => fixture.controls.getAuthorizedResult(setResult(fixture, version).id, roomOptions.name);
+  const toggle = enabled => fixture.invoke('command', { type: 'auto-apply', enabled, localSession: state.localSession });
+  assert.ok(allowed(1));
+  await toggle(false);
   fixture.state.connection = 'reconnecting';
   fixture.publish(fixture.state);
   fixture.state.connection = 'connected';
-  assert.equal(allowed(setResult(fixture, 4)), null);
-});
-
-test('待確認的準備在出現名單變動後失效，晚到的回覆不恢復授權', async () => {
-  let finish;
-  const fixture = setup({ command: () => new Promise(resolve => { finish = resolve; }) });
-  await connectFixture(fixture);
-  const { room } = fixture.state;
-  const { state } = await fixture.invoke('get-state');
-  const pending = fixture.invoke('command', { type: 'ready', ready: true, consentContext: state.consentContext });
-  room.members.push({ id: 'other', name: '隊友#TW2', approved: true, connected: false, manual: true });
   fixture.publish(fixture.state);
-  room.members.pop();
-  room.members[0].ready = true;
-  const result = setResult(fixture, 1);
-  finish(room);
-  await pending;
-  assert.equal(fixture.controls.getAuthorizedResult(result.id, roomOptions.name), null);
+  assert.equal((await fixture.invoke('get-state')).state.autoApply, false);
+  assert.equal(allowed(2), null);
+  await toggle(true);
+  assert.equal(fixture.controls.getAuthorizedResult(fixture.state.room.result.id, roomOptions.name), null);
+  assert.ok(allowed(3));
+  fixture.state.connection = 'reconnecting';
+  fixture.publish(fixture.state);
+  fixture.state.connection = 'connected';
+  assert.equal(allowed(4), null);
+  assert.ok(allowed(5));
+  await toggle(false);
+  await fixture.invoke('disconnect');
+  const next = await connectFixture(fixture);
+  assert.equal(next.state.autoApply, true);
+  assert.equal((await toggle(false)).ok, false);
+  assert.ok(allowed(1));
+  assert.equal(fixture.calls.some(([type]) => type === 'command'), false);
 });
 
-test('開始準備前名單已變更時，舊畫面的操作不送到服務端', async () => {
+test('未核准、隊伍變更及恢復連線的既有結果都不會套用', async () => {
   const fixture = setup();
   await connectFixture(fixture);
-  const { state } = await fixture.invoke('get-state');
-  fixture.state.room.members.push({ id: 'other', name: '隊友#TW2', approved: true, connected: false, manual: true });
-  fixture.publish(fixture.state);
-  const reply = await fixture.invoke('command', { type: 'ready', ready: true, consentContext: state.consentContext });
-  assert.deepEqual(reply, { ok: false, message: '房間狀態已變更，請重新確認' });
-  assert.equal(fixture.calls.filter(([type]) => type === 'command').length, 0);
+  const { room } = fixture.state;
+  room.members[0].approved = false;
+  const result = setResult(fixture, 1);
+  const allowed = () => fixture.controls.getAuthorizedResult(result.id, roomOptions.name);
+  assert.equal(allowed(), null);
+  room.members[0].approved = true;
+  assert.equal(allowed(), null);
+  room.members.push({ id: 'other', name: '隊友#TW2', approved: true, connected: false, manual: true });
+  assert.equal(allowed(), null);
 });
 
 test('主持人只能套用自己在本機發起的那次抽籤', async () => {

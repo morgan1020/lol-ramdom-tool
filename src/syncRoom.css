@@ -2,7 +2,7 @@
 .sync-room-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; }
 .sync-room-heading h1 { margin: 0; font-size: clamp(24px, 3vw, 32px); }
 .sync-room-help, .sync-field small { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
-.sync-ready, .sync-room-notice { color: var(--accent); }
+.sync-room-notice { color: var(--accent); }
 .sync-room-error { color: var(--danger); border: 1px solid currentColor; border-radius: 10px; padding: 12px; overflow-wrap: anywhere; }
 .sync-room-notice, .sync-room-closed { font-size: 14px; line-height: 1.5; }
 .sync-connect-form { display: grid; gap: 12px; max-width: 640px; margin-inline: auto; }
@@ -52,7 +52,7 @@ body:has(.sync-guest-status):not(:has(dialog[open])) .toast-wrap[popover] {
   bottom: 100px;
   max-height: 25dvh;
 }
-.refined-app .draw-screen-actions > .sync-guest-ready { min-width: min(100%, 156px); }
+.sync-connect-form > [role="switch"] { justify-self: start; }
 .sync-room-code strong { color: var(--text); letter-spacing: .03em; }
 .sync-copy-invitation {
   display: inline-flex;

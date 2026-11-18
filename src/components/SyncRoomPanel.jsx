@@ -13,6 +13,7 @@ import { UiIcon } from './UiIcon.jsx';
 import { ModalFrame } from './ModalFrame.jsx';
 import { CopyResultButton } from './CopyResultButton.jsx';
 import { CardRolePicker } from './CardRolePicker.jsx';
+import { ToggleSwitch } from './ToggleSwitch.jsx';
 import '../syncRoom.css';
 
 const connectionLabels = {
@@ -33,6 +34,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   const [url, setUrl] = useState('');
 
   const [action, setAction] = useState('choose');
+  const [entryAutoApply, setEntryAutoApply] = useState(true);
   const [reading, setReading] = useState(false);
   const [notice, setNotice] = useState('');
   const [localError, setLocalError] = useState('');
@@ -51,6 +53,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   const connected = sync.connection === 'connected';
   useEffect(() => {
     if (entryRequest) {
+      setEntryAutoApply(true);
       setAction('choose');
       setLocalError('');
       setNotice('');
@@ -60,7 +63,6 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   const pendingApproval = room?.pendingApproval === true || self?.approved === false;
   const activeRoom = Boolean(room && !room.closed && (self || pendingApproval));
   const isHost = activeRoom && sync.localIsHost === true && room.hostId === sync.memberId;
-  const canShowReady = activeRoom && !isHost && self?.approved && room.lobbySynced;
   const busy = sync.initializing || sync.busy || reading || applying || sync.connection === 'connecting';
   useEffect(() => {
     onRoomStatusChange?.({ active: activeRoom, busy });
@@ -70,10 +72,10 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     if (visible && wasInRoom.current && !activeRoom) onBack();
     wasInRoom.current = activeRoom;
   }, [activeRoom, visible, onBack]);
-  const allReady = activeRoom && !pendingApproval && room.members.every(member => isRoomPlayerReady(member, room.hostId));
+  const allReady = activeRoom && !pendingApproval && room.members.every(isRoomPlayerReady);
   const preferences = room?.drawMode === 'custom' ? room.preferences : {};
   const canDraw = connected && isHost && room.lobbySynced && allReady && !busy;
-  const result = connected && activeRoom && room.lobbySynced && self?.approved && (isHost || self.ready) && !room.result?.archived ? room.result : null;
+  const result = connected && activeRoom && room.lobbySynced && self?.approved && !room.result?.archived ? room.result : null;
   const resultId = result?.id;
   useEffect(() => {
     if (!resultId || seenResultId.current === resultId) return;
@@ -138,7 +140,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       }
     }
     void withLobby(async (lobby) => {
-      const joined = await sync.connect({ ...options, name: lobby.name });
+      const joined = await sync.connect({ ...options, autoApply: entryAutoApply, name: lobby.name });
       if (!joined) return;
       if (action === 'create') await sync.command({ type: 'sync-lobby', names: lobby.names });
       else setInvitation('');
@@ -151,7 +153,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       const reply = await window.lolDesktop.syncRoom.discover({ url: endpoint, names: lobby.names });
       if (reply.ok && reply.match.status === 'found') {
         const { roomId, teamKey } = reply.match;
-        if (await sync.connect({ url: endpoint, action: 'join', roomId, teamKey, name: lobby.name })) return;
+        if (await sync.connect({ url: endpoint, action: 'join', roomId, teamKey, autoApply: entryAutoApply, name: lobby.name })) return;
         setNotice('房間狀態已變更，請改用邀請加入。');
       } else if (reply.ok) {
         setNotice(reply.match.status === 'ambiguous'
@@ -192,13 +194,13 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       const matches = matchesLobby(lobby.names);
       if (!matches || !room.lobbySynced) {
         if (await sync.command({ type: 'sync-lobby', names: lobby.names })) {
-          setNotice('LoL 大廳名單已更新，請重新準備後再抽籤。');
+          setNotice('LoL 大廳名單已更新，請確認後再抽籤。');
         }
         return;
       }
       if (!draw) { setNotice('已讀取 LoL 大廳名單'); return; }
       if (room.drawMode === 'client') {
-        if (await saveSettings({})) setNotice('已清除舊房間的 LoL 偏好，請重新準備後再抽籤。');
+        if (await saveSettings({})) setNotice('已清除舊房間的 LoL 偏好，請確認後再抽籤。');
         return;
       }
       const resultId = `${room.roomId}:${room.resultVersion + 1}`;
@@ -216,35 +218,31 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       ? <button className="sync-room-code sync-copy-invitation" type="button" aria-label={`複製邀請（房碼 ${room.roomId}）`}
         title="複製房間邀請" onClick={copyInvitation}><strong>{room.roomId}</strong><UiIcon name="copy" /></button>
       : <span className="sync-room-code"><strong>{room.roomId}</strong></span>}</span>
+    <ToggleSwitch enabled={sync.autoApply !== false} disabled={sync.busy || !sync.localSession} label="自動套用我的分路" caption="自動套用我的分路"
+      onToggle={() => command({ type: 'auto-apply', enabled: !sync.autoApply, localSession: sync.localSession })} />
     {connected ? <span className="sync-connection-dot" role="status" title="已連線"><span className="sr-only">已連線</span></span>
       : <span role="status">{connectionLabels[sync.connection]}</span>}
   </div>;
   const teamCount = activeRoom && !pendingApproval && `${room.members.length} / 5`;
-  const pendingMembers = activeRoom && !pendingApproval ? room.members.filter(member => !isRoomPlayerReady(member, room.hostId)) : [];
+  const offline = activeRoom && !pendingApproval ? room.members.filter(member => !member.manual && !member.connected) : [];
   const waitingNames = members => members.map(member => labels[member.name]).join('、');
   const unapproved = room?.pendingMembers ?? [];
-  const offline = pendingMembers.filter(member => member.approved && !member.connected);
   const waitingReason = !connected ? '恢復連線後才能操作。'
     : !room?.lobbySynced ? '等待主持人讀取 LoL 大廳。'
-      : offline.length ? `等待重新連線：${waitingNames(offline)}`
-          : !allReady ? `等待準備：${waitingNames(pendingMembers)}` : '';
+      : offline.length ? `等待重新連線：${waitingNames(offline)}` : '';
   const roomHeader = activeRoom && <header className="draw-heading sync-room-toolbar">
     <div className="sync-room-heading-details">
       <h1 id="sync-room-title" className="draw-screen-title">{result ? '本次抽籤結果' : '多人抽分路'}</h1>
       {roomSummary}
-      {!isHost &&
-        <p className="sync-guest-status" role="status">{!connected ? waitingReason : pendingApproval ? '等待主持人核准加入' : !room.lobbySynced ? waitingReason : sync.localReady ? '已準備，等候主持人抽籤' : '確認名單與分路後，就可以準備。'}</p>
+      {!isHost && (!connected || pendingApproval || !room.lobbySynced) &&
+        <p className="sync-guest-status" role="status">{!connected ? waitingReason : pendingApproval ? '等待主持人核准加入' : waitingReason}</p>
       }
     </div>
   </header>;
   const renderMemberStatus = (member) => {
     if (member.manual) return null;
     if (member.id === room.hostId && member.connected) return <div className="sync-member-state"><span><UiIcon name="monitor" />主持人</span></div>;
-    const status = !member.connected ? '離線' : !member.approved ? '待核准' : member.ready ? '已準備' : '尚未準備';
-    return <div className="sync-member-state">
-      {member.id === room.hostId && <span>主持人</span>}
-      <span className={member.ready ? 'sync-ready' : ''}><UiIcon name={member.ready ? 'check' : 'monitor'} />{status}</span>
-    </div>;
+    return !member.connected && <span className="sync-member-state">離線</span>;
   };
   const copyResults = async () => {
     setLocalError(''); setNotice('');
@@ -291,7 +289,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
         <span>邀請或房碼</span>
         <textarea id="sync-invitation" value={invitation} onChange={(event) => setInvitation(event.target.value)} placeholder="貼上房主傳給你的邀請或房碼" rows={3} maxLength={4096} autoComplete="off" spellCheck="false" disabled={busy} required />
       </label>}
-      <p className="sync-room-help">{action === 'create' ? '從 LoL 讀取大廳名單。' : '加入時會讀取你的 Riot ID。準備後，抽籤會自動套用你的分路。'}</p>
+      <ToggleSwitch enabled={entryAutoApply} disabled={busy} label="自動套用我的分路" caption="自動套用我的分路" onToggle={() => setEntryAutoApply(value => !value)} />
       <button className={`btn ${action === 'create' ? 'btn-primary' : 'btn-secondary'}`} type="submit" disabled={busy || (action === 'create' ? !url.trim() : !invitation.trim())}>{sync.initializing ? '正在讀取房間…' : busy ? '處理中…' : action === 'create' ? '建立房間' : '申請加入'}</button>
       {sync.connection === 'connecting' && <button className="btn btn-secondary" type="button" onClick={() => sync.disconnect()}>取消連線</button>}
       <details className="sync-service-settings" open={!sync.defaultServiceUrl && !sync.serviceUrl}>
@@ -330,12 +328,11 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
           renderPlayerDetails={renderMemberStatus} renderPlayerActions={isHost ? renderMemberActions : undefined}
           renderRolePicker={isHost ? renderMemberRolePicker : undefined} />
       </div>}
-      {(isHost || canShowReady || result) && <footer className="draw-screen-actions">
+      {(isHost || result) && <footer className="draw-screen-actions">
         {isHost && <div className="draw-footer-status sync-room-discord">
           <DrawDiscordControls discordSync={discordSync} disabled={busy} onManage={onManageWebhook} />
         </div>}
         {isHost && <button className="btn btn-primary primary-draw" type="button" disabled={!canDraw} onClick={() => updateLobby(true)}><UiIcon name="shuffle" />{result ? '重新抽籤' : '開始抽籤'}</button>}
-        {canShowReady && <button className={`btn primary-draw sync-guest-ready ${sync.localReady ? 'btn-secondary is-ready' : 'btn-primary'}`} type="button" disabled={busy || !connected} onClick={() => command({ type: 'ready', ready: !sync.localReady, consentContext: sync.consentContext })}>{sync.localReady ? '取消準備' : '我準備好了'}</button>}
         {result && <CopyResultButton onCopy={copyResults} resetKey={result.id} />}
       </footer>}
     </section>

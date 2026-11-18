@@ -80,7 +80,7 @@ test('手動玩家佔用名額，由主持人加入，不必連線或自行準�
   const manual = { memberId: 'manual1', name: '手動1#TW' };
   assert.throws(() => apply(state, 'guest1', 'add-manual', manual), /主持人/);
   state = apply(state, 'host', 'add-manual', manual);
-  assert.throws(() => apply(state, 'host', 'draw'), /準備/);
+  assert.equal(apply(state, 'host', 'draw').result.results.length, 3);
   assert.throws(() => join(state, 'other', '手動1#tw'), /已在房間/);
   for (const index of [2, 3]) state = apply(state, 'host', 'add-manual', { memberId: `manual${index}`, name: `手動${index}#TW` });
   assert.throws(() => join(state, 'other', '其他#TW'), /5 人上限/);
@@ -129,13 +129,13 @@ test('匯入 LoL 五人名單後，App 加入及離開沿用名額，抽籤須�
   assert.equal(left.members.find(member => member.name === names[1]).manual, true);
 });
 
-test('正式成員尚未準備或斷線時才會阻擋抽籤', () => {
+test('核准後即可抽籤，正式成員斷線時暫停抽籤', () => {
   assert.equal(apply(create(), 'host', 'draw').result.results.length, 1);
   let state = join(apply(create(), 'host', 'ready', { ready: true }));
   assert.equal(apply(state, 'host', 'draw').result.results.length, 1);
   state = apply(state, 'host', 'approve', { memberId: 'guest' });
   state = apply(state, 'host', 'ready', { ready: true });
-  assert.throws(() => apply(state, 'host', 'draw'), /所有玩家/);
+  assert.equal(apply(state, 'host', 'draw').result.results.length, 2);
   state = apply(readyRoom(), 'guest1', 'connection', { connected: false });
   assert.throws(() => apply(state, 'host', 'draw'), /所有玩家/);
   assert.throws(() => apply(state, 'guest1', 'ready', { ready: true }), /連線中斷/);
@@ -157,7 +157,7 @@ test('1～5 人抽籤保留既有主副位規則及完整 Riot ID', () => {
   }
 });
 
-test('名單與連線變動撤銷準備並保留上一輪結果，重連後需重新準備', () => {
+test('名單與連線變動撤銷準備並保留上一輪結果，重連後可直接重抽', () => {
   const drawn = apply(readyRoom(), 'host', 'draw');
   const pending = join(drawn, 'new', '新人#TW1');
   assert.deepEqual(pending.members, drawn.members);
@@ -170,7 +170,7 @@ test('名單與連線變動撤銷準備並保留上一輪結果，重連後需�
   const disconnected = apply(drawn, 'guest1', 'connection', { connected: false });
   const connected = apply(disconnected, 'guest1', 'connection', { connected: true });
   assert.ok(connected.members.every((entry) => !entry.ready));
-  assert.throws(() => apply(connected, 'host', 'draw'), /所有玩家/);
+  assert.equal(apply(connected, 'host', 'draw').resultVersion, 2);
 });
 
 test('舊版同步房間移轉時還原手動席位並保留待核准連線識別', () => {

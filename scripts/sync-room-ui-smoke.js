@@ -153,7 +153,6 @@ app.whenReady().then(async () => {
     await run(`click('核准'); await wait(settled); await wait(() => !document.querySelector('[aria-label="核准 隊友#TW2"]'));`);
     await until(() => guest.getState().room?.members?.find((member) => member.name === '隊友#TW2')?.approved, 'Guest did not receive approval');
     assert.equal(guest.getState().room.members.filter(member => member.manual).length, 3);
-    await guest.command({ type: 'ready', ready: true });
     await run(`
       if ([...document.querySelectorAll('button')].some(el => el.textContent === '我準備好了')) throw Error('Host must not need to ready');
       await wait(() => document.querySelector('.primary-draw:not(:disabled)'));
@@ -230,14 +229,13 @@ app.whenReady().then(async () => {
       await wait(() => document.querySelector('[role="option"][data-value="輔助"]'));
       document.querySelector('[role="option"][data-value="輔助"]').click();
       await wait(() => settled() && document.querySelector('[role="combobox"][aria-label^="隊友1 的主位偏好"]').textContent.includes('輔助'));
-      if (!document.querySelector('.primary-draw').disabled || document.querySelector('.sync-previous-result')) throw Error('Changing roles must reset readiness without showing archived results');
+      if (document.querySelector('.primary-draw').disabled || document.querySelector('.sync-previous-result')) throw Error('Changing roles must allow a fresh draw');
       document.querySelector('[role="combobox"][aria-label^="房主 的主位偏好"]').click();
       await wait(() => document.querySelector('[role="option"][data-value="輔助"]')?.disabled);
       if (!document.querySelector('[role="option"][data-value="輔助"]').textContent.includes('隊友1')) throw Error('Occupied role must identify its player');
       document.querySelector('[role="option"][data-value="輔助"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     `);
     await until(() => guest.getState().room?.preferences?.['隊友1#TW3'] === '輔助', 'Guest did not receive custom role');
-    await guest.command({ type: 'ready', ready: true });
     await run(`await wait(() => document.querySelector('.primary-draw:not(:disabled)')); click('開始抽籤'); await wait(() => settled() && document.querySelector('#sync-room-title')?.textContent === '本次抽籤結果' && document.querySelector('.assignment-marker'));`);
     await until(() => guest.getState().room?.result?.version === 3, 'Guest did not receive custom result');
     assert.equal(guest.getState().room.result.results.find(row => row.name === '隊友1#TW3').main, '輔助');
@@ -264,7 +262,6 @@ app.whenReady().then(async () => {
     `);
     await until(() => guest.getState().room?.drawMode === 'random', 'Clearing the last assigned role must restore random draw');
     assert.equal(guest.getState().room.result.version, 4);
-    await guest.command({ type: 'ready', ready: true });
     await run(`await wait(() => document.querySelector('.primary-draw:not(:disabled)')); `);
     window.setContentSize(800, 640);
     await sleep(150);
@@ -282,11 +279,10 @@ app.whenReady().then(async () => {
     assert.equal(applyCalls.length, 4);
     await until(() => guest.getState().room?.members?.some(member => member.name === '替補#TW3'), 'Guest did not receive refreshed lobby');
     assert.equal(guest.getState().room.result.archived, true);
-    await guest.command({ type: 'ready', ready: true });
     guest.socket.close();
     await until(() => guest.getState().connection === 'reconnecting', 'Guest did not enter reconnecting state');
     await until(() => guest.getState().connection === 'connected', 'Guest did not reconnect');
-    await run(`await wait(() => document.querySelector('#sync-room-title')?.textContent === '多人抽分路'); await wait(() => [...document.querySelectorAll('.sync-member-state')].every(el => el.textContent.includes('主持人') || el.textContent.includes('尚未準備')));`);
+    await run(`await wait(() => document.querySelector('#sync-room-title')?.textContent === '多人抽分路'); await wait(() => [...document.querySelectorAll('.sync-member-state')].every(el => el.textContent.includes('主持人') || el.textContent.includes('離線')));`);
     const guestAfterReconnect = guest.getState();
     assert.equal(guestAfterReconnect.room.members.length, 5);
     assert.equal(guestAfterReconnect.room.result.archived, true);
@@ -326,8 +322,6 @@ app.whenReady().then(async () => {
     const discoveredGuest = guest.getState().room.pendingMembers.find(member => member.name === '房主#TW1');
     assert.equal(discoveredGuest.approved, false);
     await guest.command({ type: 'approve', memberId: discoveredGuest.id });
-    await run(`await wait(() => document.querySelector('.sync-guest-ready:not(:disabled)')); click('我準備好了');`);
-    await until(() => guest.getState().room.members.find(member => member.id === discoveredGuest.id).ready, 'Discovered guest could not ready');
     const discoveredDraw = await guest.command({ type: 'draw', revision: guest.getState().room.revision });
     await run(`await wait(() => settled() && document.querySelectorAll('.is-revealing').length === 5 && document.querySelector('.is-own-result')?.dataset.playerId === '房主#TW1');`);
     assert.deepEqual(applyCalls.at(-1), { results: discoveredDraw.result.results, expectedName: '房主#TW1' });
@@ -336,6 +330,7 @@ app.whenReady().then(async () => {
       await wait(() => document.querySelector('.solo-draw-workspace')); await roomMenu('加入房間'); await wait(() => document.querySelector('#sync-invitation'));
     `);
     await run(`
+      document.querySelector('[aria-label="自動套用我的分路"]').click();
       await field('#sync-server-url', 'ws://127.0.0.1:1/sync');
       await field('#sync-invitation', '不完整的邀請');
       click('申請加入');
@@ -349,67 +344,28 @@ app.whenReady().then(async () => {
     await until(() => guest.getState().room.pendingMembers?.some(member => member.name === '房主#TW1'), 'Invitation request not shown to host');
     const joiningMember = guest.getState().room.pendingMembers.find(member => member.name === '房主#TW1');
     await guest.command({ type: 'approve', memberId: joiningMember.id });
-    await run(`await wait(() => document.querySelector('.sync-guest-ready:not(:disabled)'));
-      const cardTitle = document.querySelector('.sync-room-card-toolbar');
-      if (!cardTitle.textContent.includes('5 / 5') ||
-          document.querySelector('.sync-room-discord, .primary-draw:not(.sync-guest-ready), .sync-role-picker')) throw Error('Guest must see the team size with read-only cards');`);
+    await run(`await wait(() => settled() && document.querySelector('.sync-room-card-toolbar')?.textContent.includes('5 / 5'));
+      if (document.querySelector('.sync-guest-ready, .sync-room-discord, .primary-draw, .sync-role-picker')) throw Error('Unexpected guest controls');
+      if (document.querySelector('[aria-label="自動套用我的分路"]').getAttribute('aria-checked') !== 'false') throw Error('Pre-join choice was lost');`);
+    const beforeDisabledDraw = applyCalls.length;
+    const disabledDraw = await guest.command({ type: 'draw', revision: guest.getState().room.revision });
+    await run(`await wait(() => settled() && document.querySelectorAll('.sync-room-panel .has-result').length === 5);`);
+    assert.equal(applyCalls.length, beforeDisabledDraw);
+    await run(`document.querySelector('[aria-label="自動套用我的分路"]').click();
+      await wait(async () => settled() && (await window.lolDesktop.syncRoom.getState()).state.autoApply);`);
+    assert.equal(applyCalls.length, beforeDisabledDraw);
+    assert.equal(guest.getState().room.result.id, disabledDraw.result.id);
     const minimumSize = window.getMinimumSize();
     window.setMinimumSize(600, 480);
-    const guestAlignment = [];
-    for (const ready of [false, true]) {
-      for (const [width, height] of [[1040, 900], [1040, 540], [680, 900], [680, 540]]) {
-        window.setContentSize(width, height);
-        guestAlignment.push(...await run(`
-          await wait(() => innerWidth === ${width} && innerHeight === ${height});
-          const scroll = document.querySelector('.sync-room-workspace .workspace-scroll');
-          const action = document.querySelector('.sync-room-workspace .draw-screen-actions');
-          const frame = document.querySelector('.sync-room-toolbar');
-          const button = action.querySelector('.sync-guest-ready');
-          await wait(() => {
-            const rect = button.getBoundingClientRect();
-            return rect.bottom <= innerHeight &&
-              document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.closest('.sync-guest-ready');
-          });
-          const title = document.querySelector('#sync-room-title').getBoundingClientRect();
-          const card = document.querySelector('.sync-room-workspace .roster-card-grid').getBoundingClientRect();
-          const contentStyle = getComputedStyle(scroll);
-          const frameStyle = getComputedStyle(frame);
-          if (button.textContent.trim() !== ${JSON.stringify(ready ? '取消準備' : '我準備好了')}) throw Error('Unexpected guest readiness');
-          const overflow = scroll.scrollHeight > scroll.clientHeight;
-          if (scroll.contains(button)) throw Error('Ready action must stay outside the scrolling roster');
-          const measurements = [];
-          for (const offset of (overflow ? [0, scroll.scrollHeight] : [0])) {
-            scroll.scrollTop = offset;
-            const rect = button.getBoundingClientRect();
-            const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-            if ((offset !== 0 && scroll.scrollTop === 0) || rect.top < 0 || rect.bottom > innerHeight || !hit?.closest('.sync-guest-ready')) throw Error('Guest ready action is not reachable: ' + JSON.stringify({ width: innerWidth, height: innerHeight, rect, offset, scrollTop: scroll.scrollTop, hit: hit?.className }));
-            measurements.push({
-              width: innerWidth, height: innerHeight, ready: ${ready}, scrollTop: scroll.scrollTop,
-              gutter: scroll.offsetWidth - scroll.clientWidth, padding: contentStyle.paddingRight,
-              actionGutter: frame.offsetWidth - frame.clientWidth, actionPadding: frameStyle.paddingRight,
-              centerOffset: rect.left + rect.width / 2 - (action.getBoundingClientRect().left + action.getBoundingClientRect().width / 2),
-              footerOffset: rect.bottom - action.getBoundingClientRect().bottom,
-              actionOffset: action.getBoundingClientRect().right - card.right,
-              titleOffset: title.left - card.left, statusOffset: frame.querySelector('.sync-guest-status').getBoundingClientRect().left - card.left
-            });
-          }
-          return measurements;
-        `));
-        if (width === 1040 && height === 900) await capture(ready ? 'guest-ready-dark.png' : 'guest-unready-dark.png');
-      }
-      if (!ready) await run(`click('我準備好了'); await wait(() => settled() && document.querySelector('.sync-guest-status')?.textContent.includes('已準備'));`);
+    for (const [width, height] of [[1040, 900], [680, 540]]) {
+      window.setContentSize(width, height);
+      await run(`await wait(() => innerWidth === ${width} && innerHeight === ${height});
+        const button = document.querySelector('[aria-label="自動套用我的分路"]');
+        const rect = button.getBoundingClientRect();
+        if (!button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))) throw Error('Guest switch is obscured');`);
     }
-    window.setContentSize(1040, 850);
-    await run(`document.querySelector('[aria-label="切換深淺色模式"]').click(); await wait(() => innerWidth === 1040 && innerHeight === 850 && document.documentElement.dataset.theme === 'light');`);
-    await capture('guest-ready-light.png');
-    await run(`await wait(() => document.querySelector('.sync-guest-ready:not(:disabled)')?.textContent === '取消準備'); click('取消準備'); await wait(() => settled() && document.querySelector('.sync-guest-ready')?.textContent === '我準備好了');`);
-    await capture('guest-unready-light.png');
-    assert.equal(guest.getState().room.members.find(member => member.id === joiningMember.id).ready, false);
-    await run(`click('我準備好了'); await wait(() => settled() && document.querySelector('.sync-guest-status')?.textContent.includes('已準備'));`);
     window.setMinimumSize(...minimumSize);
     window.setContentSize(800, 640);
-    assert.ok(guestAlignment.every(sample => Math.abs(sample.centerOffset) <= 1 && sample.footerOffset <= 0), JSON.stringify(guestAlignment));
-    assert.equal(guest.getState().room.members.find(member => member.id === joiningMember.id).ready, true);
     await run(`await leaveRoom('退出房間'); await wait(() => document.querySelector('.solo-draw-workspace')); await roomMenu('加入房間'); await wait(() => document.querySelector('#sync-invitation'));`);
     await run(`
       await field('#sync-invitation', ${JSON.stringify(newRoomId.toLowerCase())});
@@ -444,10 +400,10 @@ app.whenReady().then(async () => {
     assert.equal(discordSends.length, 2);
     assert.deepEqual(consoleErrors, []);
     const report = { realLoopbackWebSocket: true, cloudflareLocalRuntime: cloud, realDesktopIpc: true, syntheticLobby: true, approval: true,
-      invitationCopiesServiceAndRoom: true, invitationRequiresExplicitJoin: true, roomCodeJoin: true, guestReadyWithoutScrolling: true, systemClipboardUntouched: true,
+      invitationCopiesServiceAndRoom: true, invitationRequiresExplicitJoin: true, roomCodeJoin: true, guestAutoApplySwitch: true, systemClipboardUntouched: true,
       autoDiscovery: true, missingMatchFallsBackToInvitation: true, ambiguousMatchFallsBackToInvitation: true,
-      discordOptional: true, copyWithoutDiscord: true, drawAndCopyAvailableDuringDiscordDelivery: true, guestAlignment,
-      identicalResults: true, ordinaryAndRoomResultsPreservedSeparately: true, reconnectResetsReadyAndPreservesResult: true,
+      discordOptional: true, copyWithoutDiscord: true, drawAndCopyAvailableDuringDiscordDelivery: true,
+      identicalResults: true, ordinaryAndRoomResultsPreservedSeparately: true, reconnectPreservesArchivedResult: true,
       removeMember: true, closeRoom: true, layout, roomHistoryRecorded: true, desktopOriginalModes: true,
       websiteOriginalModes: true, websiteHasNoNativeRoom: true, importedLobby: true, syntheticApplyCalls: applyCalls.length, syntheticDiscordSends: discordSends.length };
     await writeFile(path.join(output, 'result.json'), JSON.stringify(report, null, 2));

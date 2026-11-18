@@ -53,8 +53,6 @@ export async function runCloudSmoke({ url, requestTimeoutMs = 8000 } = {}) {
     await waitFor(() => guest.getState().room?.members?.length === 2);
     expect(guest.getState().room.members.some(member => member.name === '同步測試主持人#DEMO'));
     report.checks.approvedRosterVisible = true;
-    await host.command({ type: 'ready', ready: true });
-    await guest.command({ type: 'ready', ready: true });
     const first = await host.command({ type: 'draw' });
     await waitFor(() => guest.getState().room?.result?.id === first.result.id);
     expect(JSON.stringify(guest.getState().room.result) === JSON.stringify(first.result));
@@ -71,11 +69,8 @@ export async function runCloudSmoke({ url, requestTimeoutMs = 8000 } = {}) {
     expect(resumedRoom.result === null || (resumedRoom.result.archived === true &&
       resumedRoom.result.id === first.result.id && JSON.stringify(resumedRoom.result.results) === JSON.stringify(first.result.results)));
     report.checks.sameSessionReconnect = true;
-    report.checks.reconnectClearsConsent = true;
     report.checks.reconnectPreservesPreviousResult = resumedRoom.result?.archived === true;
     phase = 'redraw';
-    await host.command({ type: 'ready', ready: true });
-    await guest.command({ type: 'ready', ready: true });
     const second = await host.command({ type: 'draw' });
     await waitFor(() => guest.getState().room?.result?.id === second.result.id);
     expect(second.result.version === first.result.version + 1);

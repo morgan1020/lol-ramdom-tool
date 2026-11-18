@@ -50,10 +50,8 @@ export function registerSyncRoomIpc({ ipcMain, isSender, getWindow, discover = d
     if (current.key !== contextKey) {
       contextVersion += 1;
       revokeConsent();
-    } else if (consent?.kind === 'guest') {
-      if (!current.member?.ready) revokeConsent();
-      else if (current.room.result?.archived) consent.afterVersion = Math.max(consent.afterVersion, current.room.result.version);
-    } else if (consent?.kind === 'host' && consent.result !== JSON.stringify(current.room?.result)) revokeConsent();
+      if (session && current.key) session.afterVersion = current.room.resultVersion;
+    } else if (consent && consent !== JSON.stringify(current.room?.result)) revokeConsent();
     contextKey = current.key;
     return current;
   }
@@ -61,9 +59,9 @@ export function registerSyncRoomIpc({ ipcMain, isSender, getWindow, discover = d
   function authorizedResult(state) {
     const { room } = observe(state);
     const result = room?.result;
-    if (!consent || !contextKey || !result || result.archived) return null;
-    if (consent.kind === 'host') return consent.result === JSON.stringify(result) ? result : null;
-    return result.version > consent.afterVersion ? result : null;
+    if (!session?.autoApply || session.leaving || !contextKey || !result || result.archived || result.version <= session.afterVersion) return null;
+    if (session.action === 'create' && consent !== JSON.stringify(result)) return null;
+    return result;
   }
 
   function publicState(state) {
@@ -73,7 +71,7 @@ export function registerSyncRoomIpc({ ipcMain, isSender, getWindow, discover = d
       ...(configuredUrl ? { defaultServiceUrl: configuredUrl } : {}),
       ...(session?.action === 'create' ? { localIsHost: true } : {}),
       ...(contextKey ? { consentContext: contextVersion } : {}),
-      ...(consent?.kind === 'guest' ? { localReady: true } : {}),
+      ...(session ? { autoApply: session.autoApply, localSession: connectionAttempt } : {}),
       ...(result ? { authorizedResultId: result.id } : {})
     };
   }
@@ -103,6 +101,7 @@ export function registerSyncRoomIpc({ ipcMain, isSender, getWindow, discover = d
   });
   register('sync-room:connect', async (payload) => {
     if (!payload || typeof payload !== 'object' || !['create', 'join'].includes(payload.action)) throw new Error('invalid');
+    if (payload.autoApply !== undefined && typeof payload.autoApply !== 'boolean') throw new Error('invalid');
     const attempt = ++connectionAttempt;
     session = null;
     revokeConsent();
@@ -112,30 +111,28 @@ export function registerSyncRoomIpc({ ipcMain, isSender, getWindow, discover = d
     const state = client.getState();
     if (state.connection === 'connected' && state.room) {
       session = { action: payload.action, name: payload.name.trim(), roomId: state.room.roomId,
-        memberId: state.memberId, serviceUrl: state.serviceUrl };
+        memberId: state.memberId, serviceUrl: state.serviceUrl, autoApply: payload.autoApply !== false, afterVersion: state.room.resultVersion ?? 0 };
       publish(state);
     }
   });
-  async function commandWithConsent(command, displayedContext) {
+  async function drawWithConsent(revision, displayedContext) {
     const before = observe(client.getState());
-    const eligible = contextKey && (command.type === 'ready' ? !before.localIsHost && command.ready === true : before.localIsHost);
+    const eligible = contextKey && before.localIsHost;
     // A click must refer to the roster and settings the local App displayed.
     if (eligible && displayedContext !== contextVersion) throw new StaleConsentError('房間狀態已變更，請重新確認');
     const afterVersion = before.room?.resultVersion;
     revokeConsent();
     const epoch = consentEpoch;
     publish(client.getState());
-    const ack = await client.command(command);
+    const ack = await client.command({ type: 'draw', revision });
     const state = client.getState();
     const current = observe(state);
     if (!eligible || epoch !== consentEpoch) return;
     const confirmed = inspect({ ...state, room: ack });
     if (confirmed.key !== contextKey) return;
-    if (command.type === 'ready' && current.member?.ready && confirmed.member?.ready) {
-      consent = { kind: 'guest', afterVersion };
-    } else if (command.type === 'draw' && ack?.result && !ack.result.archived &&
+    if (ack?.result && !ack.result.archived &&
       ack.result.version === afterVersion + 1 && JSON.stringify(ack.result) === JSON.stringify(current.room?.result)) {
-      consent = { kind: 'host', result: JSON.stringify(ack.result) };
+      consent = JSON.stringify(ack.result);
     }
     publish(state);
   }
@@ -144,16 +141,30 @@ export function registerSyncRoomIpc({ ipcMain, isSender, getWindow, discover = d
     switch (payload.type) {
       case 'approve': case 'remove': return client.command({ type: payload.type, memberId: payload.memberId });
       case 'add-manual': return client.command({ type: 'add-manual', name: payload.name });
-      case 'ready':
-        if (typeof payload.ready !== 'boolean') throw new Error('invalid');
-        return commandWithConsent({ type: 'ready', ready: payload.ready }, payload.consentContext);
+      case 'auto-apply':
+        if (!session || payload.localSession !== connectionAttempt || typeof payload.enabled !== 'boolean') throw new Error('invalid');
+        if (session.autoApply !== payload.enabled) {
+          revokeConsent();
+          session.autoApply = payload.enabled;
+          session.afterVersion = client.getState().room?.resultVersion ?? session.afterVersion;
+          publish(client.getState());
+        }
+        return;
       case 'sync-lobby': return client.command({ type: 'sync-lobby', names: payload.names });
       case 'draw-settings': return client.command({ type: 'draw-settings', drawMode: payload.drawMode, preferences: payload.preferences, revision: payload.revision });
-      case 'draw': return commandWithConsent({ type: 'draw', revision: payload.revision }, payload.consentContext);
-      case 'leave': case 'close':
+      case 'draw': return drawWithConsent(payload.revision, payload.consentContext);
+      case 'leave': case 'close': {
+        const leaving = session;
+        if (leaving) leaving.leaving = true;
         revokeConsent();
         publish(client.getState());
-        return client.command({ type: payload.type });
+        return client.command({ type: payload.type }).finally(() => {
+          if (session && session === leaving) {
+            session.afterVersion = client.getState().room?.resultVersion ?? session.afterVersion;
+            session.leaving = false;
+          }
+        });
+      }
       default: throw new Error('invalid');
     }
   });
@@ -164,7 +175,7 @@ export function registerSyncRoomIpc({ ipcMain, isSender, getWindow, discover = d
     return client.disconnect();
   });
   return {
-    client, revokeConsent,
+    client, revokeConsent() { session = null; revokeConsent(); },
     getAuthorizedResult(resultId, name) {
       const result = authorizedResult(client.getState());
       return result?.id === resultId && name === session?.name ? result : null;
