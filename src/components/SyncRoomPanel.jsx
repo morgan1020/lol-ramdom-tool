@@ -226,7 +226,9 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   const teamCount = activeRoom && !pendingApproval && `${room.members.length} / 5`;
   const offline = activeRoom && !pendingApproval ? room.members.filter(member => !member.manual && !member.connected) : [];
   const waitingNames = members => members.map(member => labels[member.name]).join('、');
-  const unapproved = room?.pendingMembers ?? [];
+  const pendingByName = new Map((room?.pendingMembers ?? []).map(request => [request.name.toLowerCase(), request]));
+  const unmatchedRequests = [...pendingByName.values()].filter(request =>
+    !room.members?.some(member => member.name.toLowerCase() === request.name.toLowerCase()));
   const waitingReason = !connected ? '恢復連線後才能操作。'
     : !room?.lobbySynced ? '等待主持人讀取 LoL 大廳。'
       : offline.length ? `等待重新連線：${waitingNames(offline)}` : '';
@@ -260,15 +262,17 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       return saveSettings(values);
     }}
   />;
-  const renderMemberActions = member => {
-    if (member.manual || member.id === self.id) return null;
-    if (member.approved) {
-      return <button className="btn icon-action sync-remove-player" type="button" title="移除玩家" aria-label={`移除 ${member.name}`} disabled={busy || !connected} onClick={() => command({ type: 'remove', memberId: member.id })}><UiIcon name="close" /></button>;
-    }
+  const renderRequestActions = member => {
     return <div className="sync-member-actions">
       <button className="btn btn-primary" type="button" disabled={busy || !connected || !member.connected} onClick={() => command({ type: 'approve', memberId: member.id })} aria-label={`核准 ${member.name}`}>核准</button>
       <button className="btn btn-secondary" type="button" disabled={busy || !connected} onClick={() => command({ type: 'remove', memberId: member.id })} aria-label={`拒絕加入 ${member.name}`}>拒絕</button>
     </div>;
+  };
+  const renderMemberActions = member => {
+    const request = pendingByName.get(member.name.toLowerCase());
+    if (request) return renderRequestActions(request);
+    if (member.manual || member.id === self.id) return null;
+    return <button className="btn icon-action sync-remove-player" type="button" title="移除玩家" aria-label={`移除 ${member.name}`} disabled={busy || !connected} onClick={() => command({ type: 'remove', memberId: member.id })}><UiIcon name="close" /></button>;
   };
   if (!activeRoom) return <ModalFrame open={visible} onClose={() => { if (!busy) onBack(); }} labelId="sync-room-title">
     <div className="sync-connect-dialog" aria-busy={busy}>
@@ -315,11 +319,11 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
           {isHost && <span>點玩家卡片指定主位</span>}
         </div>
         {isHost && waitingReason && <p className="sync-room-waiting" role="status">{waitingReason}</p>}
-        {isHost && unapproved.length > 0 && <section className="sync-room-waiting" aria-label="待核准申請">
+        {isHost && unmatchedRequests.length > 0 && <section className="sync-room-waiting" aria-label="待核准申請">
           <ul>
-            {unapproved.map(member => <li key={member.id}>
+            {unmatchedRequests.map(member => <li key={member.id}>
               <span>{member.name}{member.connected ? '' : '（離線）'}</span>
-              {renderMemberActions(member)}
+              {renderRequestActions(member)}
             </li>)}
           </ul>
         </section>}

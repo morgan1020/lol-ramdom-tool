@@ -147,9 +147,20 @@ app.whenReady().then(async () => {
       const cards = [...document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card')];
       if (cards.length !== 5) throw Error('Expected five room cards');
       const approve = document.querySelector('.sync-member-actions .btn-primary');
-      if (!approve?.closest('[aria-label="待核准申請"]') || approve.closest('.roster-player-card')) throw Error('Approval must be outside the draw roster');
+      const card = approve?.closest('.roster-player-card');
+      const reject = card?.querySelector('[aria-label="拒絕加入 隊友#TW2"]');
+      if (card?.dataset.playerId !== '隊友#TW2' || !reject || document.querySelector('[aria-label="待核准申請"]')) throw Error('Both actions must be on the requesting player card');
+      for (const button of [approve, reject]) {
+        const rect = button.getBoundingClientRect();
+        if (!button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))) throw Error('Card action is obscured');
+      }
+      reject.click();
+
       if (document.querySelector('#tool-tab-roles').getAttribute('aria-selected') !== 'true') throw Error('Room should be within role draw');
     `);
+    await until(() => guest.getState().connection === 'disconnected', 'Rejected applicant remained connected');
+    await guest.connect({ url: server.url, action: 'join', roomId: hostState.room.roomId, name: '隊友#TW2' });
+    await run(`await wait(() => document.querySelector('[aria-label="核准 隊友#TW2"]:not(:disabled)'));`);
     await run(`click('核准'); await wait(settled); await wait(() => !document.querySelector('[aria-label="核准 隊友#TW2"]'));`);
     await until(() => guest.getState().room?.members?.find((member) => member.name === '隊友#TW2')?.approved, 'Guest did not receive approval');
     assert.equal(guest.getState().room.members.filter(member => member.manual).length, 3);

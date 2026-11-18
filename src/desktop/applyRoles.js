@@ -46,21 +46,25 @@ export async function applyCurrentPlayerRoles(results, { discover = discoverConn
   if (!matchesTeam(snapshot, lobby)) throw new ClientError('隊伍或登入帳號已變更，未更改客戶端');
   if (lobby.gameConfig?.mapId !== 11) throw new ClientError('目前模式不支援召喚峽谷分路偏好，未更改客戶端');
   const firstPreference = clientRoles[ownResult.main];
-  // Five-player draws have no secondary role: preserve the actual current preference.
-  const secondPreference = ownResult.secondary ? clientRoles[ownResult.secondary] : lobby.localMember.secondPositionPreference;
-  if (!validPreferences.includes(secondPreference) || firstPreference === secondPreference) {
-    throw new ClientError('本次沒有副位，既有第二偏好無法沿用，請手動調整客戶端；未更改客戶端');
+  const preferences = { firstPreference };
+  if (snapshot.players.length < 5) {
+    const second = ownResult.secondary ? clientRoles[ownResult.secondary] : lobby.localMember.secondPositionPreference;
+    if (!validPreferences.includes(second) || firstPreference === second) {
+      throw new ClientError('本次沒有副位，既有第二偏好無法沿用，請手動調整客戶端；未更改客戶端');
+    }
+    preferences.secondPreference = second;
   }
+  const matchesPreferences = member => member.firstPositionPreference === firstPreference &&
+    (!Object.hasOwn(preferences, 'secondPreference') || member.secondPositionPreference === preferences.secondPreference);
   if (await read('/lol-gameflow/v1/gameflow-phase') !== 'Lobby') throw new ClientError('已離開組隊大廳，未更改客戶端');
   if (!isCurrent()) throw new ClientError('房間結果已更新或連線已中斷，未更改客戶端');
-  const preferences = { firstPreference, secondPreference };
-  const unchanged = lobby.localMember.firstPositionPreference === firstPreference && lobby.localMember.secondPositionPreference === secondPreference;
+  const unchanged = matchesPreferences(lobby.localMember);
   if (!unchanged) await request(connection, preferenceEndpoint, { method: 'PUT', body: preferences });
   let verified;
   try { verified = await read('/lol-lobby/v2/lobby'); }
   catch { throw new ClientError('套用結果無法確認，請查看客戶端；不會自動重送'); }
-  if (!matchesTeam(snapshot, verified) || verified.localMember.firstPositionPreference !== firstPreference || verified.localMember.secondPositionPreference !== secondPreference) {
+  if (!matchesTeam(snapshot, verified) || !matchesPreferences(verified.localMember)) {
     throw new ClientError('客戶端分路與預期不符，請查看客戶端；不會自動重送');
   }
-  return { name: ownName, firstPosition: firstPreference, secondPosition: secondPreference, unchanged, fetchedAt: new Date().toISOString() };
+  return { name: ownName, firstPosition: firstPreference, secondPosition: verified.localMember.secondPositionPreference || 'UNSELECTED', unchanged, fetchedAt: new Date().toISOString() };
 }

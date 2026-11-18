@@ -1,12 +1,14 @@
 import test from 'node:test';
+import https from 'node:https';
 import assert from 'node:assert/strict';
 import { applyCurrentPlayerRoles } from '../src/desktop/applyRoles.js';
 import { preferenceEndpoint, requestClient } from '../src/desktop/lcu.js';
 
-function fixture({ count = 2, first = 'TOP', second = 'JUNGLE', isCustom = false, mapId = 11, finalPhase = 'Lobby', changedTeam = false, wrongAccount = false, refuse = false, ignoreWrite = false } = {}) {
+function fixture({ count = 2, first = 'TOP', second = 'JUNGLE', missingSecond = false, isCustom = false, mapId = 11, finalPhase = 'Lobby', changedTeam = false, wrongAccount = false, refuse = false, ignoreWrite = false } = {}) {
   const members = Array.from({ length: count }, (_, i) => ({
     summonerId: i + 1, puuid: `id-${i + 1}`, firstPositionPreference: i === 0 ? first : 'UNSELECTED', secondPositionPreference: i === 0 ? second : 'UNSELECTED'
   }));
+  if (missingSecond) delete members[0].secondPositionPreference;
   const calls = [];
   const writes = [];
   let phases = 0;
@@ -19,7 +21,7 @@ function fixture({ count = 2, first = 'TOP', second = 'JUNGLE', isCustom = false
       if (refuse) throw new Error('simulated rejection');
       if (!ignoreWrite) {
         members[0].firstPositionPreference = options.body.firstPreference;
-        members[0].secondPositionPreference = options.body.secondPreference;
+        if (Object.hasOwn(options.body, 'secondPreference')) members[0].secondPositionPreference = options.body.secondPreference;
       }
       return null;
     }
@@ -36,7 +38,7 @@ function fixture({ count = 2, first = 'TOP', second = 'JUNGLE', isCustom = false
     return { puuid: `id-${id}`, gameName: `Player${id}`, tagLine: 'TW' };
   };
   const roles = ['中路', '打野', '上路', '下路', '輔助'];
-  const results = members.map((member, i) => ({ name: `Player${i + 1}#TW`, main: roles[i], secondary: count === 5 ? '' : (i === 0 ? '輔助' : '下路') }));
+  const results = members.map((member, i) => ({ name: `Player${i + 1}#TW`, main: roles[i], secondary: count === 5 ? '' : roles[(i + 4) % roles.length] }));
   return { discover, request, writes, results, calls };
 }
 
@@ -81,13 +83,35 @@ test('stale or manual names and invalid draw payloads cannot change the client',
   }
 });
 
-test('five-player draws preserve the current secondary preference and block conflicting preferences', async () => {
-  const mock = fixture({ count: 5, second: 'JUNGLE' });
-  await applyCurrentPlayerRoles(mock.results, mock);
-  assert.equal(mock.writes[0].body.secondPreference, 'JUNGLE');
-  const conflict = fixture({ count: 5, second: 'MIDDLE' });
-  await assert.rejects(applyCurrentPlayerRoles(conflict.results, conflict), /既有第二偏好無法沿用/);
-  assert.equal(conflict.writes.length, 0);
+test('五人滿隊只送主位，副位缺失、未選或撞位都可套用', async () => {
+  for (const options of [{ missingSecond: true }, { second: 'UNSELECTED' }, { second: 'MIDDLE' }]) {
+    const mock = fixture({ count: 5, ...options });
+    const result = await applyCurrentPlayerRoles(mock.results, mock);
+    assert.deepEqual(mock.writes, [{ method: 'PUT', body: { firstPreference: 'MIDDLE' } }]);
+    assert.equal(Object.hasOwn(mock.writes[0].body, 'secondPreference'), false);
+    assert.equal(result.secondPosition, options.second ?? 'UNSELECTED');
+  }
+  const matching = fixture({ count: 5, first: 'MIDDLE', missingSecond: true });
+  assert.equal((await applyCurrentPlayerRoles(matching.results, matching)).unchanged, true);
+  assert.deepEqual(matching.writes, []);
+  const mismatch = fixture({ count: 5, ignoreWrite: true });
+  await assert.rejects(applyCurrentPlayerRoles(mismatch.results, mismatch), /分路與預期不符/);
+  assert.equal(mismatch.writes.length, 1);
+});
+
+test('一到四人套用主副位', async () => {
+  for (const count of [1, 2, 3, 4]) {
+    const mock = fixture({ count });
+    await applyCurrentPlayerRoles(mock.results, mock);
+    assert.deepEqual(mock.writes[0].body, { firstPreference: 'MIDDLE', secondPreference: 'UTILITY' });
+  }
+});
+
+test('本機傳輸允許只含主位的請求', async t => {
+  const intercepted = new Error('synthetic transport');
+  t.mock.method(https, 'request', () => { throw intercepted; });
+  await assert.rejects(requestClient({}, preferenceEndpoint, { method: 'PUT', body: { firstPreference: 'MIDDLE' } }),
+    error => error === intercepted);
 });
 
 test('matching preferences perform verification without an unnecessary write', async () => {
@@ -110,6 +134,8 @@ test('native transport rejects arbitrary endpoints, methods and preference value
   for (const [endpoint, options] of [
     ['/lol-lobby/v2/lobby', { method: 'DELETE' }],
     ['/lol-lobby/v2/lobby/members/another/position-preferences', { method: 'PUT', body: { firstPreference: 'TOP', secondPreference: 'MIDDLE' } }],
+    [preferenceEndpoint, { method: 'PUT', body: { firstPreference: 'TOP', secondPreference: undefined } }],
+    [preferenceEndpoint, { method: 'PUT', body: { firstPreference: 'TOP', extra: true } }],
     [preferenceEndpoint, { method: 'PUT', body: { firstPreference: 'unknown', secondPreference: 'TOP' } }],
     [preferenceEndpoint, { method: 'PUT', body: { firstPreference: 'TOP', secondPreference: 'MIDDLE', extra: true } }]
   ]) assert.throws(() => requestClient(connection, endpoint, options), /不支援/);

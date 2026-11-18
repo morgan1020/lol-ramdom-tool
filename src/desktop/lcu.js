@@ -39,7 +39,8 @@ export function requestClient(connection, endpoint, { method = 'GET', body } = {
   // Only fixed loopback endpoints. The sole write targets the logged-in local member.
   const readable = method === 'GET' && body === undefined && /^\/lol-(?:gameflow\/v1\/gameflow-phase|lobby\/v2\/lobby|summoner\/v1\/(?:current-summoner|summoners\/\d+))$/.test(endpoint);
   const writable = method === 'PUT' && endpoint === preferenceEndpoint && body &&
-    Object.keys(body).length === 2 && clientPositions.includes(body.firstPreference) && clientPositions.includes(body.secondPreference);
+    Object.hasOwn(body, 'firstPreference') && clientPositions.includes(body.firstPreference) &&
+    Object.keys(body).every(key => key === 'firstPreference' || (key === 'secondPreference' && clientPositions.includes(body[key])));
   if (!readable && !writable) {
     throw new ClientError('不支援的客戶端查詢');
   }

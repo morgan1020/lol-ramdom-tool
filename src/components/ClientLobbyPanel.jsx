@@ -13,7 +13,7 @@ export function ClientLobbyPanel({ lobby, error, busy, compact, usePreferences, 
     <label className="client-preference-option"><input type="checkbox" checked={usePreferences} disabled={busy} onChange={(event) => onPreferencesChange(event.target.checked)} />套用客戶端第一偏好（未勾選時全部隨機）</label>
     {usePreferences && <p className="client-read-time">補位與未選擇將隨機分配；第二偏好不作為限制。第一偏好重複時，請匯入後手動調整。</p>}
     <label className="client-preference-option"><input type="checkbox" checked={autoApplyRoles} disabled={busy} onChange={(event) => onAutoApplyRolesChange(event.target.checked)} />抽籤後自動套用自己的分路</label>
-    <p className="client-read-time">只更改目前登入帳號的排隊偏好。五人抽籤沒有副位時保留原第二偏好；若與主位衝突則提示手動調整。關閉開關不會還原已套用的分路。</p>
+    <p className="client-read-time">只更改目前登入帳號的排隊偏好。五人滿隊只送出並核對第一偏好。關閉開關不會還原已套用的分路。</p>
     </details>
     <div className="flow-actions split-actions"><button className="btn btn-secondary" type="button" disabled={busy || !lobby} onClick={onImport}>匯入後調整偏好</button><button className="btn btn-primary btn-large" type="button" disabled={busy} onClick={onDraw}>{busy ? '處理中…' : '讀取隊伍並抽籤'}</button></div>
     <p className="client-read-time">每次按下抽籤都會重新讀取隊伍。也可以使用下方手動抽籤。</p>
