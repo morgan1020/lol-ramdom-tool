@@ -15,7 +15,7 @@ export function AutoApplySwitch({ enabled, disabled, onChange }) {
       caption="套用分路" onToggle={() => onChange(!enabled)} />
   </div>;
 }
-export function RoleResultCards({ players, results, preferences = {}, assignedPreferences = {}, localPlayerId, busy, revealId, renderPlayerDetails, renderPlayerActions, renderRolePicker, onAddPlayer }) {
+export function RoleResultCards({ players, results, preferences = {}, assignedPreferences = {}, localPlayerId, busy, revealId, renderPlayerCorner, renderPlayerDetails, renderPlayerActions, renderRolePicker, onAddPlayer }) {
   const labels = createPlayerLabels(players.map((player) => player.name));
   const resultByName = Object.fromEntries(results.map((result) => [result.name, result]));
   const roleOrder = (player) => {
@@ -36,7 +36,7 @@ export function RoleResultCards({ players, results, preferences = {}, assignedPr
         return <article key={player.name} className={`roster-player-card${result ? ' has-result' : ''}${result && isSelf ? ' is-own-result' : ''}${actions ? ' has-player-actions' : ''}`} role="listitem" data-player-id={player.name} style={reveal ? { '--role-reveal-delay': `${index * 75}ms` } : undefined}>
           <header className="roster-player-header">
             <h3 className="player-label" title={renderPlayerDetails ? player.name : undefined}>{labels[player.name]}</h3>
-            {isSelf && <span className="self-badge">你</span>}
+            {renderPlayerCorner ? renderPlayerCorner(player, isSelf) : isSelf && <span className="self-badge">你</span>}
             {renderPlayerDetails?.(player)}
           </header>
           <div key={reveal ? revealId : 'static'} className={`draw-card-result${reveal ? ' is-revealing' : ''}`}>

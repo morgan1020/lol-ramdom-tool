@@ -132,7 +132,8 @@ export default function App({ initialData }) {
       const slots = 5 - players.length;
       setPlayers([...players.map(player => incoming.get(player.name) ?? player), ...newPlayers.slice(0, slots)]);
       if (newPlayers.length && slots) clearResult();
-      toast(newPlayers.length > slots ? '名單最多 5 人，請移除不需要的玩家後再讀取。' : '已讀取 LoL 隊伍', { id: 'lobby-read' });
+      if (newPlayers.length > slots) toast('名單最多 5 人，請移除不需要的玩家後再讀取。', { id: 'lobby-read', type: 'warning' });
+      else dismissNotice('lobby-read');
     } catch (error) {
       toast(error.message || '讀取客戶端失敗，請重試', { id: 'lobby-read', type: 'error' });
     } finally {
@@ -227,7 +228,6 @@ export default function App({ initialData }) {
       setRevealId(++drawSequence.current);
       void discordSync.syncDraw(drawn);
       if (shouldApply) await applyRoles(drawn, ownPlayer.name);
-      else toast('抽籤完成', { id: 'draw-complete' });
     } catch (drawError) {
       setError(drawError.message || '抽籤失敗，請重試');
       return false;

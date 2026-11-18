@@ -4,7 +4,7 @@ import { formatCopyText } from '../domain/copyFormat.js';
 import { formatRoomInvitation, parseRoomInvitation } from '../domain/roomInvitation.js';
 import { isRoomPlayerReady } from '../domain/syncRoom.js';
 import { getActiveDiscordDestination } from '../domain/discordDestinations.js';
-import { notify } from '../notifications.js';
+import { notify, dismissNotice } from '../notifications.js';
 import { RoleResultCards } from './RoleWorkspace.jsx';
 import { DrawDiscordControls } from './DiscordSyncPanel.jsx';
 import { LolRefreshButton } from './LolRefreshButton.jsx';
@@ -35,9 +35,20 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
 
   const [action, setAction] = useState('choose');
   const [entryAutoApply, setEntryAutoApply] = useState(true);
+  const [usedRolePicker, setUsedRolePicker] = useState(() => {
+    try { return localStorage.getItem('lolRoomRolePickerUsed') === 'true'; }
+    catch { return false; }
+  });
+  const markRolePickerUsed = () => {
+    if (usedRolePicker) return;
+    setUsedRolePicker(true);
+    try { localStorage.setItem('lolRoomRolePickerUsed', 'true'); }
+    catch { /* Keep the hint dismissed for this session. */ }
+  };
   const [reading, setReading] = useState(false);
   const [notice, setNotice] = useState('');
   const [localError, setLocalError] = useState('');
+  const [removeTarget, setRemoveTarget] = useState(null);
   const [invitation, setInvitation] = useState('');
   const [revealId, setRevealId] = useState(null);
   const seenResultId = useRef(null);
@@ -67,6 +78,9 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   useEffect(() => {
     onRoomStatusChange?.({ active: activeRoom, busy });
   }, [activeRoom, busy, onRoomStatusChange]);
+  useEffect(() => {
+    if (!connected || !isHost) setRemoveTarget(null);
+  }, [connected, isHost]);
   const wasInRoom = useRef(false);
   useEffect(() => {
     if (visible && wasInRoom.current && !activeRoom) onBack();
@@ -109,7 +123,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     setApplying(true);
     void window.lolDesktop.applyRoles(result.results, ownName, result.id).then(reply => {
       if (!reply.ok) throw new Error(reply.message || '無法套用分路');
-      notify(reply.simulated ? '已模擬套用我的 LoL 分路' : '已更新我的 LoL 分路', { id: 'apply-roles' });
+      dismissNotice('apply-roles');
     }).catch(error => {
       notify(`${error.message || '無法套用分路'}。請在 LoL 手動確認分路。`, { id: 'apply-roles', type: 'error' });
     }).finally(() => setApplying(false));
@@ -167,9 +181,10 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     try {
       const invitationText = formatRoomInvitation({ url: sync.serviceUrl || url, roomId: room.roomId });
       await navigator.clipboard.writeText(invitationText);
-      notify('已複製房間邀請', { id: 'copy-room-invitation', type: 'success' });
+      dismissNotice('copy-room-invitation');
     } catch {
       notify('無法複製邀請，可將房碼提供給使用同一服務的朋友。', { id: 'copy-room-invitation', type: 'error' });
+      return false;
     }
   };
   const command = async (value) => {
@@ -214,16 +229,19 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
   if (!visible) return null;
   const labels = createPlayerLabels((room?.members ?? []).map(member => member.name));
   const roomSummary = activeRoom && <div className="sync-room-summary">
-    <span>房碼 {isHost
-      ? <button className="sync-room-code sync-copy-invitation" type="button" aria-label={`複製邀請（房碼 ${room.roomId}）`}
-        title="複製房間邀請" onClick={copyInvitation}><strong>{room.roomId}</strong><UiIcon name="copy" /></button>
-      : <span className="sync-room-code"><strong>{room.roomId}</strong></span>}</span>
+    <span className="sync-room-identity">
+      {connected ? <span className="sync-connection-dot" role="img" aria-label="房間已連線" title="房間已連線" />
+        : <span role="status">{connectionLabels[sync.connection]}</span>}
+      房碼 {isHost
+        ? <CopyResultButton className="sync-room-code sync-copy-invitation" label={`複製邀請（房碼 ${room.roomId}）`}
+            copiedLabel="已複製房間邀請" resetKey={room.roomId} onCopy={copyInvitation}><strong>{room.roomId}</strong></CopyResultButton>
+        : <strong className="sync-room-code">{room.roomId}</strong>}
+    </span>
     <ToggleSwitch enabled={sync.autoApply !== false} disabled={sync.busy || !sync.localSession} label="自動套用我的分路" caption="自動套用我的分路"
       onToggle={() => command({ type: 'auto-apply', enabled: !sync.autoApply, localSession: sync.localSession })} />
-    {connected ? <span className="sync-connection-dot" role="status" title="已連線"><span className="sr-only">已連線</span></span>
-      : <span role="status">{connectionLabels[sync.connection]}</span>}
+
   </div>;
-  const teamCount = activeRoom && !pendingApproval && `${room.members.length} / 5`;
+  const onlineCount = room?.members?.filter(member => member.approved && !member.manual && member.connected).length;
   const offline = activeRoom && !pendingApproval ? room.members.filter(member => !member.manual && !member.connected) : [];
   const waitingNames = members => members.map(member => labels[member.name]).join('、');
   const pendingByName = new Map((room?.pendingMembers ?? []).map(request => [request.name.toLowerCase(), request]));
@@ -242,9 +260,12 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     </div>
   </header>;
   const renderMemberStatus = (member) => {
-    if (member.manual) return null;
-    if (member.id === room.hostId && member.connected) return <div className="sync-member-state"><span><UiIcon name="monitor" />主持人</span></div>;
-    return !member.connected && <span className="sync-member-state">離線</span>;
+    if (member.manual || !connected) return null;
+    const host = member.id === room.hostId;
+    const label = member.connected ? (host ? '主持人在線' : 'App 在線') : (host ? '主持人離線' : 'App 離線');
+    return <span className={`sync-member-state${member.connected ? ' is-online' : ''}`} title={label}>
+      <UiIcon name="monitor" />{label}
+    </span>;
   };
   const copyResults = async () => {
     setLocalError(''); setNotice('');
@@ -252,7 +273,7 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
     catch { setLocalError('無法複製，請手動選取文字複製'); return false; }
   };
   const renderMemberRolePicker = member => <CardRolePicker player={member} players={room.members} labels={labels} preferences={preferences}
-    disabled={busy || !connected || !room.lobbySynced}
+    disabled={busy || !connected || !room.lobbySynced} onOpen={markRolePickerUsed}
     onChange={role => {
       setLocalError('');
       setNotice('');
@@ -268,12 +289,16 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       <button className="btn btn-secondary" type="button" disabled={busy || !connected} onClick={() => command({ type: 'remove', memberId: member.id })} aria-label={`拒絕加入 ${member.name}`}>拒絕</button>
     </div>;
   };
-  const renderMemberActions = member => {
-    const request = pendingByName.get(member.name.toLowerCase());
-    if (request) return renderRequestActions(request);
-    if (member.manual || member.id === self.id) return null;
-    return <button className="btn icon-action sync-remove-player" type="button" title="移除玩家" aria-label={`移除 ${member.name}`} disabled={busy || !connected} onClick={() => command({ type: 'remove', memberId: member.id })}><UiIcon name="close" /></button>;
-  };
+  const removeMember = connected && isHost && removeTarget?.session === sync.localSession &&
+    room.members.find(member => member.id === removeTarget?.id && member.approved && !member.manual && member.id !== self.id);
+  const renderMemberCorner = (member, isSelf) => (
+    <span className="sync-card-corner">
+      {isSelf ? <span className="self-badge">你</span> : isHost && member.approved && !member.manual &&
+        <button className="btn icon-action sync-remove-player" type="button"
+          title={`將 ${member.name} 移出房間`} aria-label={`移除 ${member.name}`} disabled={busy || !connected}
+          onClick={() => setRemoveTarget({ id: member.id, session: sync.localSession })}><UiIcon name="close" /></button>}
+    </span>
+  );
   if (!activeRoom) return <ModalFrame open={visible} onClose={() => { if (!busy) onBack(); }} labelId="sync-room-title">
     <div className="sync-connect-dialog" aria-busy={busy}>
       <header className="sync-connect-dialog-header">
@@ -313,10 +338,14 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
       {!pendingApproval && <div className="workspace-scroll">
         <div className="sync-room-card-toolbar">
           <div className="draw-roster-controls">
-            <span className="visual-summary"><UiIcon name="users" />{teamCount}</span>
+            <span className="sync-team-count" role="status">
+              <UiIcon name="users" /><span>隊伍 <b>{room.members.length}</b> 人</span>
+              <span aria-hidden="true">·</span>
+              <span>App 在線 <b>{connected ? onlineCount : '—'}</b>{connected && ' 人'}</span>
+            </span>
             {isHost && <LolRefreshButton disabled={busy || !connected} loading={reading} onRefresh={() => updateLobby(false)} />}
           </div>
-          {isHost && <span>點玩家卡片指定主位</span>}
+          {isHost && connected && room.lobbySynced && !result && !usedRolePicker && <span className="sync-role-hint">點玩家卡片指定主位</span>}
         </div>
         {isHost && waitingReason && <p className="sync-room-waiting" role="status">{waitingReason}</p>}
         {isHost && unmatchedRequests.length > 0 && <section className="sync-room-waiting" aria-label="待核准申請">
@@ -329,7 +358,11 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
         </section>}
         <RoleResultCards players={room.members} results={result?.results ?? []} preferences={preferences} assignedPreferences={result?.preferences}
           localPlayerId={self.id} busy={busy} revealId={revealId === resultId ? revealId : null}
-          renderPlayerDetails={renderMemberStatus} renderPlayerActions={isHost ? renderMemberActions : undefined}
+          renderPlayerDetails={renderMemberStatus} renderPlayerCorner={renderMemberCorner}
+          renderPlayerActions={member => {
+            const request = pendingByName.get(member.name.toLowerCase());
+            return <div className="sync-card-actions">{isHost && request && renderRequestActions(request)}</div>;
+          }}
           renderRolePicker={isHost ? renderMemberRolePicker : undefined} />
       </div>}
       {(isHost || result) && <footer className="draw-screen-actions">
@@ -340,6 +373,19 @@ export function SyncRoomPanel({ visible, onBack, discordSync, onManageWebhook, o
         {result && <CopyResultButton onCopy={copyResults} resetKey={result.id} />}
       </footer>}
     </section>
+    {removeMember && <ModalFrame open onClose={() => setRemoveTarget(null)} labelId="sync-remove-title">
+      <div className="sync-connect-dialog">
+        <header className="sync-connect-dialog-header"><h2 id="sync-remove-title">移出房間？</h2></header>
+        <p className="sync-room-help">將 <strong>{removeMember.name}</strong> 移出 App 房間？對方仍會留在 LoL 大廳。</p>
+        <div className="sync-dialog-actions">
+          <button className="btn btn-secondary" type="button" onClick={() => setRemoveTarget(null)}>取消</button>
+          <button className="btn btn-primary" type="button" disabled={busy} onClick={() => {
+            setRemoveTarget(null);
+            void command({ type: 'remove', memberId: removeMember.id });
+          }}>確認移出</button>
+        </div>
+      </div>
+    </ModalFrame>}
     {leaveRequested && <ModalFrame open onClose={() => { if (!busy) onCancelLeave(); }} labelId="sync-leave-title">
       <div className="sync-connect-dialog">
         <header className="sync-connect-dialog-header"><h2 id="sync-leave-title">{leaveLabel}？</h2></header>

@@ -30,7 +30,7 @@ export function DiscordSettingsPage({ settings, status, onConfigure, onRemove, o
         runAction(async () => {
           const previous = settings.destinations.find((destination) => destination.id === editingId);
           await onConfigure({ label, webhookUrl: webhookUrl.trim() || previous?.webhookUrl || '', previousId: editingId || undefined });
-          setNotice('設定已儲存。'); resetEditor();
+          resetEditor();
         });
       }}>
         <label htmlFor="discord-label">自訂名稱</label>

@@ -34,7 +34,7 @@ export function useDiscordSync() {
   const mutate = async (action, payload, webAction) => {
     if (mutationInProgress.current || isSending.current) throw new Error('正在處理 Discord 設定，請稍候');
     mutationInProgress.current = true; setPending(true);
-    try { applySettings(hasDesktopData() ? await changeDesktopDiscord(action, payload) : webAction()); if (['toggle', 'select', 'set-delivery'].includes(action)) notify('Discord 設定已儲存', { id: 'discord-settings' }); }
+    try { applySettings(hasDesktopData() ? await changeDesktopDiscord(action, payload) : webAction()); }
     finally { mutationInProgress.current = false; setPending(false); }
   };
   const configure = (destination) => mutate('configure', destination, () => saveDiscordSync(upsertDiscordDestination(settingsRef.current, destination)));
@@ -59,7 +59,7 @@ export function useDiscordSync() {
       else await sendActiveDiscordDraw(currentSettings, results);
       if (currentRequest === requestId.current) {
         setStatus({ state: 'sent', message: `本次分路結果已傳送到 ${label}` });
-        notify(`已傳送到 ${label}`, { id: 'discord-delivery' });
+        dismissNotice('discord-delivery');
       }
     } catch (error) {
       if (currentRequest === requestId.current) {

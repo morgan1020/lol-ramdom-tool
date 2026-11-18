@@ -134,14 +134,37 @@ app.whenReady().then(async () => {
     assert.deepEqual(hostState.room.members.map(member => member.name), players.map(player => player.name));
     const copiedInvitation = await run(`
       document.querySelector('button.sync-room-code').click();
-      await wait(() => document.querySelector('[data-notice-id="copy-room-invitation"]')?.textContent.includes('已複製房間邀請'));
+      await wait(() => document.querySelector('button.sync-room-code[aria-label="已複製房間邀請"]'));
       return window.__roomCopiedText;
     `);
     assert.deepEqual(parseRoomInvitation(copiedInvitation), { url: server.url, roomId: hostState.room.roomId });
     await guest.connect({ url: server.url, action: 'join', roomId: hostState.room.roomId, name: '隊友#TW2' });
     await run(`await wait(() => document.querySelector('[aria-label="核准 隊友#TW2"]') && !document.querySelector('.primary-draw').disabled);`);
-    await run(`if (document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card').length !== 5 || !document.querySelector('.sync-room-card-toolbar').textContent.includes('5 / 5')) throw Error('Room must show one card per player and the team capacity');`);
+    await run(`if (document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card').length !== 5 || !document.querySelector('.sync-room-card-toolbar').textContent.includes('隊伍 5 人·App 在線 1 人')) throw Error('Room must show one card per player and the team capacity');`);
     assert.equal(guest.getState().room.pendingApproval, true);
+    await run(`if (!document.querySelector('.sync-role-hint')) throw Error('First-time host hint missing');`);
+    const originalSize = window.getContentSize();
+    async function checkCardSlots() {
+      for (const [width, height] of [[800, 640], originalSize]) {
+        window.setContentSize(width, height);
+        await run(`await wait(() => innerWidth === ${width} && innerHeight === ${height});
+          const cards = [...document.querySelectorAll('.sync-room-workspace .roster-player-card')];
+          const measurements = cards.map(card => {
+            const rect = card.getBoundingClientRect();
+            const slot = card.querySelector('.sync-card-actions').getBoundingClientRect();
+            const corner = card.querySelector('.sync-card-corner').getBoundingClientRect();
+            if (Math.abs(rect.right - corner.right - 4) > 2 || Math.abs(corner.top - rect.top - 4) > 2) throw Error('Corner anchor shifted');
+            const name = card.querySelector('.player-label').getBoundingClientRect();
+            const role = card.querySelector('.card-random-role').getBoundingClientRect();
+            return [rect.height, slot.width, slot.height, slot.bottom - rect.top,
+              name.top - rect.top, role.top - rect.top, ${width} <= 900 ? role.right - rect.right : 0];
+          });
+          if (!measurements.every(row => row.every((v,i) => Math.abs(v - measurements[0][i]) <= 2))) {
+            throw Error('Card alignment differs: ' + JSON.stringify(measurements));
+          }`);
+      }
+    }
+    await checkCardSlots();
     await capture('pending-approval.png');
     await run(`
       const cards = [...document.querySelectorAll('.sync-room-workspace .roster-card-grid > .roster-player-card')];
@@ -164,6 +187,7 @@ app.whenReady().then(async () => {
     await run(`click('核准'); await wait(settled); await wait(() => !document.querySelector('[aria-label="核准 隊友#TW2"]'));`);
     await until(() => guest.getState().room?.members?.find((member) => member.name === '隊友#TW2')?.approved, 'Guest did not receive approval');
     assert.equal(guest.getState().room.members.filter(member => member.manual).length, 3);
+    await checkCardSlots();
     await run(`
       if ([...document.querySelectorAll('button')].some(el => el.textContent === '我準備好了')) throw Error('Host must not need to ready');
       await wait(() => document.querySelector('.primary-draw:not(:disabled)'));
@@ -240,6 +264,7 @@ app.whenReady().then(async () => {
       await wait(() => document.querySelector('[role="option"][data-value="輔助"]'));
       document.querySelector('[role="option"][data-value="輔助"]').click();
       await wait(() => settled() && document.querySelector('[role="combobox"][aria-label^="隊友1 的主位偏好"]').textContent.includes('輔助'));
+      if (document.querySelector('.sync-role-hint')) throw Error('Used role hint still visible');
       if (document.querySelector('.primary-draw').disabled || document.querySelector('.sync-previous-result')) throw Error('Changing roles must allow a fresh draw');
       document.querySelector('[role="combobox"][aria-label^="房主 的主位偏好"]').click();
       await wait(() => document.querySelector('[role="option"][data-value="輔助"]')?.disabled);
@@ -250,7 +275,7 @@ app.whenReady().then(async () => {
     await run(`await wait(() => document.querySelector('.primary-draw:not(:disabled)')); click('開始抽籤'); await wait(() => settled() && document.querySelector('#sync-room-title')?.textContent === '本次抽籤結果' && document.querySelector('.assignment-marker'));`);
     await until(() => guest.getState().room?.result?.version === 3, 'Guest did not receive custom result');
     assert.equal(guest.getState().room.result.results.find(row => row.name === '隊友1#TW3').main, '輔助');
-    await run(`await wait(() => document.querySelector('[data-notice-id=discord-delivery]')?.textContent.includes('已傳送到 測試頻道') && !document.querySelector('.sync-room-feedback'));`);
+    await run(`await wait(() => document.querySelector('.draw-discord-menu [title="本次分路結果已傳送到 測試頻道"]') && !document.querySelector('.sync-room-feedback'));`);
     assert.deepEqual(discordSends, [guest.getState().room.result.results]);
     players = players.map(player => player.id === 'fixture-host' ? { ...player, firstPosition: 'TOP' } : player);
     await run(`click('重新抽籤'); await wait(async () => settled() && (await window.lolDesktop.syncRoom.getState()).state.room?.result?.version === 4);`);
@@ -280,7 +305,11 @@ app.whenReady().then(async () => {
       const panel = document.querySelector('.sync-room-panel');
       if (document.documentElement.scrollWidth > innerWidth || panel.scrollWidth > panel.clientWidth + 1) throw Error('Room layout overflows horizontally');
       if (panel.getBoundingClientRect().bottom > innerHeight) throw Error('Room panel exceeds window');
+      const row = panel.querySelector('.roster-player-card:not(.has-result)');
+      if (row.getBoundingClientRect().height > 65) throw Error('Compact room row is too tall');
       const scroll = panel.querySelector('.workspace-scroll'); scroll.scrollTop = scroll.scrollHeight;
+      const counts = panel.querySelector('.sync-team-count').getBoundingClientRect();
+      if (!panel.querySelector('.sync-team-count').contains(document.elementFromPoint(counts.left + 10, counts.top + counts.height / 2))) throw Error('Roster counts hidden after scrolling');
       return { width: innerWidth, height: innerHeight, independentlyScrollable: scroll.scrollHeight > scroll.clientHeight };
     `);
     await capture('compact-scroll.png');
@@ -290,14 +319,32 @@ app.whenReady().then(async () => {
     assert.equal(applyCalls.length, 4);
     await until(() => guest.getState().room?.members?.some(member => member.name === '替補#TW3'), 'Guest did not receive refreshed lobby');
     assert.equal(guest.getState().room.result.archived, true);
+    guest.reconnectDelayMs = 1200;
     guest.socket.close();
     await until(() => guest.getState().connection === 'reconnecting', 'Guest did not enter reconnecting state');
+    await run(`await wait(() => document.querySelector('[data-player-id="隊友#TW2"] .sync-member-state')?.textContent === 'App 離線' && document.querySelector('.sync-team-count').textContent.includes('App 在線 1 人'));`);
     await until(() => guest.getState().connection === 'connected', 'Guest did not reconnect');
-    await run(`await wait(() => document.querySelector('#sync-room-title')?.textContent === '多人抽分路'); await wait(() => [...document.querySelectorAll('.sync-member-state')].every(el => el.textContent.includes('主持人') || el.textContent.includes('離線')));`);
+    await run(`await wait(() => document.querySelector('#sync-room-title')?.textContent === '多人抽分路'); await wait(() => document.querySelector('[data-player-id="隊友#TW2"] .sync-member-state')?.textContent === 'App 在線' && document.querySelectorAll('.sync-member-state.is-online').length === 2);`);
     const guestAfterReconnect = guest.getState();
     assert.equal(guestAfterReconnect.room.members.length, 5);
     assert.equal(guestAfterReconnect.room.result.archived, true);
-    await run(`document.querySelector('[aria-label="移除 隊友#TW2"]').click(); await wait(() => settled() && [...document.querySelectorAll('.sync-member-state')].length === 1);`);
+    await run(`
+      const item = document.querySelector('[data-player-id="隊友#TW2"] [aria-label="移除 隊友#TW2"]');
+      item.scrollIntoView({ block: 'nearest' });
+      const rect = item.getBoundingClientRect();
+      if (!item.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))) throw Error('Remove action obscured');
+      if (!document.querySelector('.sync-team-count').textContent.includes('App 在線 2 人')) throw Error('Unexpected count before removal');
+      item.click();
+      await wait(() => document.querySelector('dialog[open] #sync-remove-title'));
+      if (!document.querySelector('dialog[open]').textContent.includes('隊友#TW2')) throw Error('Missing kick target');
+      click('取消');
+      await wait(() => !document.querySelector('dialog[open]'));
+      if (!document.querySelector('.sync-team-count').textContent.includes('App 在線 2 人')) throw Error('Cancel removed player');
+      item.click();
+      await wait(() => document.querySelector('dialog[open] #sync-remove-title'));
+      click('確認移出');
+      await wait(() => settled() && document.querySelector('.sync-team-count').textContent.includes('App 在線 1 人'));
+    `);
     await until(() => guest.getState().connection === 'disconnected', 'Removed guest remained connected');
     await guest.connect({ url: server.url, action: 'join', roomId: hostState.room.roomId, name: '隊友#TW2' });
     await run(`await wait(() => document.querySelector('[aria-label="核准 隊友#TW2"]') && settled());`);
@@ -355,7 +402,7 @@ app.whenReady().then(async () => {
     await until(() => guest.getState().room.pendingMembers?.some(member => member.name === '房主#TW1'), 'Invitation request not shown to host');
     const joiningMember = guest.getState().room.pendingMembers.find(member => member.name === '房主#TW1');
     await guest.command({ type: 'approve', memberId: joiningMember.id });
-    await run(`await wait(() => settled() && document.querySelector('.sync-room-card-toolbar')?.textContent.includes('5 / 5'));
+    await run(`await wait(() => settled() && document.querySelector('.sync-team-count')?.textContent.includes('隊伍 5 人·App 在線 2 人'));
       if (document.querySelector('.sync-guest-ready, .sync-room-discord, .primary-draw, .sync-role-picker')) throw Error('Unexpected guest controls');
       if (document.querySelector('[aria-label="自動套用我的分路"]').getAttribute('aria-checked') !== 'false') throw Error('Pre-join choice was lost');`);
     const beforeDisabledDraw = applyCalls.length;

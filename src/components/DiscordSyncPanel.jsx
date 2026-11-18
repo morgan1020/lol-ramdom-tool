@@ -38,7 +38,7 @@ export function DrawDiscordControls({ discordSync, disabled, onManage }) {
   ];
 
   return <SelectMenu className="draw-discord-menu" triggerClassName="discord-destination-trigger"
-    menuClassName="discord-destination-menu" label="Discord" displayLabel={summary} triggerIcon={<UiIcon name="discord" />}
+    menuClassName="discord-destination-menu" label="Discord" displayLabel={summary} triggerIcon={status.state === 'sent' ? <span title={status.message} aria-label={status.message} role="img"><UiIcon name="check" /></span> : <UiIcon name="discord" />}
     value={selected} options={options} disabled={locked}
     onChange={id => id === 'manage' ? onManage() : discordSync.setDelivery(id === 'off' ? null : id)} />;
 }

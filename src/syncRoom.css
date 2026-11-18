@@ -47,12 +47,14 @@
   font-size: 13px;
 }
 .sync-room-summary, .sync-guest-status { margin: 6px 0 0; }
+.sync-room-identity { display: inline-flex; align-items: center; gap: 5px; }
 .sync-connection-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 body:has(.sync-guest-status):not(:has(dialog[open])) .toast-wrap[popover] {
   bottom: 100px;
   max-height: 25dvh;
 }
 .sync-connect-form > [role="switch"] { justify-self: start; }
+.sync-room-code { font-variant-numeric: tabular-nums; }
 .sync-room-code strong { color: var(--text); letter-spacing: .03em; }
 .sync-copy-invitation {
   display: inline-flex;
@@ -79,24 +81,41 @@ body:has(.sync-guest-status):not(:has(dialog[open])) .toast-wrap[popover] {
   color: var(--text-muted);
   font-size: 12px;
 }
-.sync-member-state > span { display: inline-flex; align-items: center; gap: 4px; }
+.sync-member-state.is-online svg { color: var(--accent); }
 .sync-member-state svg { width: 14px; height: 14px; }
-.sync-member-actions { position: relative; z-index: 2; grid-column: 2 / -1; margin-top: 8px; }
-.sync-member-actions .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
-.refined-app .sync-room-workspace .roster-player-card:has(.sync-member-state) {
+.sync-member-actions { display: inline-flex; flex-wrap: nowrap; gap: 6px; }
+.refined-app .sync-room-workspace .sync-member-actions .btn { min-width: 0; width: auto; white-space: nowrap; min-height: 34px; padding: 0 10px; font-size: 12px; }
+.refined-app .sync-room-workspace .roster-player-card:has(.sync-member-state.is-online) {
   border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
 }
+/* A single corner anchor keeps identity and moderation aligned on every card. */
+.sync-card-corner {
+  position: absolute; inset: 4px 4px auto auto; z-index: 2;
+  display: grid; place-items: center; width: 32px; height: 32px;
+  pointer-events: none;
+}
+.sync-card-corner button { pointer-events: auto; }
+.refined-app .sync-room-workspace .sync-card-corner .self-badge { position: static; }
 .refined-app .sync-room-workspace .sync-remove-player {
-  position: absolute;
-  z-index: 2;
-  top: 4px;
-  right: 4px;
+  position: relative;
   width: 32px;
   min-width: 32px;
   min-height: 32px;
   padding: 0;
   color: var(--text-muted);
 }
+.sync-card-actions {
+  position: relative; z-index: 2; display: flex; align-items: center;
+  min-height: 36px; pointer-events: none;
+}
+.sync-card-actions button { pointer-events: auto; }
+.sync-team-count {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  color: var(--text-muted); font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.sync-team-count b { color: var(--text); font-weight: 650; }
+.sync-team-count svg { width: 16px; height: 16px; }
+.sync-role-hint { font-size: 12px; }
 .sync-remove-player svg { width: 15px; height: 15px; }
 .roster-player-card > .sync-role-picker { position: absolute; inset: 0; }
 .sync-role-picker > .app-select-trigger {
@@ -124,11 +143,26 @@ body:has(.sync-guest-status):not(:has(dialog[open])) .toast-wrap[popover] {
 .sync-room-discord .discord-sync-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .sync-room-discord .discord-destination-static { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 125px; }
 @media (min-width: 901px) {
-  .refined-app .sync-room-workspace .roster-player-card:has(.sync-remove-player) .roster-player-header { padding-inline: 14px; }
+  .sync-card-actions { width: 100%; flex: 0 0 36px; justify-content: center; }
   .sync-room-workspace .sync-member-state { flex-wrap: nowrap; white-space: nowrap; }
 }
 @media (max-width: 900px) {
-  .refined-app .sync-room-workspace .roster-player-card:has(.sync-remove-player) { padding-right: 42px; }
+  .sync-room-workspace .sync-room-card-toolbar {
+    position: sticky; top: 0; z-index: 3;
+    padding-block: 4px; margin-bottom: 6px;
+    background: var(--bg); border-bottom: 1px solid var(--border);
+  }
+  .sync-room-workspace .workspace-scroll { scroll-padding-top: 44px; }
+  .refined-app .draw-workspace.sync-room-workspace .roster-player-card {
+    grid-template-columns: 34px minmax(0, 1fr) auto 110px;
+    padding-right: 40px;
+  }
+  .sync-card-actions { width: 100%; grid-column: 4; grid-row: 1; justify-content: flex-end; }
+  .refined-app .sync-room-workspace .draw-secondary { grid-column: 2 / 4; }
+  .refined-app .sync-room-workspace .roster-player-card:not(.has-result) {
+    min-height: 52px;
+    padding-block: 8px;
+  }
   .refined-app .sync-room-workspace .roster-player-header { flex-wrap: wrap; }
   .sync-member-actions { justify-content: flex-start; }
 }

@@ -2,7 +2,7 @@ import { notify, dismissNotice } from '../notifications.js';
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { UiIcon } from './UiIcon.jsx';
 
-export function SelectMenu({ value, options, onChange, disabled, label, id, className = '', triggerClassName = '', menuClassName = '', placeholder = '未設定', displayLabel, triggerIcon }) {
+export function SelectMenu({ value, options, onChange, disabled, label, id, className = '', triggerClassName = '', menuClassName = '', placeholder = '未設定', displayLabel, triggerIcon, onOpen }) {
   const root = useRef(null);
   const trigger = useRef(null);
   const menu = useRef(null);
@@ -13,6 +13,11 @@ export function SelectMenu({ value, options, onChange, disabled, label, id, clas
   const setError = message => { if (message) notify(message, { id: 'select-error', type: 'error' }); else dismissNotice('select-error'); };
   const active = options.find(option => option.value === value);
   const selectedLabel = displayLabel ?? (active?.label || placeholder);
+  const openMenu = () => {
+    if (open) return;
+    setOpen(true);
+    onOpen?.();
+  };
   const close = (restoreFocus = false) => {
     restoreTriggerFocus.current = restoreFocus;
     setOpen(false);
@@ -64,7 +69,7 @@ export function SelectMenu({ value, options, onChange, disabled, label, id, clas
     options[next]?.focus({ preventScroll: true });
   };
   return <div className={`app-select ${className}`} ref={root} data-value={value}>
-    <button ref={trigger} id={id} className={`app-select-trigger ${triggerClassName}`} role="combobox" type="button" aria-label={label + '：' + selectedLabel} title={selectedLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? menuId : undefined} disabled={disabled || pending} onClick={() => setOpen(!open)} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); } }}><span className="app-select-option-label">{triggerIcon ?? active?.icon}<span>{selectedLabel}</span></span><UiIcon name="chevron" /></button>
+    <button ref={trigger} id={id} className={`app-select-trigger ${triggerClassName}`} role="combobox" type="button" aria-label={label + '：' + selectedLabel} title={selectedLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? menuId : undefined} disabled={disabled || pending} onClick={() => open ? close() : openMenu()} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); openMenu(); } }}><span className="app-select-option-label">{triggerIcon ?? active?.icon}<span>{selectedLabel}</span></span><UiIcon name="chevron" /></button>
     {open && <div ref={menu} id={menuId} className={`app-select-menu ${menuClassName}`} popover="manual" role="listbox" aria-label={label} aria-busy={pending} onKeyDown={navigate}>
       {options.map(option => <button key={option.value} type="button" role="option" data-value={option.value} aria-selected={option.value === value} tabIndex={option.value === value ? 0 : -1} disabled={disabled || pending || option.disabled} title={option.label} onClick={() => select(option.value)}><span className="app-select-option-label">{option.icon}<span>{option.label}</span></span>{option.value === value && <UiIcon name="check" />}</button>)}
     </div>}
